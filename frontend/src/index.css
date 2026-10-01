@@ -64,3 +64,23 @@ code {
   border-top: 10px solid #ffffff;
   border-left: 10px solid transparent;
 }
+
+/* Ensure auth inputs always have clean white background and crisp dark text */
+form input[type="text"],
+form input[type="password"] {
+  background-color: #ffffff !important;
+  color: #111b21 !important;
+  border-color: #d1d5db !important;
+}
+
+form input[type="text"]::placeholder,
+form input[type="password"]::placeholder {
+  color: #8696a0 !important;
+}
+
+form input[type="text"]:focus,
+form input[type="password"]:focus {
+  background-color: #ffffff !important;
+  color: #111b21 !important;
+  border-color: #00a884 !important;
+}

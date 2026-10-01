@@ -53,7 +53,7 @@ const navigate=useNavigate();
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
+    <div data-theme="light" className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
       <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 font-bold text-2xl">
@@ -70,7 +70,7 @@ const navigate=useNavigate();
             <input
               value={user.username}
               onChange={(e) => setUser({ ...user, username: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm text-[#111b21] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 !bg-white !text-[#111b21] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
               type="text"
               placeholder="Enter your username"
               required
@@ -83,7 +83,7 @@ const navigate=useNavigate();
             <input
               value={user.password}
               onChange={(e) => setUser({ ...user, password: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm text-[#111b21] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 !bg-white !text-[#111b21] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all"
               type="password"
               placeholder="Enter your password"
               required

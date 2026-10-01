@@ -36,13 +36,15 @@ export const register= async(req,res)=>{
       gender
      });
      return res.status(201).json({
-      message:"Account created successfully.",
-      success:true
-
+      message: "Account created successfully.",
+      success: true,
     });
    } catch(error){
-    console.log(error);
-  
+    console.log("Register error:", error);
+    return res.status(500).json({
+      message: error?.message || "Registration failed. Please try again.",
+      success: false
+    });
   }
 };
 export const login= async(req,res)=>{

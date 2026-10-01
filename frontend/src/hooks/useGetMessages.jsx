@@ -37,7 +37,17 @@ const useGetMessages = () => {
         );
         dispatch(setMessages(res.data));
       } catch (error) {
-        console.log(error);
+        console.log("Backend offline, loading fallback message:", error);
+        dispatch(
+          setMessages([
+            {
+              _id: `welcome-${selectedUser._id}`,
+              senderId: selectedUser._id,
+              message: `Hey! Thanks for checking out my chat application. You can send text, emojis, photos, or use the mic button 🎙️!`,
+              createdAt: new Date().toISOString(),
+            },
+          ])
+        );
       }
     };
 

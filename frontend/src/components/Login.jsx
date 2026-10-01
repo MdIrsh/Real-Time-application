@@ -28,7 +28,7 @@ const navigate=useNavigate();
         dispatch(setAuthUser(res.data));
         toast.success("Login successful!");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Login failed!");
+      toast.error(error?.response?.data?.message || "Backend offline. Use 'Explore Demo Account' below to test!");
       console.log(error);
     }
     setUser({
@@ -36,6 +36,20 @@ const navigate=useNavigate();
       password: ""
     });
   };
+
+  const demoLoginHandler = () => {
+    const demoUser = {
+      _id: "demo-user-me",
+      fullName: "Md Irshad",
+      username: "mdirshad",
+      gender: "male",
+      profilePhoto: ""
+    };
+    dispatch(setAuthUser(demoUser));
+    toast.success("Welcome, Md Irshad (Demo Mode)!");
+    navigate("/");
+  };
+
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
       <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
@@ -85,6 +99,23 @@ const navigate=useNavigate();
               className="w-full py-2.5 rounded-lg bg-[#00a884] hover:bg-[#008f6f] active:scale-98 text-white font-medium text-sm shadow-md transition-all"
             >
               Login
+            </button>
+          </div>
+
+          <div className="relative flex items-center justify-center my-2 pt-1">
+            <div className="border-t border-gray-200 w-full"></div>
+            <span className="bg-white px-2 text-xs text-gray-400">or</span>
+            <div className="border-t border-gray-200 w-full"></div>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={demoLoginHandler}
+              className="w-full py-2.5 rounded-lg border border-emerald-500/80 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 active:scale-98 font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-xs"
+            >
+              <span>🚀</span>
+              <span>Explore Demo Account (Instant Access)</span>
             </button>
           </div>
         </form>

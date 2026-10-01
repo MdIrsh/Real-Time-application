@@ -18,12 +18,14 @@ const Sidebar = () => {
 
   const logoutHandler = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/v1/user/logout`);
-      dispatch(setAuthUser(null));
-      navigate("/login");
-      toast.success(res.data.message || "Logged out successfully");
+      await axios.get(`http://localhost:5000/api/v1/user/logout`);
     } catch (error) {
-      console.log(error);
+      console.log("Backend logout error:", error);
+    } finally {
+      dispatch(setAuthUser(null));
+      dispatch(setSelectedUser(null));
+      navigate("/login");
+      toast.success("Logged out successfully");
     }
   };
 

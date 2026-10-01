@@ -12,12 +12,32 @@ const Signup = () => {
     confirmPassword: "",
     gender: "",
   });
-  const navigate=useNavigate();
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
   const handleCheckbox = (gender) => {
     setUser({ ...user, gender });
   };
+
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+
+    if (!user.fullName.trim() || !user.username.trim() || !user.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (!user.gender) {
+      toast.error("Please select a gender (Male or Female)");
+      return;
+    }
+
+    if (user.password !== user.confirmPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await axios.post(
         `${BASE_URL}/api/v1/user/register`,
@@ -31,20 +51,19 @@ const Signup = () => {
       );
 
       if (res.data.success) {
+        toast.success(res.data.message || "Account created successfully!");
         navigate("/login");
-        toast.success(res.data.message);
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Signup failed!");
+      const errorMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Signup failed! Check backend connection.";
+      toast.error(errorMsg);
       console.log(error);
+    } finally {
+      setLoading(false);
     }
-    setUser({
-      fullName: "",
-      username: "",
-      password: "",
-      confirmPassword: "",
-      gender: "",
-    });
   };
 
   return (
@@ -150,9 +169,13 @@ const Signup = () => {
           <div>
             <button
               type="submit"
-              className="w-full py-2.5 rounded-lg bg-[#00a884] hover:bg-[#008f6f] active:scale-98 text-white font-medium text-sm shadow-md transition-all"
+              disabled={loading}
+              className="w-full py-2.5 rounded-lg bg-[#00a884] hover:bg-[#008f6f] disabled:opacity-60 active:scale-98 text-white font-medium text-sm shadow-md transition-all flex items-center justify-center gap-2"
             >
-              Signup
+              {loading && (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              )}
+              <span>{loading ? "Creating Account..." : "Signup"}</span>
             </button>
           </div>
         </form>

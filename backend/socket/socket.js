@@ -7,9 +7,11 @@ const app=express();
 const server=http.createServer(app);
 const io=new Server(server,{
   cors:{
-    origin:['http://localhost:3000'],
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     methods:['GET', 'POST'],
-    
+    credentials: true,
   },
 });
 const userSocketMap={};

@@ -9,6 +9,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
+import { BASE_URL } from "../config/api";
 
 const Sidebar = () => {
   const [search, setSearch] = useState("");
@@ -18,7 +19,7 @@ const Sidebar = () => {
 
   const logoutHandler = async () => {
     try {
-      await axios.get(`http://localhost:5000/api/v1/user/logout`);
+      await axios.get(`${BASE_URL}/api/v1/user/logout`);
     } catch (error) {
       console.log("Backend logout error:", error);
     } finally {

@@ -13,10 +13,22 @@ const PORT = process.env.PORT || 5000;
 app.use(express.urlencoded({ extended: true}));
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-const corsOption={
-  origin:"http://localhost:3000",
-  credentials:true,
-}
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://real-time-application-cyan.vercel.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+const corsOption = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true,
+};
 
 app.use(cors(corsOption));
 

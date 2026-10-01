@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setMessages } from "../redux/messageSlice";
 import { generateAiReply } from "../utils/metaAi";
 import toast from "react-hot-toast";
+import { BASE_URL } from "../config/api";
 
 const POPULAR_EMOJIS = [
   "😀", "😂", "😍", "🥰", "😎", "🔥", "👍", "🙏", "❤️", "🎉",
@@ -135,7 +136,7 @@ const SendInput = () => {
     // Real backend message if not demo contact
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/v1/message/send/${selectedUser._id}`,
+        `${BASE_URL}/api/v1/message/send/${selectedUser._id}`,
         {
           message: currentText || (imageUrl ? "📷 Shared an image" : ""),
           image: imageUrl,

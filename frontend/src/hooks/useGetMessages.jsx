@@ -3,6 +3,7 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages } from "../redux/messageSlice";
 import { getInitialMetaAiMessages } from "../utils/metaAi";
+import { BASE_URL } from "../config/api";
 
 const useGetMessages = () => {
   const { selectedUser } = useSelector((store) => store.user);
@@ -33,7 +34,7 @@ const useGetMessages = () => {
       try {
         axios.defaults.withCredentials = true;
         const res = await axios.get(
-          `http://localhost:5000/api/v1/message/${selectedUser._id}`
+          `${BASE_URL}/api/v1/message/${selectedUser._id}`
         );
         dispatch(setMessages(res.data));
       } catch (error) {

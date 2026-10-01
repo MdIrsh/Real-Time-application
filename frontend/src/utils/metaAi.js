@@ -330,6 +330,18 @@ export const generateAiReply = async (userPrompt) => {
     return "Hello! 😊 Main Meta AI hoon. Main aapki kya madad kar sakta hoon aaj? Aap mujhse koi bhi sawal pooch sakte hain ya coding, GK, study me help le sakte hain!";
   }
 
+  if (/^(ok|okay|thik hai|theek hai|thik|theek|acha|achha|hmm|hmmm|sahi hai|fine)$/i.test(query)) {
+    return "Ji bilkul! 😊 Agar aapka koi aur sawal ya kaam ho toh zaroor batayein, main hamesha madad ke liye yahan hoon.";
+  }
+
+  if (/^(thanks|thank you|shukriya|dhanyawad|dhanyavad|tq|thx)/i.test(query)) {
+    return "You're most welcome! 😊 Khushi hui aapki madad karke. Koi aur sawal ho toh bejhijhak poochhein!";
+  }
+
+  if (/^(bye|good night|gn|alvida|tata)/i.test(query)) {
+    return "Alvida! Apna khayal rakhein aur jab bhi zaroorat ho, Meta AI ko yaad karein. Have a great day! 👋✨";
+  }
+
   if (query.includes("shayari") || query.includes("kavita")) {
     return "Yeh rahi aapke liye ek khoobsurat shayari ✨:\n\n*\"Manzil mile na mile yeh to mukaddar ki baat hai,*\n*Hum koshish bhi na karein yeh to galat baat hai!\"* 🌟";
   }

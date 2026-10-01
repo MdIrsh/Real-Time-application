@@ -1,6 +1,6 @@
 # 💬 Real-Time Chat Application with Meta AI Assistant
 
-![Real-Time Chat App with Meta AI](./chat_app_showcase.jpg)
+![Real-Time Chat App with Meta AI](./chat_app_ui.png)
 
 A modern, full-stack real-time messaging application inspired by WhatsApp, featuring live 1-on-1 chatting, active user status indicators, and an integrated **Meta AI (Llama 3)** assistant for instant intelligent replies, general knowledge, and coding help.
 

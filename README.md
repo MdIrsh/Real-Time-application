@@ -79,4 +79,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to view the 
 
 ## 👨‍💻 Author
 
-- **Md Irshad** - [GitHub Profile](https://github.com/MdIrsh)
+- **Md Irshad**
+  - 🐙 **GitHub:** [github.com/MdIrsh](https://github.com/MdIrsh)
+  - 💼 **LinkedIn:** [linkedin.com/in/md-irshad-22212428a](https://www.linkedin.com/in/md-irshad-22212428a)

@@ -6,13 +6,13 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setOtherUsers, setAuthUser, setSelectedUser } from "../redux/userSlice";
+import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
 
 const Sidebar = () => {
   const [search, setSearch] = useState("");
-  const { otherUsers, authUser, selectedUser } = useSelector((store) => store.user);
+  const { authUser, selectedUser } = useSelector((store) => store.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

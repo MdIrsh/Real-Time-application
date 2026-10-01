@@ -10,7 +10,10 @@ const Message = ({ message }) => {
     scroll.current?.scrollIntoView({ behavior: "smooth" });
   }, [message]);
 
-  const isSentByMe = authUser?._id === message?.senderId;
+  const isSentByMe =
+    message?.isMe ||
+    (authUser?._id && authUser._id === message?.senderId) ||
+    message?.senderId === "demo-user-me";
   const isMetaAi = message?.senderId === "meta-ai";
   const isTyping = message?.isTyping;
 

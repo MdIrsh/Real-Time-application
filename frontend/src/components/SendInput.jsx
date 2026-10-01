@@ -92,7 +92,47 @@ const SendInput = () => {
       return;
     }
 
-    // Normal user-to-user backend message
+    // User-to-user message (demo contacts or real backend)
+    const userMsg = {
+      _id: `user-msg-${Date.now()}`,
+      senderId: authUser?._id || "demo-user-me",
+      isMe: true,
+      message: currentText || (imageUrl ? "📷 Shared an image" : ""),
+      image: imageUrl || null,
+      createdAt: new Date().toISOString(),
+    };
+
+    const currentList = messages || [];
+    const updatedMessages = [...currentList, userMsg];
+    dispatch(setMessages(updatedMessages));
+
+    const isDemoContact = selectedUser._id?.startsWith("demo-contact");
+
+    if (isDemoContact) {
+      // Simulate realistic auto-reply from demo contact after 1.2s
+      const contactReplies = [
+        "Hey! Got your message 👍",
+        "Sounds good! How are you doing today?",
+        "Awesome! Thanks for testing this out 😊",
+        "Looks great! The chat interface is really smooth 🔥",
+        "Haha nice! Let's catch up soon 🙌",
+        "Super responsive! Loving this WhatsApp clone 🚀"
+      ];
+      const randomReply = contactReplies[Math.floor(Math.random() * contactReplies.length)];
+
+      setTimeout(() => {
+        const replyMsg = {
+          _id: `reply-${Date.now()}`,
+          senderId: selectedUser._id,
+          message: randomReply,
+          createdAt: new Date().toISOString(),
+        };
+        dispatch(setMessages([...updatedMessages, replyMsg]));
+      }, 1200);
+      return;
+    }
+
+    // Real backend message if not demo contact
     try {
       const res = await axios.post(
         `http://localhost:5000/api/v1/message/send/${selectedUser._id}`,
@@ -111,22 +151,12 @@ const SendInput = () => {
         const newMsgObj = {
           ...res.data.newMessage,
           image: imageUrl || null,
+          isMe: true,
         };
-        dispatch(setMessages([...(messages || []), newMsgObj]));
+        dispatch(setMessages([...updatedMessages.slice(0, -1), newMsgObj]));
       }
     } catch (error) {
-      console.log(error);
-      // Fallback local update if offline
-      if (imageUrl) {
-        const localImgMsg = {
-          _id: `local-img-${Date.now()}`,
-          senderId: authUser?._id,
-          message: currentText,
-          image: imageUrl,
-          createdAt: new Date().toISOString(),
-        };
-        dispatch(setMessages([...(messages || []), localImgMsg]));
-      }
+      console.log("Backend offline, message kept in local chat state:", error);
     }
   };
 

@@ -1,8 +1,15 @@
 # 💬 Real-Time Chat Application with Meta AI Assistant
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://real-time-application-cyan.vercel.app)
+[![Backend API](https://img.shields.io/badge/Backend_API-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://real-time-application-35ha.onrender.com)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MdIrsh/Real-Time-application)
+
 ![Real-Time Chat App with Meta AI](./chat_app_ui.png)
 
 A modern, full-stack real-time messaging application inspired by WhatsApp, featuring live 1-on-1 chatting, active user status indicators, and an integrated **Meta AI (Llama 3)** assistant for instant intelligent replies, general knowledge, and coding help.
+
+🌐 **Live Demo:** [https://real-time-application-cyan.vercel.app](https://real-time-application-cyan.vercel.app)  
+🚀 **Live Backend:** [https://real-time-application-35ha.onrender.com](https://real-time-application-35ha.onrender.com)
 
 ---
 

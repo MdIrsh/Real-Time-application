@@ -70,11 +70,18 @@ export const login= async(req,res)=>{
         userId:user._id
       }
      const token= await jwt.sign(tokenData, process.env.JWT_SECRET_KEY ,{expiresIn:'1d'});
+     let profilePhoto = user.profilePhoto;
+     if (!profilePhoto || profilePhoto.includes("avatar.iran.liara.run")) {
+       const seed = encodeURIComponent(user.username || user.fullName || "User");
+       profilePhoto = user.gender === "female"
+         ? `https://api.dicebear.com/10.x/lorelei/svg?seed=${seed}`
+         : `https://api.dicebear.com/10.x/personas/svg?seed=${seed}`;
+     }
       return res.status(200).cookie("token",token,{maxAge:1*24*60*60*1000,httpOnly:true,sameSite:'strict'}).json({
         _id:user._id,
         username:user.username,
         fullName:user.fullName,
-        profilePhoto:user.profilePhoto,
+        profilePhoto:profilePhoto,
     
       });
       
@@ -96,7 +103,23 @@ export const logout=(req,res)=>{
     try {
       const loggedInUserId= req.id;
       const otherUsers= await User.find({_id:{$ne:loggedInUserId}}).select("-password");
-     return res.status(200).json(otherUsers);
+
+      const sanitizedUsers = otherUsers.map(u => {
+        let photo = u.profilePhoto;
+        if (!photo || photo.includes("avatar.iran.liara.run")) {
+          const seed = encodeURIComponent(u.username || u.fullName || "User");
+          photo = u.gender === "female"
+            ? `https://api.dicebear.com/10.x/lorelei/svg?seed=${seed}`
+            : `https://api.dicebear.com/10.x/personas/svg?seed=${seed}`;
+        }
+        const userObj = u.toObject ? u.toObject() : u;
+        return {
+          ...userObj,
+          profilePhoto: photo
+        };
+      });
+
+     return res.status(200).json(sanitizedUsers);
     
     } catch(error) {
       console.log(error);

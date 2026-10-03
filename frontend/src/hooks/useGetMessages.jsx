@@ -7,10 +7,19 @@ import { BASE_URL } from "../config/api";
 
 const useGetMessages = () => {
   const { selectedUser } = useSelector((store) => store.user);
+  const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (!selectedUser?._id) return;
+
+    if (
+      socket &&
+      selectedUser._id !== "meta-ai" &&
+      !selectedUser._id.startsWith("demo-contact")
+    ) {
+      socket.emit("markAsSeen", { senderId: selectedUser._id });
+    }
 
     if (selectedUser._id === "meta-ai") {
       const saved = localStorage.getItem("meta_ai_chat_history");
@@ -53,7 +62,7 @@ const useGetMessages = () => {
     };
 
     fetchMessages();
-  }, [selectedUser, dispatch]);
+  }, [selectedUser, socket, dispatch]);
 };
 
 export default useGetMessages;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { IoCheckmarkDoneSharp } from "react-icons/io5";
+import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
 
 const Message = ({ message }) => {
   const scroll = useRef();
@@ -70,10 +70,21 @@ const Message = ({ message }) => {
         {/* Typing indicator or message content */}
         {isTyping ? (
           <div className="flex items-center gap-1.5 py-1 px-1">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "300ms" }} />
-            <span className="text-xs text-gray-500 ml-1.5 italic font-medium">Meta AI is thinking...</span>
+            <span
+              className="w-2 h-2 rounded-full bg-blue-500 animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <span
+              className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <span
+              className="w-2 h-2 rounded-full bg-pink-500 animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
+            <span className="text-xs text-gray-500 ml-1.5 italic font-medium">
+              Meta AI is thinking...
+            </span>
           </div>
         ) : (
           message?.message && (
@@ -88,7 +99,25 @@ const Message = ({ message }) => {
           <span className="float-right ml-2 mt-1 flex items-center gap-1 text-[11px] text-[#667781] select-none">
             <span>{formattedTime}</span>
             {isSentByMe && (
-              <IoCheckmarkDoneSharp className="text-[#53bdeb] text-sm" />
+              message?.seen ? (
+                // Double Blue Tick: Seen / Read by receiver
+                <IoCheckmarkDoneSharp
+                  className="text-[#53bdeb] text-sm"
+                  title="Read"
+                />
+              ) : message?.delivered ? (
+                // Double Gray Tick: Delivered to receiver
+                <IoCheckmarkDoneSharp
+                  className="text-[#8696a0] text-sm"
+                  title="Delivered"
+                />
+              ) : (
+                // Single Gray Tick: Sent from your device
+                <IoCheckmarkSharp
+                  className="text-[#8696a0] text-sm"
+                  title="Sent"
+                />
+              )
             )}
           </span>
         )}

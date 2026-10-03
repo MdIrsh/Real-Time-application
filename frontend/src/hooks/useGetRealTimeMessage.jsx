@@ -5,6 +5,7 @@ import {
   incrementUnreadCount,
   setLastMessage,
   clearUnreadCount,
+  markMessagesSeen,
 } from "../redux/messageSlice";
 import { setSelectedUser } from "../redux/userSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
@@ -81,6 +82,8 @@ const useGetRealTimeMessage = () => {
       if (isCurrentChatActive) {
         // Active chat is open: add directly to messages list
         dispatch(addMessage(newMessage));
+        // Immediately notify sender that message has been seen (turns ticks Blue)
+        socket.emit("markAsSeen", { senderId });
       } else {
         // Chat is not currently open: increment unread count & show toast
         dispatch(incrementUnreadCount(senderId));
@@ -92,6 +95,7 @@ const useGetRealTimeMessage = () => {
               onClick={() => {
                 dispatch(setSelectedUser(senderDetails));
                 dispatch(clearUnreadCount(senderId));
+                socket.emit("markAsSeen", { senderId });
                 toast.dismiss(t.id);
               }}
               className={`${
@@ -131,6 +135,7 @@ const useGetRealTimeMessage = () => {
                   e.stopPropagation();
                   dispatch(setSelectedUser(senderDetails));
                   dispatch(clearUnreadCount(senderId));
+                  socket.emit("markAsSeen", { senderId });
                   toast.dismiss(t.id);
                 }}
                 className="shrink-0 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -162,14 +167,22 @@ const useGetRealTimeMessage = () => {
         onClick: () => {
           dispatch(setSelectedUser(senderDetails));
           dispatch(clearUnreadCount(senderId));
+          socket.emit("markAsSeen", { senderId });
         },
       });
     };
 
+    // When the other user sees our messages, update ticks to Double Blue Tick!
+    const handleMessagesSeen = ({ seenBy }) => {
+      dispatch(markMessagesSeen(seenBy));
+    };
+
     socket.on("newMessage", handleNewMessage);
+    socket.on("messagesSeen", handleMessagesSeen);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("messagesSeen", handleMessagesSeen);
     };
   }, [socket, dispatch]);
 };

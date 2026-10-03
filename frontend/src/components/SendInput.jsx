@@ -3,7 +3,7 @@ import { IoSend } from "react-icons/io5";
 import { BsPlusLg, BsCamera, BsMicFill, BsEmojiSmile, BsTrash } from "react-icons/bs";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, setLastMessage } from "../redux/messageSlice";
+import { setMessages, setLastMessage, markMessageDelivered } from "../redux/messageSlice";
 import { generateAiReply } from "../utils/metaAi";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl } from "../utils/avatar";
@@ -89,7 +89,8 @@ const SendInput = () => {
         createdAt: new Date().toISOString(),
       };
 
-      const finalMessages = [...updatedWithUser, aiMsg];
+      const seenUserMsg = { ...userMsg, delivered: true, seen: true };
+      const finalMessages = [...currentList, seenUserMsg, aiMsg];
       dispatch(setMessages(finalMessages));
       localStorage.setItem("meta_ai_chat_history", JSON.stringify(finalMessages));
       return;
@@ -99,9 +100,12 @@ const SendInput = () => {
     const userMsg = {
       _id: `user-msg-${Date.now()}`,
       senderId: authUser?._id || "demo-user-me",
+      receiverId: selectedUser?._id,
       isMe: true,
       message: currentText || (imageUrl ? "📷 Shared an image" : ""),
       image: imageUrl || null,
+      delivered: false, // Single gray tick ✓ initially
+      seen: false, // Becomes blue tick only once seen
       createdAt: new Date().toISOString(),
     };
 
@@ -114,13 +118,20 @@ const SendInput = () => {
         text: currentText || (imageUrl ? "📷 Shared an image" : ""),
         time: userMsg.createdAt,
         isMe: true,
+        seen: false,
+        delivered: false,
       })
     );
 
     const isDemoContact = selectedUser._id?.startsWith("demo-contact");
 
     if (isDemoContact) {
-      // Simulate realistic auto-reply from demo contact after 1.2s
+      // 1. After 150ms: Turn to Double Gray Tick (Delivered)
+      setTimeout(() => {
+        dispatch(markMessageDelivered(userMsg._id));
+      }, 150);
+
+      // 2. When contact replies after 450ms: Turn to Double Blue Tick (Seen)
       const contactReplies = [
         "Hey! Got your message 👍",
         "Sounds good! How are you doing today?",
@@ -138,7 +149,10 @@ const SendInput = () => {
           message: randomReply,
           createdAt: new Date().toISOString(),
         };
-        dispatch(setMessages([...updatedMessages, replyMsg]));
+        const seenUpdatedMessages = updatedMessages.map((m) =>
+          m._id === userMsg._id ? { ...m, delivered: true, seen: true } : m
+        );
+        dispatch(setMessages([...seenUpdatedMessages, replyMsg]));
         dispatch(
           setLastMessage({
             userId: selectedUser._id,
@@ -153,7 +167,7 @@ const SendInput = () => {
           messageText: randomReply,
           isCurrentChatActive: true,
         });
-      }, 400);
+      }, 450);
       return;
     }
 
@@ -177,6 +191,8 @@ const SendInput = () => {
           ...res.data.newMessage,
           image: imageUrl || null,
           isMe: true,
+          delivered: res.data.newMessage.delivered || false,
+          seen: res.data.newMessage.seen || false,
         };
         dispatch(setMessages([...updatedMessages.slice(0, -1), newMsgObj]));
       }

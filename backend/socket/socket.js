@@ -70,6 +70,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on("markAsSeen", ({ senderId }) => {
+    const userId = socket.handshake.query.userId;
+    if (userId && senderId) {
+      const senderSocketId = getReceiverSocketId(senderId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messagesSeen", { seenBy: userId });
+      }
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('user disconnected', socket.id);
     if (userId && userSocketMap[userId] === socket.id) {

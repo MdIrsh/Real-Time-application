@@ -5,7 +5,7 @@ const messageSlice = createSlice({
   initialState: {
     messages: null,
     unreadCounts: {}, // { [userId]: number }
-    lastMessages: {}, // { [userId]: { text: string, time: string, isMe?: boolean } }
+    lastMessages: {}, // { [userId]: { text: string, time: string, isMe?: boolean, seen?: boolean, delivered?: boolean } }
   },
   reducers: {
     setMessages: (state, action) => {
@@ -37,13 +37,38 @@ const messageSlice = createSlice({
       state.unreadCounts[userId] = 0;
     },
     setLastMessage: (state, action) => {
-      const { userId, text, time, isMe } = action.payload || {};
+      const { userId, text, time, isMe, seen, delivered } = action.payload || {};
       if (!userId) return;
       state.lastMessages[userId] = {
         text: text || "",
         time: time || new Date().toISOString(),
         isMe: !!isMe,
+        seen: !!seen,
+        delivered: !!delivered,
       };
+    },
+    markMessagesSeen: (state, action) => {
+      const seenBy = action.payload;
+      if (state.messages) {
+        state.messages.forEach((msg) => {
+          if (
+            msg.isMe ||
+            (seenBy && String(msg.receiverId) === String(seenBy))
+          ) {
+            msg.seen = true;
+          }
+        });
+      }
+      if (seenBy && state.lastMessages[seenBy] && state.lastMessages[seenBy].isMe) {
+        state.lastMessages[seenBy].seen = true;
+      }
+    },
+    markMessageDelivered: (state, action) => {
+      const msgId = action.payload;
+      if (state.messages) {
+        const found = state.messages.find((m) => m._id === msgId);
+        if (found) found.delivered = true;
+      }
     },
   },
 });
@@ -54,6 +79,8 @@ export const {
   incrementUnreadCount,
   clearUnreadCount,
   setLastMessage,
+  markMessagesSeen,
+  markMessageDelivered,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;

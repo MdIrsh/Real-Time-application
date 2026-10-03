@@ -5,22 +5,28 @@ const messageModel = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true 
-
   },
-    receiverId: {
+  receiverId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true 
-
   },
-  message:{
+  message: {
     type: String,
     required: true
   },
   image: {
     type: String,
     default: null
+  },
+  delivered: {
+    type: Boolean,
+    default: false
+  },
+  seen: {
+    type: Boolean,
+    default: false
   }
+}, { timestamps: true });
 
-},{timestamps:true});
 export const Message = mongoose.model('Message', messageModel);

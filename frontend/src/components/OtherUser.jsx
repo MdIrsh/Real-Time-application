@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../redux/userSlice";
 import { clearUnreadCount } from "../redux/messageSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
-import { IoCheckmarkDoneSharp } from "react-icons/io5";
+import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
 
 const OtherUser = ({ user }) => {
   const dispatch = useDispatch();
@@ -93,7 +93,13 @@ const OtherUser = ({ user }) => {
             {lastMsg ? (
               <>
                 {lastMsg.isMe && (
-                  <IoCheckmarkDoneSharp className="text-[#53bdeb] text-sm shrink-0 inline" />
+                  lastMsg.seen ? (
+                    <IoCheckmarkDoneSharp className="text-[#53bdeb] text-sm shrink-0 inline" title="Read" />
+                  ) : lastMsg.delivered ? (
+                    <IoCheckmarkDoneSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Delivered" />
+                  ) : (
+                    <IoCheckmarkSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Sent" />
+                  )
                 )}
                 <span className="truncate">{lastMsg.text}</span>
               </>

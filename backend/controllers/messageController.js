@@ -9,6 +9,9 @@ export const sendMessage = async (req, res) => {
     const receiverId = req.params.id;
     const { message, image } = req.body;
 
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    const isReceiverOnline = !!receiverSocketId;
+
     // Run lookups and message creation in parallel for maximum speed
     const [conversation, newMessage, sender] = await Promise.all([
       Conversation.findOne({
@@ -19,12 +22,13 @@ export const sendMessage = async (req, res) => {
         receiverId,
         message,
         image,
+        delivered: isReceiverOnline, // delivered if receiver is online
+        seen: false, // only marked true once receiver views the chat
       }),
       User.findById(senderId).select("fullName username profilePhoto").lean(),
     ]);
 
     // 1. Emit Socket.IO event IMMEDIATELY to receiver (<15ms delivery)
-    const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       const messagePayload = {
         ...newMessage.toObject(),
@@ -58,8 +62,21 @@ export const sendMessage = async (req, res) => {
 
 export const getMessage = async (req, res) => {
   try {
-    const receiverId = req.params.id;
-    const senderId = req.id;
+    const receiverId = req.params.id; // user whose chat is opened
+    const senderId = req.id; // me
+
+    // Mark previous unread messages from this user as seen (Blue Tick)
+    await Message.updateMany(
+      { senderId: receiverId, receiverId: senderId, seen: false },
+      { seen: true }
+    );
+
+    // Notify the sender in real-time that their messages are now seen
+    const senderSocketId = getReceiverSocketId(receiverId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", { seenBy: senderId });
+    }
+
     const conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
     }).populate("messages");
@@ -67,6 +84,28 @@ export const getMessage = async (req, res) => {
     return res.status(200).json(conversation?.messages || []);
   } catch (error) {
     console.error("getMessage error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const markAsSeen = async (req, res) => {
+  try {
+    const senderId = req.params.id; // who sent the messages
+    const receiverId = req.id; // current user who read them
+
+    await Message.updateMany(
+      { senderId, receiverId, seen: false },
+      { seen: true }
+    );
+
+    const senderSocketId = getReceiverSocketId(senderId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", { seenBy: receiverId });
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("markAsSeen error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

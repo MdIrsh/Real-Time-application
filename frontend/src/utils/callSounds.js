@@ -108,3 +108,32 @@ export const startIncomingRingtone = () => {
   playMelodicChime();
   incomingInterval = setInterval(playMelodicChime, 2400);
 };
+
+/**
+ * Positive chime when call connects successfully
+ */
+export const playCallConnectedTone = () => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.1);
+
+      gain.gain.setValueAtTime(0, now + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.1 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + i * 0.1);
+      osc.stop(now + i * 0.1 + 0.25);
+    });
+  } catch (e) {
+    console.log("Connect tone error:", e);
+  }
+};

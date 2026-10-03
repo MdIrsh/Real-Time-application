@@ -11,6 +11,7 @@ import {
   startOutgoingRingtone,
   startIncomingRingtone,
   stopCallSounds,
+  playCallConnectedTone,
 } from "../utils/callSounds";
 import toast from "react-hot-toast";
 
@@ -171,9 +172,24 @@ export const CallProvider = ({ children }) => {
     }
   };
 
+  // Unlock audio policy on mobile browsers (Android/iOS)
+  const unlockMobileAudio = () => {
+    try {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.play().catch(() => {});
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    } catch (e) {
+      console.warn("Mobile audio unlock:", e);
+    }
+  };
+
   // Attach remote stream to audio & video elements
   const attachRemoteStream = (stream) => {
     stopCallSounds();
+    playCallConnectedTone();
     setCallStatus("Connected");
 
     if (remoteAudioRef.current) {
@@ -207,6 +223,7 @@ export const CallProvider = ({ children }) => {
       return;
     }
 
+    unlockMobileAudio();
     setCallUser(user);
     setCallType(type);
     setIsVideoOff(type === "audio");
@@ -223,6 +240,7 @@ export const CallProvider = ({ children }) => {
       await getUserMediaStream(type);
       setTimeout(() => {
         stopCallSounds();
+        playCallConnectedTone();
         setCallStatus("Connected");
         toast.success(`Connected with ${user.fullName}`);
 
@@ -295,6 +313,7 @@ export const CallProvider = ({ children }) => {
   // Accept incoming call
   const acceptIncomingCall = async () => {
     stopCallSounds();
+    unlockMobileAudio();
     const targetUser = callUserRef.current;
     const signal = incomingSignalRef.current;
     if (!targetUser || !signal) {

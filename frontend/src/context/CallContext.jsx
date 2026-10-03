@@ -21,6 +21,8 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
   ],
 };
 
@@ -32,7 +34,7 @@ export const CallProvider = ({ children }) => {
   const [isIncoming, setIsIncoming] = useState(false);
   const [callUser, setCallUser] = useState(null);
   const [callType, setCallType] = useState("audio"); // "audio" | "video"
-  const [callStatus, setCallStatus] = useState("Ringing..."); // "Ringing...", "Connected", "Ended"
+  const [callStatus, setCallStatus] = useState("Ringing..."); // "Calling...", "Connected", "Ended"
   const [callSeconds, setCallSeconds] = useState(0);
 
   const [isMuted, setIsMuted] = useState(false);
@@ -42,6 +44,7 @@ export const CallProvider = ({ children }) => {
   const peerConnectionRef = useRef(null);
   const incomingSignalRef = useRef(null);
   const callUserRef = useRef(null);
+  const candidateQueueRef = useRef([]);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -54,6 +57,10 @@ export const CallProvider = ({ children }) => {
   // Clean up peer connection and media tracks
   const cleanupCall = useCallback(() => {
     stopCallSounds();
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -76,6 +83,7 @@ export const CallProvider = ({ children }) => {
     }
 
     incomingSignalRef.current = null;
+    candidateQueueRef.current = [];
     setCallActive(false);
     setIsIncoming(false);
     setCallUser(null);
@@ -103,17 +111,36 @@ export const CallProvider = ({ children }) => {
     cleanupCall();
   }, [socket, cleanupCall]);
 
-  // Acquire camera and mic stream
+  // Flush queued ICE candidates after setRemoteDescription completes
+  const flushCandidateQueue = async (pc) => {
+    while (candidateQueueRef.current.length > 0) {
+      const cand = candidateQueueRef.current.shift();
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (err) {
+        console.error("Error adding queued candidate:", err);
+      }
+    }
+  };
+
+  // Acquire camera and mic stream with high-quality audio
   const getUserMediaStream = async (type) => {
     try {
       const constraints = {
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
         video:
           type === "video"
             ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
             : false,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream.getAudioTracks().forEach((t) => {
+        t.enabled = true;
+      });
       localStreamRef.current = stream;
 
       if (localVideoRef.current) {
@@ -122,18 +149,52 @@ export const CallProvider = ({ children }) => {
       return stream;
     } catch (err) {
       console.log("Could not get requested media, falling back to audio:", err);
-      // Fallback to audio-only if video fails or not permitted
       try {
         const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
           video: false,
+        });
+        audioOnlyStream.getAudioTracks().forEach((t) => {
+          t.enabled = true;
         });
         localStreamRef.current = audioOnlyStream;
         return audioOnlyStream;
       } catch (audioErr) {
         console.error("Audio permission denied:", audioErr);
-        toast.error("Microphone/Camera permission needed for calling");
+        toast.error("Microphone permission needed to speak!");
         return null;
+      }
+    }
+  };
+
+  // Attach remote stream to audio & video elements
+  const attachRemoteStream = (stream) => {
+    stopCallSounds();
+    setCallStatus("Connected");
+
+    if (remoteAudioRef.current) {
+      if (remoteAudioRef.current.srcObject !== stream) {
+        remoteAudioRef.current.srcObject = stream;
+      }
+      remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.muted = false;
+      const playPromise = remoteAudioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((e) => console.warn("Audio play auto-policy warning:", e));
+      }
+    }
+
+    if (remoteVideoRef.current) {
+      if (remoteVideoRef.current.srcObject !== stream) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+      const videoPlay = remoteVideoRef.current.play();
+      if (videoPlay !== undefined) {
+        videoPlay.catch((e) => console.warn("Video play error:", e));
       }
     }
   };
@@ -153,8 +214,9 @@ export const CallProvider = ({ children }) => {
     setCallActive(true);
     setIsIncoming(false);
     setCallSeconds(0);
+    candidateQueueRef.current = [];
 
-    // If demo contact, simulate connection for testing
+    // If demo contact, simulate connection with voice greeting test!
     const isDemo = user._id?.startsWith("demo-contact");
     if (isDemo) {
       startOutgoingRingtone();
@@ -163,6 +225,17 @@ export const CallProvider = ({ children }) => {
         stopCallSounds();
         setCallStatus("Connected");
         toast.success(`Connected with ${user.fullName}`);
+
+        // Provide real voice feedback so the user hears voice through speakers!
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const greeting = new SpeechSynthesisUtterance(
+            `Hello ${authUser?.fullName || "there"}! Got your call. Your audio calling, microphone, and speakers are working great!`
+          );
+          greeting.lang = "en-US";
+          greeting.rate = 1.0;
+          window.speechSynthesis.speak(greeting);
+        }
       }, 2500);
       return;
     }
@@ -185,16 +258,8 @@ export const CallProvider = ({ children }) => {
 
     // Handle remote tracks
     pc.ontrack = (event) => {
-      stopCallSounds();
-      setCallStatus("Connected");
-      if (remoteAudioRef.current && event.streams[0]) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch(() => {});
-      }
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        remoteVideoRef.current.play().catch(() => {});
-      }
+      const incomingStream = event.streams[0] || new MediaStream([event.track]);
+      attachRemoteStream(incomingStream);
     };
 
     // Send ICE candidates to remote peer
@@ -209,7 +274,10 @@ export const CallProvider = ({ children }) => {
 
     // Create and send SDP Offer
     try {
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === "video",
+      });
       await pc.setLocalDescription(offer);
 
       socket.emit("callUser", {
@@ -251,16 +319,8 @@ export const CallProvider = ({ children }) => {
     });
 
     pc.ontrack = (event) => {
-      stopCallSounds();
-      setCallStatus("Connected");
-      if (remoteAudioRef.current && event.streams[0]) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch(() => {});
-      }
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        remoteVideoRef.current.play().catch(() => {});
-      }
+      const incomingStream = event.streams[0] || new MediaStream([event.track]);
+      attachRemoteStream(incomingStream);
     };
 
     pc.onicecandidate = (event) => {
@@ -274,6 +334,9 @@ export const CallProvider = ({ children }) => {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(signal));
+      // Flush any ICE candidates that arrived before remoteDescription was set
+      await flushCandidateQueue(pc);
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -332,7 +395,6 @@ export const CallProvider = ({ children }) => {
 
     // Incoming Call received
     const handleIncomingCall = ({ signal, from, callType: incomingType }) => {
-      // If already in a call, auto-reject busy
       if (callActive) {
         socket.emit("rejectCall", { to: from._id });
         return;
@@ -341,6 +403,7 @@ export const CallProvider = ({ children }) => {
       setCallUser(from);
       setCallType(incomingType || "audio");
       incomingSignalRef.current = signal;
+      candidateQueueRef.current = [];
       setCallActive(true);
       setIsIncoming(true);
       setCallStatus("Incoming Call...");
@@ -356,6 +419,8 @@ export const CallProvider = ({ children }) => {
           await peerConnectionRef.current.setRemoteDescription(
             new RTCSessionDescription(signal)
           );
+          // Flush any queued ICE candidates
+          await flushCandidateQueue(peerConnectionRef.current);
         } catch (e) {
           console.error("Error setting remote description on accept:", e);
         }
@@ -364,14 +429,17 @@ export const CallProvider = ({ children }) => {
 
     // ICE Candidate exchange
     const handleIceCandidate = async ({ candidate }) => {
-      if (peerConnectionRef.current && candidate) {
+      if (!candidate) return;
+      const pc = peerConnectionRef.current;
+      if (pc && pc.remoteDescription && pc.remoteDescription.type) {
         try {
-          await peerConnectionRef.current.addIceCandidate(
-            new RTCIceCandidate(candidate)
-          );
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
           console.error("Error adding received ICE candidate:", e);
         }
+      } else {
+        // Queue until remoteDescription is set!
+        candidateQueueRef.current.push(candidate);
       }
     };
 

@@ -57,11 +57,12 @@ const CallModal = () => {
         <div className="relative flex-1 my-3 flex items-center justify-center overflow-hidden rounded-2xl bg-zinc-900/90 border border-white/5">
           {callType === "video" ? (
             <div className="relative w-full h-full flex items-center justify-center bg-black">
-              {/* Remote Video Stream */}
+              {/* Remote Video Stream (muted because remoteAudioRef handles the voice stream) */}
               <video
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
+                muted
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   isConnected ? "opacity-100" : "opacity-0"
                 }`}

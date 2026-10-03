@@ -14,20 +14,69 @@ const io=new Server(server,{
     credentials: true,
   },
 });
-const userSocketMap={};
-io.on('connection', (socket)=>{
-  console.log('user connected',socket.id);
-  const userId=socket.handshake.query.userId
-  if(userId !==undefined) {
+const userSocketMap = {}; // { userId: socketId }
+
+export const getReceiverSocketId = (receiverId) => {
+  return userSocketMap[receiverId];
+};
+
+io.on('connection', (socket) => {
+  console.log('user connected', socket.id);
+  const userId = socket.handshake.query.userId;
+  if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
   }
   io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
- socket.on('disconnect', ()=>{
-   console.log('user disconnected', socket.id);
-   delete userSocketMap[userId];
-   io.emit('getOnlineUsers', Object.keys(userSocketMap));
- })
+  // WebRTC Calling Signaling Events
+  socket.on("callUser", ({ userToCall, signalData, from, callType }) => {
+    const receiverSocketId = getReceiverSocketId(userToCall);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("incomingCall", {
+        signal: signalData,
+        from,
+        callType,
+      });
+    } else {
+      socket.emit("callUnavailable", { message: "User is currently offline." });
+    }
+  });
 
-})
-export {app, io, server} 
+  socket.on("answerCall", ({ to, signal }) => {
+    const callerSocketId = getReceiverSocketId(to);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("callAccepted", { signal });
+    }
+  });
+
+  socket.on("iceCandidate", ({ to, candidate }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("iceCandidate", { candidate });
+    }
+  });
+
+  socket.on("endCall", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("callEnded");
+    }
+  });
+
+  socket.on("rejectCall", ({ to }) => {
+    const callerSocketId = getReceiverSocketId(to);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("callRejected");
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('user disconnected', socket.id);
+    if (userId && userSocketMap[userId] === socket.id) {
+      delete userSocketMap[userId];
+    }
+    io.emit('getOnlineUsers', Object.keys(userSocketMap));
+  });
+});
+
+export { app, io, server }; 

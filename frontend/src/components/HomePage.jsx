@@ -1,13 +1,15 @@
 import React from "react";
 import Sidebar from "./Sidebar";
 import MessageContainer from "./MessageContainer";
+import CallModal from "./CallModal";
+import IncomingCallModal from "./IncomingCallModal";
 import { useSelector } from "react-redux";
 
 const HomePage = () => {
   const { selectedUser } = useSelector((store) => store.user);
 
   return (
-    <div className="w-full h-full bg-white flex overflow-hidden select-none">
+    <div className="w-full h-full bg-white flex overflow-hidden select-none relative">
       {/* Sidebar: Visible on desktop, or on mobile when no chat is open */}
       <div
         className={`${
@@ -25,6 +27,10 @@ const HomePage = () => {
       >
         <MessageContainer />
       </div>
+
+      {/* WebRTC Audio and Video Call Modals */}
+      <CallModal />
+      <IncomingCallModal />
     </div>
   );
 };

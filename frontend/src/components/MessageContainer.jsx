@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import SendInput from "./SendInput";
 import Messages from "./Messages";
-import CallModal from "./CallModal";
+import { useCall } from "../context/CallContext";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../redux/userSlice";
 import { setMessages } from "../redux/messageSlice";
@@ -21,11 +21,10 @@ import { BsChatSquareDots } from "react-icons/bs";
 import toast from "react-hot-toast";
 
 const MessageContainer = () => {
-  const { selectedUser, authUser, onlineUsers } = useSelector((store) => store.user);
+  const { selectedUser, onlineUsers } = useSelector((store) => store.user);
   const dispatch = useDispatch();
+  const { startCall } = useCall();
 
-  const [callModalOpen, setCallModalOpen] = useState(false);
-  const [callType, setCallType] = useState("audio");
   const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => {
@@ -33,8 +32,7 @@ const MessageContainer = () => {
   }, [dispatch]);
 
   const handleStartCall = (type) => {
-    setCallType(type);
-    setCallModalOpen(true);
+    startCall({ user: selectedUser, type });
   };
 
   const clearChatHandler = () => {
@@ -174,15 +172,6 @@ const MessageContainer = () => {
           <div className="shrink-0">
             <SendInput />
           </div>
-
-          {/* Call Modal */}
-          <CallModal
-            isOpen={callModalOpen}
-            onClose={() => setCallModalOpen(false)}
-            user={selectedUser}
-            authUser={authUser}
-            callType={callType}
-          />
         </div>
       ) : (
         /* Empty State / WhatsApp Web Splash */

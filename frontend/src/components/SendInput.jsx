@@ -3,8 +3,10 @@ import { IoSend } from "react-icons/io5";
 import { BsPlusLg, BsCamera, BsMicFill, BsEmojiSmile, BsTrash } from "react-icons/bs";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages } from "../redux/messageSlice";
+import { setMessages, setLastMessage } from "../redux/messageSlice";
 import { generateAiReply } from "../utils/metaAi";
+import { triggerMessageNotification } from "../utils/notificationService";
+import { getAvatarUrl } from "../utils/avatar";
 import toast from "react-hot-toast";
 import { BASE_URL } from "../config/api";
 
@@ -106,6 +108,14 @@ const SendInput = () => {
     const currentList = messages || [];
     const updatedMessages = [...currentList, userMsg];
     dispatch(setMessages(updatedMessages));
+    dispatch(
+      setLastMessage({
+        userId: selectedUser._id,
+        text: currentText || (imageUrl ? "📷 Shared an image" : ""),
+        time: userMsg.createdAt,
+        isMe: true,
+      })
+    );
 
     const isDemoContact = selectedUser._id?.startsWith("demo-contact");
 
@@ -129,7 +139,21 @@ const SendInput = () => {
           createdAt: new Date().toISOString(),
         };
         dispatch(setMessages([...updatedMessages, replyMsg]));
-      }, 1200);
+        dispatch(
+          setLastMessage({
+            userId: selectedUser._id,
+            text: randomReply,
+            time: replyMsg.createdAt,
+            isMe: false,
+          })
+        );
+        triggerMessageNotification({
+          senderName: selectedUser.fullName,
+          senderAvatar: getAvatarUrl(selectedUser),
+          messageText: randomReply,
+          isCurrentChatActive: true,
+        });
+      }, 400);
       return;
     }
 

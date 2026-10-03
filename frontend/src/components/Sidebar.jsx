@@ -1,5 +1,12 @@
-import React, { useState } from "react";
-import { IoSearchSharp, IoLogOutOutline, IoShieldCheckmark } from "react-icons/io5";
+import React, { useState, useEffect } from "react";
+import {
+  IoSearchSharp,
+  IoLogOutOutline,
+  IoShieldCheckmark,
+  IoNotificationsOutline,
+  IoNotifications,
+  IoClose,
+} from "react-icons/io5";
 import { BsChatLeftTextFill } from "react-icons/bs";
 import OtherUsers from "./OtherUsers";
 import axios from "axios";
@@ -10,12 +17,26 @@ import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
 import { BASE_URL } from "../config/api";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  triggerMessageNotification,
+} from "../utils/notificationService";
 
 const Sidebar = () => {
   const [search, setSearch] = useState("");
+  const [notifPermission, setNotifPermission] = useState(() =>
+    getNotificationPermission()
+  );
+  const [dismissBanner, setDismissBanner] = useState(false);
+
   const { authUser, selectedUser } = useSelector((store) => store.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setNotifPermission(getNotificationPermission());
+  }, []);
 
   const logoutHandler = async () => {
     try {
@@ -27,6 +48,31 @@ const Sidebar = () => {
       dispatch(setSelectedUser(null));
       navigate("/login");
       toast.success("Logged out successfully");
+    }
+  };
+
+  const handleNotificationClick = async () => {
+    if (notifPermission !== "granted") {
+      const res = await requestNotificationPermission();
+      setNotifPermission(res);
+      if (res === "granted") {
+        toast.success("🔔 Desktop notifications activated!");
+        triggerMessageNotification({
+          senderName: "WhatsApp Web",
+          messageText: "You will now get alerts for incoming messages! 🚀",
+          isCurrentChatActive: false,
+        });
+      } else if (res === "denied") {
+        toast.error("Notifications blocked in browser. Allow in site settings.");
+      }
+    } else {
+      // Test chime & notification
+      triggerMessageNotification({
+        senderName: "Chat Notification",
+        messageText: "Incoming message alert & sound working! 🔔",
+        isCurrentChatActive: false,
+      });
+      toast.success("🔔 Notification test played!");
     }
   };
 
@@ -55,12 +101,38 @@ const Sidebar = () => {
             <h3 className="text-sm font-semibold text-[#111b21] leading-tight">
               {authUser?.fullName || "My Account"}
             </h3>
-            <span className="text-[11px] text-emerald-600 font-medium">online</span>
+            <span className="text-[11px] text-emerald-600 font-medium">
+              online
+            </span>
           </div>
         </div>
 
-        {/* Header icons: Meta AI quick button, Chats, Logout */}
-        <div className="flex items-center gap-1.5">
+        {/* Header icons: Notifications, Meta AI quick button, Chats, Logout */}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Notification Bell with status indicator */}
+          <button
+            onClick={handleNotificationClick}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${
+              notifPermission === "granted"
+                ? "text-emerald-600 hover:bg-emerald-50"
+                : "text-amber-500 hover:bg-amber-50"
+            }`}
+            title={
+              notifPermission === "granted"
+                ? "Notifications Active (Click to test sound)"
+                : "Enable message notifications"
+            }
+          >
+            {notifPermission === "granted" ? (
+              <IoNotifications className="text-xl" />
+            ) : (
+              <IoNotificationsOutline className="text-xl" />
+            )}
+            {notifPermission !== "granted" && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
+            )}
+          </button>
+
           <button
             onClick={openMetaAi}
             className="p-1 hover:bg-gray-200 rounded-full transition-colors"
@@ -68,9 +140,14 @@ const Sidebar = () => {
           >
             <MetaAiRing size="w-7 h-7" />
           </button>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-[#54656f]">
+
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#54656f]"
+            title="Chats"
+          >
             <BsChatLeftTextFill className="text-base" />
           </div>
+
           <button
             onClick={logoutHandler}
             className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors"
@@ -81,9 +158,39 @@ const Sidebar = () => {
         </div>
       </div>
 
+      {/* Optional Notification Prompt Banner */}
+      {notifPermission === "default" && !dismissBanner && (
+        <div className="bg-[#182229] text-white px-3.5 py-2.5 flex items-center justify-between text-xs shrink-0 border-b border-gray-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-base">🔔</span>
+            <span className="truncate text-gray-200">
+              Get notified of new messages on your device
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            <button
+              onClick={handleNotificationClick}
+              className="text-emerald-400 font-semibold hover:text-emerald-300 underline text-xs"
+            >
+              Turn on
+            </button>
+            <button
+              onClick={() => setDismissBanner(true)}
+              className="text-gray-400 hover:text-white"
+              title="Dismiss"
+            >
+              <IoClose className="text-base" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search Input Bar with Meta AI button */}
       <div className="p-2.5 border-b border-gray-100 bg-white shrink-0">
-        <form onSubmit={searchSubmitHandler} className="relative flex items-center">
+        <form
+          onSubmit={searchSubmitHandler}
+          className="relative flex items-center"
+        >
           <IoSearchSharp className="absolute left-3 text-gray-400 text-lg" />
           <input
             value={search}

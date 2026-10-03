@@ -9,6 +9,8 @@ import io from "socket.io-client";
 import { setSocket } from './redux/socketSlice';
 import { setOnlineUsers } from './redux/userSlice';
 import { BASE_URL } from './config/api';
+import useGetRealTimeMessage from './hooks/useGetRealTimeMessage';
+import { CallProvider } from './context/CallContext';
 
 const router = createBrowserRouter([
   {
@@ -29,6 +31,9 @@ function App() {
   
   const {authUser} = useSelector(store=>store.user);
   const dispatch=useDispatch();
+
+  // Listen to incoming real-time socket messages and notifications
+  useGetRealTimeMessage();
 
   useEffect(()=>{
     if(authUser) {
@@ -52,7 +57,9 @@ function App() {
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#f0f2f5]">
-      <RouterProvider router={router} />
+      <CallProvider>
+        <RouterProvider router={router} />
+      </CallProvider>
     </div>
   );
 }

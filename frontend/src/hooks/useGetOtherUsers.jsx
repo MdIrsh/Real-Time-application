@@ -1,60 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 import axios from "axios";
-import {useDispatch} from "react-redux";
+import { useDispatch } from "react-redux";
 import { setOtherUsers } from "../redux/userSlice";
 import { BASE_URL } from "../config/api";
 
-
-const DEMO_USERS = [
-  {
-    _id: "demo-contact-1",
-    fullName: "Rahul Sharma",
-    username: "rahul",
-    gender: "male",
-    profilePhoto: ""
-  },
-  {
-    _id: "demo-contact-2",
-    fullName: "Priya Patel",
-    username: "priya",
-    gender: "female",
-    profilePhoto: ""
-  },
-  {
-    _id: "demo-contact-3",
-    fullName: "Aman Verma",
-    username: "aman",
-    gender: "male",
-    profilePhoto: ""
-  },
-  {
-    _id: "demo-contact-4",
-    fullName: "Sneha Reddy",
-    username: "sneha",
-    gender: "female",
-    profilePhoto: ""
-  }
-];
-
 const useGetOtherUsers = () => {
   const dispatch = useDispatch();
+
   useEffect(() => {
-    const fetchOtherUsers = async () => {
+    const fetchFriends = async () => {
       try {
         axios.defaults.withCredentials = true;
         const res = await axios.get(`${BASE_URL}/api/v1/user/`);
-        if (Array.isArray(res.data) && res.data.length > 0) {
+        if (Array.isArray(res.data)) {
           dispatch(setOtherUsers(res.data));
         } else {
-          dispatch(setOtherUsers(DEMO_USERS));
+          dispatch(setOtherUsers([]));
         }
       } catch (error) {
-        console.log("Backend offline, using demo contacts:", error);
-        dispatch(setOtherUsers(DEMO_USERS));
+        console.log("Failed to fetch friends:", error);
+        dispatch(setOtherUsers([]));
       }
     };
-    fetchOtherUsers();
+
+    fetchFriends();
   }, [dispatch]);
 };
 
-export default useGetOtherUsers
+export default useGetOtherUsers;

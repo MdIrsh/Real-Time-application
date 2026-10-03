@@ -9,11 +9,28 @@ export const sendMessage = async (req, res) => {
     const receiverId = req.params.id;
     const { message, image } = req.body;
 
+    const sender = await User.findById(senderId).select("fullName username profilePhoto friends").lean();
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    // Check friendship: messaging locked unless request is accepted!
+    const isFriend = sender.friends?.some(
+      (fId) => fId.toString() === receiverId.toString()
+    );
+
+    if (!isFriend) {
+      return res.status(403).json({
+        message: "You can only send messages to accepted friends.",
+        locked: true,
+      });
+    }
+
     const receiverSocketId = getReceiverSocketId(receiverId);
     const isReceiverOnline = !!receiverSocketId;
 
     // Run lookups and message creation in parallel for maximum speed
-    const [conversation, newMessage, sender] = await Promise.all([
+    const [conversation, newMessage] = await Promise.all([
       Conversation.findOne({
         participants: { $all: [senderId, receiverId] },
       }),
@@ -25,7 +42,6 @@ export const sendMessage = async (req, res) => {
         delivered: isReceiverOnline, // delivered if receiver is online
         seen: false, // only marked true once receiver views the chat
       }),
-      User.findById(senderId).select("fullName username profilePhoto").lean(),
     ]);
 
     // 1. Emit Socket.IO event IMMEDIATELY to receiver (<15ms delivery)
@@ -64,6 +80,16 @@ export const getMessage = async (req, res) => {
   try {
     const receiverId = req.params.id; // user whose chat is opened
     const senderId = req.id; // me
+
+    // Check friendship: cannot view messages of non-friends
+    const currentUser = await User.findById(senderId).select("friends").lean();
+    const isFriend = currentUser?.friends?.some(
+      (fId) => fId.toString() === receiverId.toString()
+    );
+
+    if (!isFriend) {
+      return res.status(200).json([]);
+    }
 
     // Mark previous unread messages from this user as seen (Blue Tick)
     await Message.updateMany(

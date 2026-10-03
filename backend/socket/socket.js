@@ -1,6 +1,7 @@
 import {Server} from "socket.io";
 import http from "http";
 import express from "express";
+import { User } from "../models/userModel.js";
 
 const app=express();
 
@@ -30,17 +31,38 @@ io.on('connection', (socket) => {
   }
   io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
-  // WebRTC Calling Signaling Events
-  socket.on("callUser", ({ userToCall, signalData, from, callType }) => {
-    const receiverSocketId = getReceiverSocketId(userToCall);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("incomingCall", {
-        signal: signalData,
-        from,
-        callType,
-      });
-    } else {
-      socket.emit("callUnavailable", { message: "User is currently offline." });
+  // WebRTC Calling Signaling Events (Locked to Accepted Friends only!)
+  socket.on("callUser", async ({ userToCall, signalData, from, callType }) => {
+    try {
+      const callerId = from?._id || socket.handshake.query.userId;
+      if (!callerId || !userToCall) {
+        socket.emit("callUnavailable", { message: "Invalid call request." });
+        return;
+      }
+      const caller = await User.findById(callerId).select("friends").lean();
+      const isFriend = caller?.friends?.some(
+        (fId) => fId.toString() === userToCall.toString()
+      );
+      if (!isFriend) {
+        socket.emit("callUnavailable", {
+          message: "Calling is locked. You must be accepted friends to call.",
+        });
+        return;
+      }
+
+      const receiverSocketId = getReceiverSocketId(userToCall);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("incomingCall", {
+          signal: signalData,
+          from,
+          callType,
+        });
+      } else {
+        socket.emit("callUnavailable", { message: "User is currently offline." });
+      }
+    } catch (e) {
+      console.error("callUser socket error:", e);
+      socket.emit("callUnavailable", { message: "Failed to connect call." });
     }
   });
 

@@ -21,7 +21,9 @@ import { BsChatSquareDots } from "react-icons/bs";
 import toast from "react-hot-toast";
 
 const MessageContainer = () => {
-  const { selectedUser, onlineUsers, typingUsers } = useSelector((store) => store.user);
+  const { selectedUser, otherUsers, onlineUsers, typingUsers } = useSelector(
+    (store) => store.user
+  );
   const dispatch = useDispatch();
   const { startCall } = useCall();
 
@@ -31,7 +33,17 @@ const MessageContainer = () => {
     return () => dispatch(setSelectedUser(null));
   }, [dispatch]);
 
+  const isMetaAi = selectedUser?._id === "meta-ai";
+  // Accepted friend verification: must be Meta AI or in accepted friends list (otherUsers)
+  const isAcceptedFriend =
+    isMetaAi ||
+    Boolean(otherUsers?.some((u) => u._id === selectedUser?._id));
+
   const handleStartCall = (type) => {
+    if (!isAcceptedFriend) {
+      toast.error("🔒 Calling is locked until friend request is accepted!");
+      return;
+    }
     startCall({ user: selectedUser, type });
   };
 
@@ -49,7 +61,6 @@ const MessageContainer = () => {
     setShowMenu(false);
   };
 
-  const isMetaAi = selectedUser?._id === "meta-ai";
   const isOnline = isMetaAi || onlineUsers?.includes(selectedUser?._id);
   const isTyping = Boolean(selectedUser?._id && typingUsers?.[selectedUser._id]);
 
@@ -67,7 +78,7 @@ const MessageContainer = () => {
                 title="Back to chats"
               >
                 <IoChevronBack className="text-2xl" />
-                <span className="hidden sm:inline">1</span>
+                <span className="hidden sm:inline">Back</span>
               </button>
 
               {/* Avatar with live online badge */}
@@ -105,7 +116,13 @@ const MessageContainer = () => {
                       typing...
                     </span>
                   ) : isMetaAi ? (
-                    <span className="text-blue-600 font-medium">with Llama 3 • AI Assistant</span>
+                    <span className="text-blue-600 font-medium">
+                      with Llama 3 • AI Assistant
+                    </span>
+                  ) : !isAcceptedFriend ? (
+                    <span className="text-amber-600 font-medium">
+                      Connection pending
+                    </span>
                   ) : isOnline ? (
                     <span className="text-emerald-600 font-medium">online</span>
                   ) : (
@@ -119,18 +136,36 @@ const MessageContainer = () => {
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {/* Video Call Icon */}
               <button
+                disabled={!isAcceptedFriend}
                 onClick={() => handleStartCall("video")}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-[#007aff] hover:bg-gray-200 active:scale-95 transition-all"
-                title="Video Call"
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  isAcceptedFriend
+                    ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
+                    : "text-gray-400 cursor-not-allowed opacity-50"
+                }`}
+                title={
+                  isAcceptedFriend
+                    ? "Video Call"
+                    : "Calling locked (Accept friend request first)"
+                }
               >
                 <IoVideocamOutline className="text-2xl" />
               </button>
 
               {/* Audio / Phone Call Icon */}
               <button
+                disabled={!isAcceptedFriend}
                 onClick={() => handleStartCall("audio")}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-[#007aff] hover:bg-gray-200 active:scale-95 transition-all"
-                title="Voice Call"
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  isAcceptedFriend
+                    ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
+                    : "text-gray-400 cursor-not-allowed opacity-50"
+                }`}
+                title={
+                  isAcceptedFriend
+                    ? "Voice Call"
+                    : "Calling locked (Accept friend request first)"
+                }
               >
                 <IoCallOutline className="text-xl" />
               </button>
@@ -173,9 +208,18 @@ const MessageContainer = () => {
             <Messages />
           </div>
 
-          {/* Bottom Send Input Bar */}
+          {/* Bottom Send Input Bar or Locked Notice */}
           <div className="shrink-0">
-            <SendInput />
+            {isAcceptedFriend ? (
+              <SendInput />
+            ) : (
+              <div className="bg-[#f0f2f5] p-3 text-center border-t border-gray-200 text-xs text-gray-600 flex items-center justify-center gap-2 select-none">
+                <IoLockClosed className="text-amber-600 text-sm" />
+                <span>
+                  Messaging and calling are locked until this friend request is accepted.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -188,11 +232,11 @@ const MessageContainer = () => {
             WhatsApp Web
           </h2>
           <p className="text-sm text-[#667781] max-w-md leading-relaxed mb-8">
-            Send and receive messages seamlessly. Select a chat from the left or chat with <strong>Meta AI</strong> for answers, coding help, and instant assistance.
+            Send and receive messages privately. Only accepted friends appear here. Chat with <strong>Meta AI</strong> anytime for instant help.
           </p>
           <div className="flex items-center gap-1.5 text-xs text-[#8696a0]">
             <IoLockClosed className="text-xs" />
-            <span>End-to-end encrypted</span>
+            <span>End-to-end encrypted • Private connections only</span>
           </div>
         </div>
       )}

@@ -29,7 +29,7 @@ const ICE_SERVERS = {
 
 export const CallProvider = ({ children }) => {
   const { socket } = useSelector((store) => store.socket);
-  const { authUser } = useSelector((store) => store.user);
+  const { authUser, otherUsers } = useSelector((store) => store.user);
 
   const [callActive, setCallActive] = useState(false);
   const [isIncoming, setIsIncoming] = useState(false);
@@ -220,6 +220,12 @@ export const CallProvider = ({ children }) => {
     if (!user?._id) return;
     if (user._id === "meta-ai") {
       toast("Meta AI is a text assistant!", { icon: "🤖" });
+      return;
+    }
+
+    const isFriend = otherUsers?.some((u) => u._id === user._id);
+    if (!isFriend) {
+      toast.error("🔒 Calling is locked. You can only call accepted friends!");
       return;
     }
 

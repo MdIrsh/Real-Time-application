@@ -6,9 +6,12 @@ import {
   IoNotificationsOutline,
   IoNotifications,
   IoClose,
+  IoPersonAddOutline,
+  IoPeopleOutline,
 } from "react-icons/io5";
-import { BsChatLeftTextFill } from "react-icons/bs";
 import OtherUsers from "./OtherUsers";
+import FriendRequestsModal from "./FriendRequestsModal";
+import AddFriendModal from "./AddFriendModal";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +20,7 @@ import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
 import { BASE_URL } from "../config/api";
+import useFriendRequests from "../hooks/useFriendRequests";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -29,10 +33,19 @@ const Sidebar = () => {
     getNotificationPermission()
   );
   const [dismissBanner, setDismissBanner] = useState(false);
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const { authUser, selectedUser } = useSelector((store) => store.user);
+  const { authUser, selectedUser, friendRequests } = useSelector(
+    (store) => store.user
+  );
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Friend requests actions and real-time socket events
+  const friendHookActions = useFriendRequests();
+
+  const pendingReceivedCount = friendRequests?.received?.length || 0;
 
   useEffect(() => {
     setNotifPermission(getNotificationPermission());
@@ -66,7 +79,6 @@ const Sidebar = () => {
         toast.error("Notifications blocked in browser. Allow in site settings.");
       }
     } else {
-      // Test chime & notification
       triggerMessageNotification({
         senderName: "Chat Notification",
         messageText: "Incoming message alert & sound working! 🔔",
@@ -87,18 +99,18 @@ const Sidebar = () => {
   const isMetaAiSelected = selectedUser?._id === "meta-ai";
 
   return (
-    <div className="flex flex-col h-full bg-white select-none overflow-hidden">
+    <div className="flex flex-col h-full bg-white select-none overflow-hidden relative">
       {/* Top Header */}
-      <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="bg-[#f0f2f5] px-3.5 py-3 flex items-center justify-between border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <img
             src={getAvatarUrl(authUser)}
             alt="my-avatar"
-            className="w-10 h-10 rounded-full object-cover border border-gray-300"
+            className="w-10 h-10 rounded-full object-cover border border-gray-300 shrink-0"
             onError={(e) => handleImageError(e, authUser?.fullName)}
           />
-          <div>
-            <h3 className="text-sm font-semibold text-[#111b21] leading-tight">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[#111b21] leading-tight truncate">
               {authUser?.fullName || "My Account"}
             </h3>
             <span className="text-[11px] text-emerald-600 font-medium">
@@ -107,9 +119,32 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* Header icons: Notifications, Meta AI quick button, Chats, Logout */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          {/* Notification Bell with status indicator */}
+        {/* Header icons: Add Friend, Requests Badge, Notifications, Meta AI, Logout */}
+        <div className="flex items-center gap-1">
+          {/* Add Friend Button */}
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#54656f] hover:bg-gray-200 transition-colors"
+            title="Add Friend"
+          >
+            <IoPersonAddOutline className="text-lg" />
+          </button>
+
+          {/* Friend Requests Button with Notification Badge */}
+          <button
+            onClick={() => setIsRequestsModalOpen(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#54656f] hover:bg-gray-200 transition-colors relative"
+            title="Friend Requests"
+          >
+            <IoPeopleOutline className="text-xl" />
+            {pendingReceivedCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow animate-pulse">
+                {pendingReceivedCount > 9 ? "9+" : pendingReceivedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Bell */}
           <button
             onClick={handleNotificationClick}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${
@@ -119,7 +154,7 @@ const Sidebar = () => {
             }`}
             title={
               notifPermission === "granted"
-                ? "Notifications Active (Click to test sound)"
+                ? "Notifications Active (Click to test)"
                 : "Enable message notifications"
             }
           >
@@ -133,6 +168,7 @@ const Sidebar = () => {
             )}
           </button>
 
+          {/* Meta AI Quick Button */}
           <button
             onClick={openMetaAi}
             className="p-1 hover:bg-gray-200 rounded-full transition-colors"
@@ -141,13 +177,7 @@ const Sidebar = () => {
             <MetaAiRing size="w-7 h-7" />
           </button>
 
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#54656f]"
-            title="Chats"
-          >
-            <BsChatLeftTextFill className="text-base" />
-          </div>
-
+          {/* Logout */}
           <button
             onClick={logoutHandler}
             className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors"
@@ -185,27 +215,57 @@ const Sidebar = () => {
         </div>
       )}
 
-      {/* Search Input Bar with Meta AI button */}
+      {/* Friend Request Notice Banner if pending requests exist */}
+      {pendingReceivedCount > 0 && (
+        <div
+          onClick={() => setIsRequestsModalOpen(true)}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-2 flex items-center justify-between text-xs font-medium cursor-pointer transition-colors shadow-sm shrink-0"
+        >
+          <div className="flex items-center gap-2">
+            <span>👥</span>
+            <span>
+              {pendingReceivedCount}{" "}
+              {pendingReceivedCount === 1 ? "friend request" : "friend requests"}{" "}
+              waiting for you
+            </span>
+          </div>
+          <span className="text-[11px] underline font-semibold">View</span>
+        </div>
+      )}
+
+      {/* Search Input Bar with Add Friend shortcut */}
       <div className="p-2.5 border-b border-gray-100 bg-white shrink-0">
         <form
           onSubmit={searchSubmitHandler}
-          className="relative flex items-center"
+          className="relative flex items-center gap-2"
         >
-          <IoSearchSharp className="absolute left-3 text-gray-400 text-lg" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            type="text"
-            placeholder="Ask Meta AI or Search"
-            className="w-full bg-[#f0f2f5] text-sm text-[#111b21] pl-9 pr-10 py-2 rounded-lg focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500/50 transition-all border border-transparent focus:border-gray-200"
-          />
+          <div className="relative flex-1 flex items-center">
+            <IoSearchSharp className="absolute left-3 text-gray-400 text-lg" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              type="text"
+              placeholder="Search chats..."
+              className="w-full bg-[#f0f2f5] text-sm text-[#111b21] pl-9 pr-8 py-2 rounded-lg focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500/50 transition-all border border-transparent focus:border-gray-200"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 text-gray-400 hover:text-gray-600"
+              >
+                <IoClose className="text-base" />
+              </button>
+            )}
+          </div>
+
           <button
             type="button"
-            onClick={openMetaAi}
-            className="absolute right-2 p-1 hover:opacity-80 transition-opacity"
-            title="Ask Meta AI"
+            onClick={() => setIsAddModalOpen(true)}
+            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200 shrink-0"
+            title="Search all users to add friend"
           >
-            <MetaAiRing size="w-5 h-5" />
+            <IoPersonAddOutline className="text-base" />
           </button>
         </form>
       </div>
@@ -241,9 +301,26 @@ const Sidebar = () => {
           </div>
         )}
 
-        {/* Regular users with live search */}
-        <OtherUsers search={search} />
+        {/* Regular accepted friends only (clean empty state if 0) */}
+        <OtherUsers
+          search={search}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+        />
       </div>
+
+      {/* Modals for Friend Requests & Add Friend */}
+      <FriendRequestsModal
+        isOpen={isRequestsModalOpen}
+        onClose={() => setIsRequestsModalOpen(false)}
+        onOpenAddModal={() => setIsAddModalOpen(true)}
+        hookActions={friendHookActions}
+      />
+
+      <AddFriendModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        hookActions={friendHookActions}
+      />
     </div>
   );
 };

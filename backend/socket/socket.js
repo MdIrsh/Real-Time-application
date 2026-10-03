@@ -82,6 +82,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on("typing", ({ to, isTyping }) => {
+    const receiverSocketId = getReceiverSocketId(to);
+    const senderId = socket.handshake.query.userId;
+    if (receiverSocketId && senderId) {
+      io.to(receiverSocketId).emit("userTyping", {
+        userId: senderId,
+        isTyping: Boolean(isTyping),
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('user disconnected', socket.id);
     if (userId && userSocketMap[userId] === socket.id) {

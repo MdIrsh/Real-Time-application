@@ -7,7 +7,7 @@ const userSlice=createSlice({
      otherUsers:null,
      selectedUser:null,
      onlineUsers:null,
-
+     typingUsers:{}, // { [userId]: boolean }
   },
   reducers:{
      setAuthUser:(state,action)=>{
@@ -21,8 +21,17 @@ const userSlice=createSlice({
      },
     setOnlineUsers:(state,action)=>{
       state.onlineUsers=action.payload
-     }
+     },
+    setUserTyping:(state,action)=>{
+      const { userId, isTyping } = action.payload;
+      if (!state.typingUsers) state.typingUsers = {};
+      if (isTyping) {
+        state.typingUsers[userId] = true;
+      } else {
+        delete state.typingUsers[userId];
+      }
+    }
   }
 });
-export const {setAuthUser,setOtherUsers,setSelectedUser,setOnlineUsers} = userSlice.actions;
+export const {setAuthUser,setOtherUsers,setSelectedUser,setOnlineUsers,setUserTyping} = userSlice.actions;
 export default userSlice.reducer;

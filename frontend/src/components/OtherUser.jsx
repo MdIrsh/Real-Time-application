@@ -7,11 +7,12 @@ import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
 
 const OtherUser = ({ user }) => {
   const dispatch = useDispatch();
-  const { selectedUser, onlineUsers } = useSelector((store) => store.user);
+  const { selectedUser, onlineUsers, typingUsers } = useSelector((store) => store.user);
   const { unreadCounts, lastMessages } = useSelector((store) => store.message);
 
   const isSelected = selectedUser?._id === user?._id;
   const isOnline = onlineUsers?.includes(user?._id);
+  const isUserTyping = Boolean(typingUsers?.[user?._id]);
 
   const unreadCount = unreadCounts?.[user?._id] || 0;
   const lastMsg = lastMessages?.[user?._id];
@@ -90,7 +91,11 @@ const OtherUser = ({ user }) => {
                 : "text-[#667781]"
             }`}
           >
-            {lastMsg ? (
+            {isUserTyping ? (
+              <span className="text-emerald-600 font-semibold italic text-xs animate-pulse">
+                typing...
+              </span>
+            ) : lastMsg ? (
               <>
                 {lastMsg.isMe && (
                   lastMsg.seen ? (

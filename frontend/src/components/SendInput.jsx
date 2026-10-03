@@ -24,9 +24,50 @@ const SendInput = () => {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   const dispatch = useDispatch();
   const { selectedUser, authUser } = useSelector((store) => store.user);
+  const { socket } = useSelector((store) => store.socket);
   const { messages } = useSelector((store) => store.message);
+
+  // Clean up typing status when changing user or unmounting
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (socket && selectedUser?._id && selectedUser._id !== "meta-ai") {
+        socket.emit("typing", { to: selectedUser._id, isTyping: false });
+      }
+    };
+  }, [selectedUser, socket]);
+
+  // Handle live typing event
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setMessage(val);
+
+    if (!selectedUser?._id || selectedUser._id === "meta-ai" || !socket) return;
+
+    if (val.trim()) {
+      socket.emit("typing", { to: selectedUser._id, isTyping: true });
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        if (socket && selectedUser?._id) {
+          socket.emit("typing", { to: selectedUser._id, isTyping: false });
+        }
+      }, 2500);
+    } else {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      socket.emit("typing", { to: selectedUser._id, isTyping: false });
+    }
+  };
 
   // Timer while recording voice
   useEffect(() => {
@@ -50,6 +91,14 @@ const SendInput = () => {
 
     setMessage("");
     setShowEmojiPicker(false);
+
+    // Stop typing indicator on message send
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (socket && selectedUser?._id && selectedUser._id !== "meta-ai") {
+      socket.emit("typing", { to: selectedUser._id, isTyping: false });
+    }
 
     // Special handling for Meta AI
     if (selectedUser._id === "meta-ai") {
@@ -414,7 +463,7 @@ const SendInput = () => {
               <input
                 ref={inputRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={handleInputChange}
                 type="text"
                 placeholder={
                   selectedUser?._id === "meta-ai"

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import Message from "./Message";
 import useGetMessages from "../hooks/useGetMessages";
 import { useSelector, useDispatch } from "react-redux";
@@ -18,9 +18,15 @@ const Messages = () => {
   useGetMessages();
   const dispatch = useDispatch();
   const { messages } = useSelector((store) => store.message);
-  const { selectedUser, authUser } = useSelector((store) => store.user);
+  const { selectedUser, authUser, typingUsers } = useSelector((store) => store.user);
+  const scrollRef = useRef(null);
 
   const isMetaAi = selectedUser?._id === "meta-ai";
+  const isTyping = Boolean(selectedUser?._id && typingUsers?.[selectedUser._id]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
 
   const handlePromptClick = async (promptText) => {
     const cleanPrompt = promptText.replace(/^[^\w\s]+/, "").trim();
@@ -118,6 +124,19 @@ const Messages = () => {
           </p>
         </div>
       )}
+
+      {/* Live Typing Indicator Bubble */}
+      {isTyping && (
+        <div className="flex items-center gap-2 my-2 animate-fadeIn">
+          <div className="bg-white rounded-2xl rounded-tl-none px-3.5 py-2 shadow-sm border border-gray-100 flex items-center gap-1.5 w-fit">
+            <span className="text-xs text-gray-500 font-medium mr-0.5">typing</span>
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
+          </div>
+        </div>
+      )}
+      <div ref={scrollRef} />
     </div>
   );
 };

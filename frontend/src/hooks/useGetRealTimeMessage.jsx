@@ -7,7 +7,7 @@ import {
   clearUnreadCount,
   markMessagesSeen,
 } from "../redux/messageSlice";
-import { setSelectedUser } from "../redux/userSlice";
+import { setSelectedUser, setUserTyping } from "../redux/userSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import toast from "react-hot-toast";
@@ -148,6 +148,9 @@ const useGetRealTimeMessage = () => {
         );
       }
 
+      // Clear typing indicator for this sender when message is received
+      dispatch(setUserTyping({ userId: senderId, isTyping: false }));
+
       // Update last message preview for this sender
       dispatch(
         setLastMessage({
@@ -177,12 +180,19 @@ const useGetRealTimeMessage = () => {
       dispatch(markMessagesSeen(seenBy));
     };
 
+    // When the other user starts or stops typing
+    const handleUserTyping = ({ userId, isTyping }) => {
+      dispatch(setUserTyping({ userId, isTyping }));
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
+    socket.on("userTyping", handleUserTyping);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
+      socket.off("userTyping", handleUserTyping);
     };
   }, [socket, dispatch]);
 };

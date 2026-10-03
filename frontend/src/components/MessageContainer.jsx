@@ -21,7 +21,7 @@ import { BsChatSquareDots } from "react-icons/bs";
 import toast from "react-hot-toast";
 
 const MessageContainer = () => {
-  const { selectedUser, onlineUsers } = useSelector((store) => store.user);
+  const { selectedUser, onlineUsers, typingUsers } = useSelector((store) => store.user);
   const dispatch = useDispatch();
   const { startCall } = useCall();
 
@@ -51,6 +51,7 @@ const MessageContainer = () => {
 
   const isMetaAi = selectedUser?._id === "meta-ai";
   const isOnline = isMetaAi || onlineUsers?.includes(selectedUser?._id);
+  const isTyping = Boolean(selectedUser?._id && typingUsers?.[selectedUser._id]);
 
   return (
     <>
@@ -99,7 +100,11 @@ const MessageContainer = () => {
                   )}
                 </div>
                 <span className="text-xs text-[#667781] leading-tight">
-                  {isMetaAi ? (
+                  {isTyping ? (
+                    <span className="text-emerald-600 font-semibold flex items-center gap-1 animate-pulse">
+                      typing...
+                    </span>
+                  ) : isMetaAi ? (
                     <span className="text-blue-600 font-medium">with Llama 3 • AI Assistant</span>
                   ) : isOnline ? (
                     <span className="text-emerald-600 font-medium">online</span>

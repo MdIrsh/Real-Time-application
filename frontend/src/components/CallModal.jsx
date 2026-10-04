@@ -63,11 +63,18 @@ const CallModal = () => {
     return `${mins < 10 ? "0" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const isConnected = callStatus === "Connected";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all p-3 sm:p-6 animate-fadeIn">
-      <div className="relative w-full max-w-lg h-[620px] bg-gradient-to-b from-[#1c2c35] via-[#111b21] to-[#0c1317] rounded-3xl shadow-2xl overflow-hidden flex flex-col justify-between p-5 sm:p-6 border border-gray-700/60">
+    <div
+      onClick={enableAudio}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all p-3 sm:p-6 animate-fadeIn cursor-pointer"
+    >
+      <div
+        onClick={(e) => {
+          enableAudio();
+          e.stopPropagation();
+        }}
+        className="relative w-full max-w-lg h-[620px] bg-gradient-to-b from-[#1c2c35] via-[#111b21] to-[#0c1317] rounded-3xl shadow-2xl overflow-hidden flex flex-col justify-between p-5 sm:p-6 border border-gray-700/60 cursor-default"
+      >
         {/* Header */}
         <div className="text-center pt-1 z-20">
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mb-1">

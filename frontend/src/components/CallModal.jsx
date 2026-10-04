@@ -22,6 +22,7 @@ const CallModal = () => {
     isMuted,
     isVideoOff,
     audioBlocked,
+    micPermissionDenied,
     enableAudio,
     localStream,
     remoteStream,
@@ -102,6 +103,17 @@ const CallModal = () => {
               >
                 <MdVolumeUp className="text-base" /> Tap here to enable sound
               </button>
+            </div>
+          )}
+
+          {/* Microphone Blocked Warning Banner */}
+          {micPermissionDenied && (
+            <div className="mt-2 bg-red-600/90 text-white text-xs px-3 py-1.5 rounded-xl flex items-center justify-between shadow-lg animate-pulse">
+              <span className="flex items-center gap-1.5">
+                <MdMicOff className="text-base shrink-0" />
+                <span>Mic blocked! Saamne wale ko aawaj nahi ja rahi.</span>
+              </span>
+              <span className="underline font-bold text-[11px] ml-2 shrink-0">🔒 se Allow karein</span>
             </div>
           )}
         </div>

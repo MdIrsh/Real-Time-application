@@ -3,34 +3,40 @@ import Sidebar from "./Sidebar";
 import MessageContainer from "./MessageContainer";
 import CallModal from "./CallModal";
 import IncomingCallModal from "./IncomingCallModal";
+import MicPermissionPrompt from "./MicPermissionPrompt";
 import { useSelector } from "react-redux";
 
 const HomePage = () => {
   const { selectedUser } = useSelector((store) => store.user);
 
   return (
-    <div className="w-full h-full bg-white flex overflow-hidden select-none relative">
-      {/* Sidebar: Visible on desktop, or on mobile when no chat is open */}
-      <div
-        className={`${
-          selectedUser ? "hidden md:flex" : "flex"
-        } w-full md:w-[360px] lg:w-[400px] flex-col h-full border-r border-gray-200 shrink-0 bg-white overflow-hidden`}
-      >
-        <Sidebar />
-      </div>
+    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none relative">
+      {/* Proactive Microphone Permission Alert Banner */}
+      <MicPermissionPrompt />
 
-      {/* Message Container: Visible on desktop, or on mobile when a chat is open */}
-      <div
-        className={`${
-          !selectedUser ? "hidden md:flex" : "flex"
-        } flex-1 flex-col h-full min-w-0 overflow-hidden`}
-      >
-        <MessageContainer />
-      </div>
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Sidebar: Visible on desktop, or on mobile when no chat is open */}
+        <div
+          className={`${
+            selectedUser ? "hidden md:flex" : "flex"
+          } w-full md:w-[360px] lg:w-[400px] flex-col h-full border-r border-gray-200 shrink-0 bg-white overflow-hidden`}
+        >
+          <Sidebar />
+        </div>
 
-      {/* WebRTC Audio and Video Call Modals */}
-      <CallModal />
-      <IncomingCallModal />
+        {/* Message Container: Visible on desktop, or on mobile when a chat is open */}
+        <div
+          className={`${
+            !selectedUser ? "hidden md:flex" : "flex"
+          } flex-1 flex-col h-full min-w-0 overflow-hidden`}
+        >
+          <MessageContainer />
+        </div>
+
+        {/* WebRTC Audio and Video Call Modals */}
+        <CallModal />
+        <IncomingCallModal />
+      </div>
     </div>
   );
 };

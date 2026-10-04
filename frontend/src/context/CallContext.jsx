@@ -56,6 +56,7 @@ export const CallProvider = ({ children }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
 
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -120,6 +121,7 @@ export const CallProvider = ({ children }) => {
     setCallSeconds(0);
     setIsMuted(false);
     setIsVideoOff(false);
+    setMicPermissionDenied(false);
   }, []);
 
   // End Call function
@@ -191,13 +193,15 @@ export const CallProvider = ({ children }) => {
           });
         } catch (audioErr) {
           console.error("Microphone permission denied:", audioErr);
-          toast.error("Microphone permission is needed! Please allow mic access in your browser.");
+          setMicPermissionDenied(true);
+          toast.error("Microphone blocked! Kripya browser me mic allow karein.");
           return null;
         }
       }
     }
 
     if (stream) {
+      setMicPermissionDenied(false);
       stream.getAudioTracks().forEach((t) => {
         t.enabled = true;
       });
@@ -670,6 +674,7 @@ export const CallProvider = ({ children }) => {
         isMuted,
         isVideoOff,
         audioBlocked,
+        micPermissionDenied,
         enableAudio,
         localStream,
         remoteStream,

@@ -63,6 +63,8 @@ const CallModal = () => {
     return `${mins < 10 ? "0" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  const isConnected = callStatus === "Connected";
+
   return (
     <div
       onClick={enableAudio}

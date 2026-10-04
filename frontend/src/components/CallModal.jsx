@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useCall } from "../context/CallContext";
-import { MdCallEnd, MdMic, MdMicOff, MdVideocam, MdVideocamOff } from "react-icons/md";
+import {
+  MdCallEnd,
+  MdMic,
+  MdMicOff,
+  MdVideocam,
+  MdVideocamOff,
+  MdVolumeUp,
+} from "react-icons/md";
 import { IoShieldCheckmark } from "react-icons/io5";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 
@@ -14,12 +21,38 @@ const CallModal = () => {
     callSeconds,
     isMuted,
     isVideoOff,
+    audioBlocked,
+    enableAudio,
+    localStream,
+    remoteStream,
     localVideoRef,
     remoteVideoRef,
     endCall,
     toggleMute,
     toggleVideo,
   } = useCall();
+
+  // Ensure remote video element has the active remote media stream
+  useEffect(() => {
+    if (callType === "video" && remoteVideoRef.current && remoteStream) {
+      if (remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.play().catch((err) => {
+        console.warn("remoteVideo autoplay restricted:", err);
+      });
+    }
+  }, [remoteVideoRef, remoteStream, callType]);
+
+  // Ensure local video element has the local camera stream
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      if (localVideoRef.current.srcObject !== localStream) {
+        localVideoRef.current.srcObject = localStream;
+      }
+    }
+  }, [localVideoRef, localStream]);
 
   // Only render if call is active and NOT in incoming ringing state
   if (!callActive || isIncoming || !callUser) return null;
@@ -35,7 +68,6 @@ const CallModal = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all p-3 sm:p-6 animate-fadeIn">
       <div className="relative w-full max-w-lg h-[620px] bg-gradient-to-b from-[#1c2c35] via-[#111b21] to-[#0c1317] rounded-3xl shadow-2xl overflow-hidden flex flex-col justify-between p-5 sm:p-6 border border-gray-700/60">
-        
         {/* Header */}
         <div className="text-center pt-1 z-20">
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mb-1">
@@ -51,18 +83,29 @@ const CallModal = () => {
           <span className="text-[11px] text-gray-400 uppercase tracking-wider">
             {callType === "video" ? "WhatsApp Video Call" : "WhatsApp Voice Call"}
           </span>
+
+          {/* Audio Autoplay Unblock Banner */}
+          {audioBlocked && (
+            <div className="mt-2 flex justify-center">
+              <button
+                onClick={enableAudio}
+                className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg animate-bounce transition-all active:scale-95"
+              >
+                <MdVolumeUp className="text-base" /> Tap here to enable sound
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Center: Video streams or Audio Avatar view */}
         <div className="relative flex-1 my-3 flex items-center justify-center overflow-hidden rounded-2xl bg-zinc-900/90 border border-white/5">
           {callType === "video" ? (
             <div className="relative w-full h-full flex items-center justify-center bg-black">
-              {/* Remote Video Stream (muted because remoteAudioRef handles the voice stream) */}
+              {/* Remote Video Stream (Unmuted so remote person's voice plays loud and clear) */}
               <video
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                muted
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   isConnected ? "opacity-100" : "opacity-0"
                 }`}
@@ -83,7 +126,7 @@ const CallModal = () => {
                     <div className="absolute inset-0 rounded-full border-4 border-emerald-400 animate-ping pointer-events-none opacity-40" />
                   </div>
                   <p className="text-sm text-gray-300 mt-4 font-medium animate-pulse">
-                    Connecting camera feed...
+                    Connecting camera & audio feed...
                   </p>
                 </div>
               )}
@@ -105,7 +148,7 @@ const CallModal = () => {
                   </div>
                 )}
                 <span className="absolute bottom-1 right-2 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">
-                  You
+                  You {isMuted && "(Muted)"}
                 </span>
               </div>
             </div>
@@ -138,9 +181,16 @@ const CallModal = () => {
               </div>
 
               {/* Status text */}
-              <p className="text-xs text-gray-400 mt-4">
-                {isConnected ? "Live Audio Connected 🎙️" : "Calling..."}
-              </p>
+              <div className="text-center mt-4">
+                <p className="text-xs text-gray-300 font-medium">
+                  {isConnected ? "Live Voice Connected 🎙️" : "Calling..."}
+                </p>
+                {isMuted && (
+                  <span className="inline-block mt-1 bg-red-500/20 text-red-400 text-[11px] px-2 py-0.5 rounded-full font-medium">
+                    Your Mic is Muted
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>

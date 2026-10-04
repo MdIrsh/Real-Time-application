@@ -3,7 +3,7 @@ let audioContext = null;
 let outgoingInterval = null;
 let incomingInterval = null;
 
-const getAudioContext = () => {
+export const resumeAudioContext = () => {
   if (typeof window === "undefined") return null;
   if (!audioContext) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -16,6 +16,20 @@ const getAudioContext = () => {
   }
   return audioContext;
 };
+
+const getAudioContext = () => {
+  return resumeAudioContext();
+};
+
+// Auto-unlock AudioContext on first user interaction anywhere in the window
+if (typeof window !== "undefined") {
+  const handleUserGesture = () => {
+    resumeAudioContext();
+  };
+  window.addEventListener("click", handleUserGesture, { passive: true });
+  window.addEventListener("touchstart", handleUserGesture, { passive: true });
+  window.addEventListener("keydown", handleUserGesture, { passive: true });
+}
 
 export const stopCallSounds = () => {
   if (outgoingInterval) {

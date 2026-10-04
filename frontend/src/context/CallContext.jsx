@@ -12,6 +12,7 @@ import {
   startIncomingRingtone,
   stopCallSounds,
   playCallConnectedTone,
+  resumeAudioContext,
 } from "../utils/callSounds";
 import toast from "react-hot-toast";
 
@@ -22,8 +23,22 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelay",
+      credential: "openrelay",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelay",
+      credential: "openrelay",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelay",
+      credential: "openrelay",
+    },
   ],
 };
 
@@ -35,13 +50,18 @@ export const CallProvider = ({ children }) => {
   const [isIncoming, setIsIncoming] = useState(false);
   const [callUser, setCallUser] = useState(null);
   const [callType, setCallType] = useState("audio"); // "audio" | "video"
-  const [callStatus, setCallStatus] = useState("Ringing..."); // "Calling...", "Connected", "Ended"
+  const [callStatus, setCallStatus] = useState("Ringing..."); // "Calling...", "Connecting...", "Connected", "Ended"
   const [callSeconds, setCallSeconds] = useState(0);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
 
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const incomingSignalRef = useRef(null);
   const callUserRef = useRef(null);
@@ -68,6 +88,11 @@ export const CallProvider = ({ children }) => {
       localStreamRef.current = null;
     }
 
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop());
+      remoteStreamRef.current = null;
+    }
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -85,6 +110,9 @@ export const CallProvider = ({ children }) => {
 
     incomingSignalRef.current = null;
     candidateQueueRef.current = [];
+    setLocalStream(null);
+    setRemoteStream(null);
+    setAudioBlocked(false);
     setCallActive(false);
     setIsIncoming(false);
     setCallUser(null);
@@ -124,8 +152,16 @@ export const CallProvider = ({ children }) => {
     }
   };
 
-  // Acquire camera and mic stream with high-quality audio
+  // Acquire camera and mic stream with high-quality audio & robust fallbacks
   const getUserMediaStream = async (type) => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      toast.error(
+        "Microphone requires HTTPS or localhost! Browser blocks microphone on HTTP network IP."
+      );
+      return null;
+    }
+
+    let stream = null;
     try {
       const constraints = {
         audio: {
@@ -138,82 +174,142 @@ export const CallProvider = ({ children }) => {
             ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
             : false,
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      console.warn("Optimal constraints failed, falling back to basic media constraints:", err);
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: type === "video",
+        });
+      } catch (basicErr) {
+        console.warn("Basic constraints failed, falling back to audio only:", basicErr);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
+        } catch (audioErr) {
+          console.error("Microphone permission denied:", audioErr);
+          toast.error("Microphone permission is needed! Please allow mic access in your browser.");
+          return null;
+        }
+      }
+    }
+
+    if (stream) {
       stream.getAudioTracks().forEach((t) => {
         t.enabled = true;
       });
       localStreamRef.current = stream;
+      setLocalStream(stream);
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
-      return stream;
-    } catch (err) {
-      console.log("Could not get requested media, falling back to audio:", err);
-      try {
-        const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-          video: false,
-        });
-        audioOnlyStream.getAudioTracks().forEach((t) => {
-          t.enabled = true;
-        });
-        localStreamRef.current = audioOnlyStream;
-        return audioOnlyStream;
-      } catch (audioErr) {
-        console.error("Audio permission denied:", audioErr);
-        toast.error("Microphone permission needed to speak!");
-        return null;
-      }
     }
+    return stream;
   };
 
-  // Unlock audio policy on mobile browsers (Android/iOS)
-  const unlockMobileAudio = () => {
+  // Unlock audio policy on user click
+  const unlockAudioContext = () => {
     try {
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.play().catch(() => {});
-      }
+      resumeAudioContext();
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
     } catch (e) {
-      console.warn("Mobile audio unlock:", e);
+      console.warn("Audio unlock warning:", e);
     }
   };
 
   // Attach remote stream to audio & video elements
-  const attachRemoteStream = (stream) => {
+  const attachRemoteStream = useCallback((stream) => {
     stopCallSounds();
     playCallConnectedTone();
     setCallStatus("Connected");
+    setRemoteStream(stream);
 
+    // Audio element: handles voice for audio call (muted during video call to avoid double audio)
     if (remoteAudioRef.current) {
       if (remoteAudioRef.current.srcObject !== stream) {
         remoteAudioRef.current.srcObject = stream;
       }
       remoteAudioRef.current.volume = 1.0;
-      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.muted = (callType === "video");
       const playPromise = remoteAudioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch((e) => console.warn("Audio play auto-policy warning:", e));
+        playPromise.catch((e) => {
+          console.warn("Audio element autoplay restricted:", e);
+          if (callType === "audio") setAudioBlocked(true);
+        });
       }
     }
 
-    if (remoteVideoRef.current) {
+    // Video element: plays BOTH video and audio for video calls
+    if (remoteVideoRef.current && callType === "video") {
       if (remoteVideoRef.current.srcObject !== stream) {
         remoteVideoRef.current.srcObject = stream;
       }
+      remoteVideoRef.current.volume = 1.0;
+      remoteVideoRef.current.muted = false; // UNMUTED: allows remote audio to play directly!
       const videoPlay = remoteVideoRef.current.play();
       if (videoPlay !== undefined) {
-        videoPlay.catch((e) => console.warn("Video play error:", e));
+        videoPlay.catch((e) => {
+          console.warn("Video element autoplay restricted:", e);
+          setAudioBlocked(true);
+        });
       }
     }
-  };
+  }, [callType]);
+
+  // Manually enable audio if autoplay was blocked by browser
+  const enableAudio = useCallback(() => {
+    resumeAudioContext();
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = (callType === "video");
+      remoteAudioRef.current.play().catch(() => {});
+    }
+    if (remoteVideoRef.current && callType === "video") {
+      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+    setAudioBlocked(false);
+  }, [callType]);
+
+  // Sync video elements whenever refs or streams become available
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      if (localVideoRef.current.srcObject !== localStream) {
+        localVideoRef.current.srcObject = localStream;
+      }
+    }
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteStream) {
+      if (remoteVideoRef.current && callType === "video") {
+        if (remoteVideoRef.current.srcObject !== remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+        remoteVideoRef.current.muted = false;
+        remoteVideoRef.current.play().catch((e) => {
+          console.warn("Autoplay blocked on remote video:", e);
+          setAudioBlocked(true);
+        });
+      }
+      if (remoteAudioRef.current) {
+        if (remoteAudioRef.current.srcObject !== remoteStream) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
+        remoteAudioRef.current.muted = (callType === "video");
+        remoteAudioRef.current.play().catch((e) => {
+          console.warn("Autoplay blocked on remote audio:", e);
+          if (callType === "audio") setAudioBlocked(true);
+        });
+      }
+    }
+  }, [remoteStream, callType]);
 
   // Start outgoing call
   const startCall = async ({ user, type = "audio" }) => {
@@ -229,7 +325,7 @@ export const CallProvider = ({ children }) => {
       return;
     }
 
-    unlockMobileAudio();
+    unlockAudioContext();
     setCallUser(user);
     setCallType(type);
     setIsVideoOff(type === "audio");
@@ -237,7 +333,9 @@ export const CallProvider = ({ children }) => {
     setCallActive(true);
     setIsIncoming(false);
     setCallSeconds(0);
+    setAudioBlocked(false);
     candidateQueueRef.current = [];
+    remoteStreamRef.current = new MediaStream();
 
     // If demo contact, simulate connection with voice greeting test!
     const isDemo = user._id?.startsWith("demo-contact");
@@ -250,7 +348,6 @@ export const CallProvider = ({ children }) => {
         setCallStatus("Connected");
         toast.success(`Connected with ${user.fullName}`);
 
-        // Provide real voice feedback so the user hears voice through speakers!
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
           const greeting = new SpeechSynthesisUtterance(
@@ -280,10 +377,37 @@ export const CallProvider = ({ children }) => {
       pc.addTrack(track, stream);
     });
 
-    // Handle remote tracks
+    // Handle remote tracks: accumulate without dropping existing tracks
     pc.ontrack = (event) => {
-      const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      attachRemoteStream(incomingStream);
+      console.log("WebRTC track received:", event.track.kind);
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+      }
+
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
+            remoteStreamRef.current.addTrack(track);
+          }
+        });
+      } else if (event.track) {
+        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
+          remoteStreamRef.current.addTrack(event.track);
+        }
+      }
+
+      attachRemoteStream(remoteStreamRef.current);
+    };
+
+    // Monitor ICE connection state
+    pc.oniceconnectionstatechange = () => {
+      console.log("Caller ICE State:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setCallStatus("Connected");
+      } else if (pc.iceConnectionState === "failed") {
+        console.error("WebRTC ICE Connection Failed");
+        toast.error("Call connection failed! Network firewall or NAT blocked P2P connection.");
+      }
     };
 
     // Send ICE candidates to remote peer
@@ -319,7 +443,7 @@ export const CallProvider = ({ children }) => {
   // Accept incoming call
   const acceptIncomingCall = async () => {
     stopCallSounds();
-    unlockMobileAudio();
+    unlockAudioContext();
     const targetUser = callUserRef.current;
     const signal = incomingSignalRef.current;
     if (!targetUser || !signal) {
@@ -329,6 +453,8 @@ export const CallProvider = ({ children }) => {
 
     setIsIncoming(false);
     setCallStatus("Connecting...");
+    setAudioBlocked(false);
+    remoteStreamRef.current = new MediaStream();
 
     const stream = await getUserMediaStream(callType);
     if (!stream) {
@@ -344,8 +470,34 @@ export const CallProvider = ({ children }) => {
     });
 
     pc.ontrack = (event) => {
-      const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      attachRemoteStream(incomingStream);
+      console.log("WebRTC track received (receiver):", event.track.kind);
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+      }
+
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
+            remoteStreamRef.current.addTrack(track);
+          }
+        });
+      } else if (event.track) {
+        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
+          remoteStreamRef.current.addTrack(event.track);
+        }
+      }
+
+      attachRemoteStream(remoteStreamRef.current);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("Receiver ICE State:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setCallStatus("Connected");
+      } else if (pc.iceConnectionState === "failed") {
+        console.error("WebRTC ICE Connection Failed");
+        toast.error("Call connection failed! Network firewall or NAT blocked P2P connection.");
+      }
     };
 
     pc.onicecandidate = (event) => {
@@ -359,10 +511,12 @@ export const CallProvider = ({ children }) => {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(signal));
-      // Flush any ICE candidates that arrived before remoteDescription was set
       await flushCandidateQueue(pc);
 
-      const answer = await pc.createAnswer();
+      const answer = await pc.createAnswer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: callType === "video",
+      });
       await pc.setLocalDescription(answer);
 
       socket.emit("answerCall", {
@@ -444,7 +598,6 @@ export const CallProvider = ({ children }) => {
           await peerConnectionRef.current.setRemoteDescription(
             new RTCSessionDescription(signal)
           );
-          // Flush any queued ICE candidates
           await flushCandidateQueue(peerConnectionRef.current);
         } catch (e) {
           console.error("Error setting remote description on accept:", e);
@@ -463,7 +616,6 @@ export const CallProvider = ({ children }) => {
           console.error("Error adding received ICE candidate:", e);
         }
       } else {
-        // Queue until remoteDescription is set!
         candidateQueueRef.current.push(candidate);
       }
     };
@@ -517,6 +669,10 @@ export const CallProvider = ({ children }) => {
         callSeconds,
         isMuted,
         isVideoOff,
+        audioBlocked,
+        enableAudio,
+        localStream,
+        remoteStream,
         localVideoRef,
         remoteVideoRef,
         startCall,

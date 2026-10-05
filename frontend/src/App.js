@@ -35,24 +35,45 @@ function App() {
   // Listen to incoming real-time socket messages and notifications
   useGetRealTimeMessage();
 
-  useEffect(()=>{
-    if(authUser) {
+  useEffect(() => {
+    if (authUser?._id) {
       const socket = io(BASE_URL, {
-        query:{
-          userId: authUser?._id
-        }
+        query: {
+          userId: authUser._id,
+        },
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        transports: ["websocket", "polling"],
       });
       dispatch(setSocket(socket));
-      socket.on('getOnlineUsers',(onlineUsers)=>{
+
+      socket.on("getOnlineUsers", (onlineUsers) => {
         dispatch(setOnlineUsers(onlineUsers));
       });
+
+      // Mobile phone screen wake / tab switch auto-reconnect
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          if (!socket.connected) {
+            socket.connect();
+          }
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("focus", handleVisibility);
+
       return () => {
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("focus", handleVisibility);
         socket.close();
       };
     } else {
       dispatch(setSocket(null));
     }
-  },[authUser, dispatch]);
+  }, [authUser, dispatch]);
 
 
   return (

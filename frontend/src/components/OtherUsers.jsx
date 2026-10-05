@@ -3,10 +3,11 @@ import OtherUser from "./OtherUser";
 import useGetOtherUsers from "../hooks/useGetOtherUsers";
 import { useSelector } from "react-redux";
 import { IoPersonAddOutline, IoShieldCheckmarkOutline } from "react-icons/io5";
+import { FaWhatsapp } from "react-icons/fa";
 
 const OtherUsers = ({ search = "", onOpenAddModal }) => {
   useGetOtherUsers();
-  const { otherUsers } = useSelector((store) => store.user);
+  const { otherUsers, authUser } = useSelector((store) => store.user);
 
   if (otherUsers === null) {
     return (
@@ -19,8 +20,12 @@ const OtherUsers = ({ search = "", onOpenAddModal }) => {
 
   // Pure clean inbox if 0 accepted friends!
   if (otherUsers.length === 0) {
+    const inviteText = encodeURIComponent(
+      `Hey! Connect with me on our real-time video & audio calling chat app: https://real-time-application-cyan.vercel.app\n\nMy Username is: "${authUser?.username || "User"}"\n(Search my username to start calling!)`
+    );
+
     return (
-      <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
+      <div className="flex flex-col items-center justify-center py-8 px-6 text-center select-none">
         <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 mb-3 shadow-inner">
           <IoShieldCheckmarkOutline className="text-2xl" />
         </div>
@@ -30,13 +35,24 @@ const OtherUsers = ({ search = "", onOpenAddModal }) => {
         <p className="text-xs text-[#667781] leading-relaxed max-w-[240px] mb-4">
           No strangers can message or call you. Only people you send or accept requests from will appear here.
         </p>
-        <button
-          onClick={onOpenAddModal}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all active:scale-95"
-        >
-          <IoPersonAddOutline className="text-sm" />
-          <span>Find & Add Friends</span>
-        </button>
+        <div className="flex flex-col w-full max-w-[240px] gap-2">
+          <button
+            onClick={onOpenAddModal}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+          >
+            <IoPersonAddOutline className="text-sm" />
+            <span>Find & Add Friends</span>
+          </button>
+          <a
+            href={`https://api.whatsapp.com/send?text=${inviteText}`}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+          >
+            <FaWhatsapp className="text-base" />
+            <span>Invite to Call on WhatsApp</span>
+          </a>
+        </div>
       </div>
     );
   }

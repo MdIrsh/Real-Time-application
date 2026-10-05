@@ -11,6 +11,7 @@ import { setOnlineUsers } from './redux/userSlice';
 import { BASE_URL } from './config/api';
 import useGetRealTimeMessage from './hooks/useGetRealTimeMessage';
 import { CallProvider } from './context/CallContext';
+import WhatsAppInAppModal from './components/WhatsAppInAppModal';
 
 const router = createBrowserRouter([
   {
@@ -78,6 +79,8 @@ function App() {
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#f0f2f5]">
+      {/* WhatsApp In-App Webview Detector & 1-Tap Browser Breakout */}
+      <WhatsAppInAppModal />
       <CallProvider>
         <RouterProvider router={router} />
       </CallProvider>

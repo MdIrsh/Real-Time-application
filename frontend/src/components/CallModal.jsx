@@ -9,7 +9,6 @@ import {
   MdVolumeUp,
   MdVolumeDown,
   MdVolumeOff,
-  MdVolumeMute,
 } from "react-icons/md";
 import { IoShieldCheckmark, IoCameraReverseOutline } from "react-icons/io5";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";

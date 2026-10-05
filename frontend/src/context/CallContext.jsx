@@ -58,6 +58,8 @@ export const CallProvider = ({ children }) => {
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [facingMode, setFacingMode] = useState("user"); // "user" (front) or "environment" (back)
+  const facingModeRef = useRef("user");
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
   const [callVolume, setCallVolume] = useState(1.0); // 0.0 (mute) to 1.0 (max)
@@ -138,6 +140,8 @@ export const CallProvider = ({ children }) => {
     setIsVideoOff(false);
     setMicPermissionDenied(false);
     setCallVolume(1.0);
+    facingModeRef.current = "user";
+    setFacingMode("user");
   }, []);
 
   // End Call function
@@ -573,6 +577,73 @@ export const CallProvider = ({ children }) => {
         setIsVideoOff((prev) => !prev);
       }
     }
+  // Switch Camera (Front Camera <-> Back/Rear Camera)
+  const switchCamera = async () => {
+    if (callType !== "video" || !localStreamRef.current) return;
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      toast.error("Camera access requires HTTPS!");
+      return;
+    }
+
+    const nextMode = facingModeRef.current === "user" ? "environment" : "user";
+    try {
+      let newStream = null;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: nextMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+      } catch (err1) {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: nextMode },
+        });
+      }
+
+      const newTrack = newStream.getVideoTracks()[0];
+      if (!newTrack) {
+        toast.error("Could not switch camera.");
+        return;
+      }
+
+      // Stop old video track
+      const oldTrack = localStreamRef.current.getVideoTracks()[0];
+      if (oldTrack) {
+        oldTrack.stop();
+        localStreamRef.current.removeTrack(oldTrack);
+      }
+
+      // Add new track to existing local stream
+      localStreamRef.current.addTrack(newTrack);
+
+      // Seamlessly replace track on WebRTC peer connection
+      if (peerConnectionRef.current) {
+        const senders = peerConnectionRef.current.getSenders();
+        const videoSender = senders.find((s) => s.track && s.track.kind === "video");
+        if (videoSender) {
+          await videoSender.replaceTrack(newTrack);
+        }
+      }
+
+      // Refresh local video element
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+
+      facingModeRef.current = nextMode;
+      setFacingMode(nextMode);
+      setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+      toast.success(
+        nextMode === "environment"
+          ? "Switched to Back Camera 📸"
+          : "Switched to Front Camera 🤳"
+      );
+    } catch (err) {
+      console.error("Camera flip error:", err);
+      toast.error("Back camera not available or permission denied.");
+    }
   };
 
   // Live call duration timer
@@ -702,6 +773,8 @@ export const CallProvider = ({ children }) => {
         endCall,
         toggleMute,
         toggleVideo,
+        switchCamera,
+        facingMode,
         callVolume,
         changeCallVolume,
       }}

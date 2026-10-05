@@ -11,7 +11,7 @@ import {
   MdVolumeOff,
   MdVolumeMute,
 } from "react-icons/md";
-import { IoShieldCheckmark } from "react-icons/io5";
+import { IoShieldCheckmark, IoCameraReverseOutline } from "react-icons/io5";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 
 const CallModal = () => {
@@ -35,6 +35,8 @@ const CallModal = () => {
     endCall,
     toggleMute,
     toggleVideo,
+    switchCamera,
+    facingMode,
     callVolume,
     changeCallVolume,
   } = useCall();
@@ -173,6 +175,23 @@ const CallModal = () => {
                   <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-gray-400 text-xs">
                     Camera Off
                   </div>
+                )}
+                {/* Quick Flip Camera Button on PiP */}
+                {!isVideoOff && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      switchCamera();
+                    }}
+                    className="absolute top-1.5 left-1.5 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-sm shadow-md transition-all active:scale-90 z-40 border border-white/20"
+                    title={
+                      facingMode === "user"
+                        ? "Switch to Back Camera (पीछे का कैमरा)"
+                        : "Switch to Front Camera (आगे का कैमरा)"
+                    }
+                  >
+                    <IoCameraReverseOutline />
+                  </button>
                 )}
                 <span className="absolute bottom-1 right-2 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">
                   You {isMuted && "(Muted)"}
@@ -337,6 +356,25 @@ const CallModal = () => {
               title={isVideoOff ? "Turn Camera On" : "Turn Camera Off"}
             >
               {isVideoOff ? <MdVideocamOff /> : <MdVideocam />}
+            </button>
+          )}
+
+          {/* Flip Front/Back Camera Button (only in video call) */}
+          {callType === "video" && !isVideoOff && (
+            <button
+              onClick={switchCamera}
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all shadow-md active:scale-95 ${
+                facingMode === "environment"
+                  ? "bg-emerald-500 text-white shadow-emerald-500/25 scale-105"
+                  : "bg-white/15 text-white hover:bg-white/25"
+              }`}
+              title={
+                facingMode === "user"
+                  ? "Switch to Back Camera (पीछे का कैमरा चालू करें)"
+                  : "Switch to Front Camera (आगे का कैमरा चालू करें)"
+              }
+            >
+              <IoCameraReverseOutline />
             </button>
           )}
 

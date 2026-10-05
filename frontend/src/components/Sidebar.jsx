@@ -57,6 +57,10 @@ const Sidebar = () => {
     } catch (error) {
       console.log("Backend logout error:", error);
     } finally {
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("chat-user");
+      } catch (e) {}
       dispatch(setAuthUser(null));
       dispatch(setSelectedUser(null));
       navigate("/login");

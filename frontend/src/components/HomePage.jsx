@@ -1,13 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Sidebar from "./Sidebar";
 import MessageContainer from "./MessageContainer";
 import CallModal from "./CallModal";
 import IncomingCallModal from "./IncomingCallModal";
 import MicPermissionPrompt from "./MicPermissionPrompt";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
-  const { selectedUser } = useSelector((store) => store.user);
+  const { selectedUser, authUser } = useSelector((store) => store.user);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authUser) {
+      navigate("/login");
+    }
+  }, [authUser, navigate]);
 
   return (
     <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none relative">

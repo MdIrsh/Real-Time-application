@@ -26,9 +26,12 @@ const navigate=useNavigate();
           withCredentials: true,
         }
       );
-        navigate("/");
-        dispatch(setAuthUser(res.data));
-        toast.success("Login successful!");
+      if (res.data?.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+      dispatch(setAuthUser(res.data));
+      toast.success("Login successful!");
+      navigate("/");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Backend offline. Use 'Explore Demo Account' below to test!");
       console.log(error);

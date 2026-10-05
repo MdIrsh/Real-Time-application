@@ -116,6 +116,7 @@ export const login = async (req, res) => {
         fullName: user.fullName,
         profilePhoto: profilePhoto,
         gender: user.gender,
+        token: token,
       });
   } catch (error) {
     console.log("Login error:", error);

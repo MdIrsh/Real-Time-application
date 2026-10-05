@@ -1,9 +1,18 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const getInitialAuthUser = () => {
+  try {
+    const item = typeof window !== "undefined" ? localStorage.getItem("chat-user") : null;
+    return item ? JSON.parse(item) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const userSlice = createSlice({
   name: "user",
   initialState: {
-    authUser: null,
+    authUser: getInitialAuthUser(),
     otherUsers: null, // Accepted friends list
     selectedUser: null,
     onlineUsers: null,
@@ -16,6 +25,19 @@ const userSlice = createSlice({
   reducers: {
     setAuthUser: (state, action) => {
       state.authUser = action.payload;
+      try {
+        if (action.payload) {
+          localStorage.setItem("chat-user", JSON.stringify(action.payload));
+          if (action.payload.token) {
+            localStorage.setItem("token", action.payload.token);
+          }
+        } else {
+          localStorage.removeItem("chat-user");
+          localStorage.removeItem("token");
+        }
+      } catch (e) {
+        console.error("Error updating localStorage for user:", e);
+      }
     },
     setOtherUsers: (state, action) => {
       state.otherUsers = action.payload;

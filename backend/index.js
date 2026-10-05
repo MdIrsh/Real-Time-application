@@ -28,6 +28,8 @@ const corsOption = {
     }
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-access-token", "token"],
 };
 
 app.use(cors(corsOption));

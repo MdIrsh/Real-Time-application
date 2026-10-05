@@ -577,6 +577,8 @@ export const CallProvider = ({ children }) => {
         setIsVideoOff((prev) => !prev);
       }
     }
+  };
+
   // Switch Camera (Front Camera <-> Back/Rear Camera)
   const switchCamera = async () => {
     if (callType !== "video" || !localStreamRef.current) return;

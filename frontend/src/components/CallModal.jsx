@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useCall } from "../context/CallContext";
 import {
   MdCallEnd,
@@ -7,11 +7,15 @@ import {
   MdVideocam,
   MdVideocamOff,
   MdVolumeUp,
+  MdVolumeDown,
+  MdVolumeOff,
+  MdVolumeMute,
 } from "react-icons/md";
 import { IoShieldCheckmark } from "react-icons/io5";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 
 const CallModal = () => {
+  const [showVolumePopup, setShowVolumePopup] = useState(false);
   const {
     callActive,
     isIncoming,
@@ -31,6 +35,8 @@ const CallModal = () => {
     endCall,
     toggleMute,
     toggleVideo,
+    callVolume,
+    changeCallVolume,
   } = useCall();
 
   // Ensure remote video element has the active remote media stream
@@ -217,7 +223,95 @@ const CallModal = () => {
         </div>
 
         {/* Bottom Call Controls Bar */}
-        <div className="bg-[#1f2c34]/95 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 flex items-center justify-around border border-white/10 shadow-xl z-20">
+        <div className="relative bg-[#1f2c34]/95 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 flex items-center justify-around border border-white/10 shadow-xl z-20">
+          {/* Speaker Volume Popover */}
+          {showVolumePopup && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-20 left-4 sm:left-8 bg-zinc-900/95 backdrop-blur-xl border border-gray-700/80 p-4 rounded-2xl shadow-2xl w-64 z-30 animate-fadeIn text-white"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                  {callVolume === 0 ? (
+                    <MdVolumeOff className="text-red-400 text-sm" />
+                  ) : callVolume < 0.5 ? (
+                    <MdVolumeDown className="text-emerald-400 text-sm" />
+                  ) : (
+                    <MdVolumeUp className="text-emerald-400 text-sm" />
+                  )}
+                  Speaker Volume
+                </span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  {Math.round(callVolume * 100)}%
+                </span>
+              </div>
+
+              {/* Range Slider */}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={callVolume}
+                onChange={(e) => changeCallVolume(e.target.value)}
+                className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 mb-3"
+              />
+
+              {/* Volume Presets */}
+              <div className="flex items-center justify-between gap-1 text-[11px]">
+                <button
+                  onClick={() => changeCallVolume(0)}
+                  className={`flex-1 py-1 rounded-lg border transition-all ${
+                    callVolume === 0
+                      ? "bg-red-500/20 border-red-500/40 text-red-300 font-bold"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Mute (0%)
+                </button>
+                <button
+                  onClick={() => changeCallVolume(0.5)}
+                  className={`flex-1 py-1 rounded-lg border transition-all ${
+                    callVolume > 0 && callVolume < 0.8
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Medium (50%)
+                </button>
+                <button
+                  onClick={() => changeCallVolume(1)}
+                  className={`flex-1 py-1 rounded-lg border transition-all ${
+                    callVolume >= 0.8
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Max (100%)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Speaker Volume Button */}
+          <button
+            onClick={() => setShowVolumePopup((prev) => !prev)}
+            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all shadow-md ${
+              showVolumePopup || callVolume < 1
+                ? "bg-emerald-500 text-white shadow-emerald-500/20 scale-105"
+                : "bg-white/15 text-white hover:bg-white/25"
+            }`}
+            title="Speaker Volume Control (Click to adjust)"
+          >
+            {callVolume === 0 ? (
+              <MdVolumeOff className="text-red-400" />
+            ) : callVolume < 0.5 ? (
+              <MdVolumeDown />
+            ) : (
+              <MdVolumeUp />
+            )}
+          </button>
+
           {/* Mute Mic Button */}
           <button
             onClick={toggleMute}

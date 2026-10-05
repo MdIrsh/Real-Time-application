@@ -60,6 +60,18 @@ export const CallProvider = ({ children }) => {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+  const [callVolume, setCallVolume] = useState(1.0); // 0.0 (mute) to 1.0 (max)
+
+  const changeCallVolume = useCallback((newVol) => {
+    const val = Math.max(0, Math.min(1, parseFloat(newVol)));
+    setCallVolume(val);
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = val;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.volume = val;
+    }
+  }, []);
 
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -125,6 +137,7 @@ export const CallProvider = ({ children }) => {
     setIsMuted(false);
     setIsVideoOff(false);
     setMicPermissionDenied(false);
+    setCallVolume(1.0);
   }, []);
 
   // End Call function
@@ -689,6 +702,8 @@ export const CallProvider = ({ children }) => {
         endCall,
         toggleMute,
         toggleVideo,
+        callVolume,
+        changeCallVolume,
       }}
     >
       {children}

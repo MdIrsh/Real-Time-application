@@ -22,7 +22,7 @@ const sanitizeUser = (u) => {
 
 export const register = async (req, res) => {
   try {
-    const { fullName, username, password, confirmPassword, gender } = req.body;
+    const { fullName, username, password, confirmPassword, gender, profilePhoto } = req.body;
 
     if (!fullName || !username || !password || !confirmPassword || !gender) {
       return res.status(400).json({ message: "All fields are required" });
@@ -45,11 +45,18 @@ export const register = async (req, res) => {
       username
     )}`;
 
+    const finalPhoto =
+      profilePhoto && profilePhoto.trim()
+        ? profilePhoto
+        : gender === "female"
+        ? femaleProfilePhoto
+        : maleProfilePhoto;
+
     await User.create({
       fullName,
       username,
       password: hashedPassword,
-      profilePhoto: gender === "male" ? maleProfilePhoto : femaleProfilePhoto,
+      profilePhoto: finalPhoto,
       gender,
       friends: [],
     });
@@ -499,3 +506,83 @@ export const getFriendRequests = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Update user's profile photo permanently
+export const updateProfilePhoto = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { profilePhoto, fullName } = req.body;
+
+    if (!profilePhoto && !fullName) {
+      return res.status(400).json({ message: "Please provide a photo or name to update." });
+    }
+
+    const updateFields = {};
+    if (profilePhoto) updateFields.profilePhoto = profilePhoto;
+    if (fullName && fullName.trim()) updateFields.fullName = fullName.trim();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const sanitized = sanitizeUser(updatedUser);
+
+    // Broadcast update via Socket.IO so all users/friends see new DP in real-time
+    io.emit("userProfileUpdated", {
+      userId: sanitized._id,
+      profilePhoto: sanitized.profilePhoto,
+      fullName: sanitized.fullName,
+    });
+
+    return res.status(200).json({
+      message: "Profile photo updated successfully!",
+      user: sanitized,
+    });
+  } catch (error) {
+    console.error("updateProfilePhoto error:", error);
+    return res.status(500).json({ message: "Failed to update profile photo." });
+  }
+};
+
+// Reset profile photo to default Dicebear avatar
+export const resetProfilePhoto = async (req, res) => {
+  try {
+    const userId = req.id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const seed = encodeURIComponent(user.username || user.fullName || "User");
+    const defaultPhoto =
+      user.gender === "female"
+        ? `https://api.dicebear.com/10.x/lorelei/svg?seed=${seed}`
+        : `https://api.dicebear.com/10.x/personas/svg?seed=${seed}`;
+
+    user.profilePhoto = defaultPhoto;
+    await user.save();
+
+    const sanitized = sanitizeUser(user);
+
+    io.emit("userProfileUpdated", {
+      userId: sanitized._id,
+      profilePhoto: sanitized.profilePhoto,
+      fullName: sanitized.fullName,
+    });
+
+    return res.status(200).json({
+      message: "Profile photo reset to default avatar.",
+      user: sanitized,
+    });
+  } catch (error) {
+    console.error("resetProfilePhoto error:", error);
+    return res.status(500).json({ message: "Failed to reset profile photo." });
+  }
+};
+

@@ -101,6 +101,47 @@ const userSlice = createSlice({
         state.otherUsers = [newFriend, ...state.otherUsers];
       }
     },
+    updateUserProfilePhoto: (state, action) => {
+      const { userId, profilePhoto, fullName } = action.payload || {};
+      if (!userId) return;
+
+      const currentAuthId = state.authUser?._id || state.authUser?.id;
+      if (currentAuthId && String(currentAuthId) === String(userId)) {
+        state.authUser = {
+          ...state.authUser,
+          ...(profilePhoto ? { profilePhoto } : {}),
+          ...(fullName ? { fullName } : {}),
+        };
+        try {
+          localStorage.setItem("chat-user", JSON.stringify(state.authUser));
+        } catch (e) {}
+      }
+
+      if (state.selectedUser) {
+        const selId = state.selectedUser?._id || state.selectedUser?.id;
+        if (selId && String(selId) === String(userId)) {
+          state.selectedUser = {
+            ...state.selectedUser,
+            ...(profilePhoto ? { profilePhoto } : {}),
+            ...(fullName ? { fullName } : {}),
+          };
+        }
+      }
+
+      if (Array.isArray(state.otherUsers)) {
+        state.otherUsers = state.otherUsers.map((u) => {
+          const uId = u._id || u.id;
+          if (uId && String(uId) === String(userId)) {
+            return {
+              ...u,
+              ...(profilePhoto ? { profilePhoto } : {}),
+              ...(fullName ? { fullName } : {}),
+            };
+          }
+          return u;
+        });
+      }
+    },
   },
 });
 
@@ -116,6 +157,7 @@ export const {
   addSentRequest,
   removeSentRequest,
   addFriend,
+  updateUserProfilePhoto,
 } = userSlice.actions;
 
 export default userSlice.reducer;

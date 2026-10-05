@@ -8,10 +8,12 @@ import {
   IoClose,
   IoPersonAddOutline,
   IoPeopleOutline,
+  IoCamera,
 } from "react-icons/io5";
 import OtherUsers from "./OtherUsers";
 import FriendRequestsModal from "./FriendRequestsModal";
 import AddFriendModal from "./AddFriendModal";
+import ProfileModal from "./ProfileModal";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +37,7 @@ const Sidebar = () => {
   const [dismissBanner, setDismissBanner] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const { authUser, selectedUser, friendRequests } = useSelector(
     (store) => store.user
@@ -106,22 +109,37 @@ const Sidebar = () => {
     <div className="flex flex-col h-full bg-white select-none overflow-hidden relative">
       {/* Top Header */}
       <div className="bg-[#f0f2f5] px-3.5 py-3 flex items-center justify-between border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <img
-            src={getAvatarUrl(authUser)}
-            alt="my-avatar"
-            className="w-10 h-10 rounded-full object-cover border border-gray-300 shrink-0"
-            onError={(e) => handleImageError(e, authUser?.fullName)}
-          />
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[#111b21] leading-tight truncate">
-              {authUser?.fullName || "My Account"}
-            </h3>
-            <span className="text-[11px] text-emerald-600 font-medium">
-              online
+        {/* Touch-optimized Clickable Profile Card to edit photo & details */}
+        <button
+          type="button"
+          onClick={() => setIsProfileModalOpen(true)}
+          className="flex items-center gap-2.5 min-w-0 p-1 -m-1 rounded-xl hover:bg-gray-200/70 active:bg-gray-300 active:scale-98 transition-all group text-left cursor-pointer touch-manipulation select-none"
+          title="Click to view & change profile photo"
+        >
+          <div className="relative shrink-0">
+            <img
+              src={getAvatarUrl(authUser)}
+              alt="my-avatar"
+              className="w-10 h-10 rounded-full object-cover border border-gray-300 transition-opacity group-hover:opacity-85 shadow-sm"
+              onError={(e) => handleImageError(e, authUser?.fullName)}
+            />
+            {/* Camera icon badge always visible on mobile & desktop */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00a884] text-white rounded-full flex items-center justify-center shadow-md border border-white">
+              <IoCamera className="text-[10px]" />
             </span>
           </div>
-        </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[#111b21] leading-tight truncate group-hover:text-emerald-700 transition-colors">
+              {authUser?.fullName || "My Account"}
+            </h3>
+            <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+              <span>online</span>
+              <span className="text-[10px] text-gray-400 group-hover:text-emerald-600 transition-colors">
+                • Change DP
+              </span>
+            </span>
+          </div>
+        </button>
 
         {/* Header icons: Add Friend, Requests Badge, Notifications, Meta AI, Logout */}
         <div className="flex items-center gap-1">
@@ -324,6 +342,11 @@ const Sidebar = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         hookActions={friendHookActions}
+      />
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
     </div>
   );

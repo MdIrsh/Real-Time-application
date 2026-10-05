@@ -10,6 +10,8 @@ import {
   rejectFriendRequest,
   cancelFriendRequest,
   getFriendRequests,
+  updateProfilePhoto,
+  resetProfilePhoto,
 } from "../controllers/userController.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 
@@ -19,6 +21,10 @@ router.route("/register").post(register);
 router.route("/login").post(login);
 router.route("/logout").get(logout);
 router.route("/").get(isAuthenticated, getOtherUsers);
+
+// Profile photo management routes
+router.route("/profile/update-photo").put(isAuthenticated, updateProfilePhoto);
+router.route("/profile/reset-photo").put(isAuthenticated, resetProfilePhoto);
 
 // Friend Request System Routes
 router.route("/search").get(isAuthenticated, searchUsers);

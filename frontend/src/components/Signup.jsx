@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { BASE_URL } from "../config/api";
+import { compressImage } from "../utils/imageCompressor";
+import { IoCamera, IoClose } from "react-icons/io5";
 
 const Signup = () => {
   const [user, setUser] = useState({
@@ -11,9 +13,33 @@ const Signup = () => {
     password: "",
     confirmPassword: "",
     gender: "",
+    profilePhoto: "",
   });
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.loading("Optimizing photo...", { id: "signup-photo" });
+      const compressed = await compressImage(file, { maxSize: 400, quality: 0.85 });
+      setPhotoPreview(compressed.dataUrl);
+      setUser((prev) => ({ ...prev, profilePhoto: compressed.dataUrl }));
+      toast.success("Profile photo ready!", { id: "signup-photo" });
+    } catch (err) {
+      toast.error("Failed to process photo.", { id: "signup-photo" });
+    }
+  };
+
+  const handleRemovePhoto = (e) => {
+    e.stopPropagation();
+    setPhotoPreview(null);
+    setUser((prev) => ({ ...prev, profilePhoto: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleCheckbox = (gender) => {
     setUser({ ...user, gender });
@@ -69,13 +95,60 @@ const Signup = () => {
   return (
     <div data-theme="light" className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
       <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
-        <div className="flex flex-col items-center mb-5">
-          <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 font-bold text-2xl">
+        <div className="flex flex-col items-center mb-4">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-1 font-bold text-2xl">
             💬
           </div>
           <h1 className="text-2xl font-bold text-[#111b21]">Create an Account</h1>
-          <p className="text-xs text-gray-500 mt-1">Join to start messaging your friends</p>
+          <p className="text-xs text-gray-500 mt-0.5">Join to start messaging your friends</p>
+
+          {/* Profile Photo Picker */}
+          <div className="mt-3.5 flex flex-col items-center">
+            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              <div className="w-20 h-20 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-gray-50 flex items-center justify-center shadow-inner">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400 group-hover:text-emerald-600 transition-colors">
+                    <IoCamera className="text-2xl" />
+                    <span className="text-[10px] font-medium mt-0.5">Add DP</span>
+                  </div>
+                )}
+              </div>
+
+              {photoPreview ? (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow"
+                  title="Remove photo"
+                >
+                  <IoClose className="text-xs" />
+                </button>
+              ) : (
+                <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#00a884] text-white rounded-full flex items-center justify-center shadow border-2 border-white">
+                  <span className="text-xs font-bold leading-none">+</span>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoSelect}
+            />
+            <span className="text-[11px] text-gray-400 mt-1">
+              {photoPreview ? "Custom DP Selected ✓" : "Upload your real photo (Optional)"}
+            </span>
+          </div>
         </div>
+
         <form onSubmit={onSubmitHandler} className="space-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">

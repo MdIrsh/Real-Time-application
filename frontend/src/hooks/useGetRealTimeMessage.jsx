@@ -7,7 +7,11 @@ import {
   clearUnreadCount,
   markMessagesSeen,
 } from "../redux/messageSlice";
-import { setSelectedUser, setUserTyping } from "../redux/userSlice";
+import {
+  setSelectedUser,
+  setUserTyping,
+  updateUserProfilePhoto,
+} from "../redux/userSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import toast from "react-hot-toast";
@@ -185,14 +189,23 @@ const useGetRealTimeMessage = () => {
       dispatch(setUserTyping({ userId, isTyping }));
     };
 
+    // When a friend or user updates their profile photo or name
+    const handleUserProfileUpdated = (data) => {
+      if (data?.userId) {
+        dispatch(updateUserProfilePhoto(data));
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
     socket.on("userTyping", handleUserTyping);
+    socket.on("userProfileUpdated", handleUserProfileUpdated);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
       socket.off("userTyping", handleUserTyping);
+      socket.off("userProfileUpdated", handleUserProfileUpdated);
     };
   }, [socket, dispatch]);
 };

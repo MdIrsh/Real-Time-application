@@ -23,24 +23,26 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
-    { urls: "stun:stun.cloudflare.com:3478" },
-    { urls: "stun:stun.services.mozilla.com" },
+    { urls: "stun:stun.relay.metered.ca:80" },
     {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelay",
-      credential: "openrelay",
+      urls: "turn:global.relay.metered.ca:80",
+      username: "91da8aa34b5cbbc4d061261e",
+      credential: "KjeJVIphq75BFyNh",
     },
     {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelay",
-      credential: "openrelay",
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "91da8aa34b5cbbc4d061261e",
+      credential: "KjeJVIphq75BFyNh",
     },
     {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelay",
-      credential: "openrelay",
+      urls: "turn:global.relay.metered.ca:443",
+      username: "91da8aa34b5cbbc4d061261e",
+      credential: "KjeJVIphq75BFyNh",
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "91da8aa34b5cbbc4d061261e",
+      credential: "KjeJVIphq75BFyNh",
     },
   ],
 };
@@ -254,34 +256,33 @@ export const CallProvider = ({ children }) => {
     setCallStatus("Connected");
     setRemoteStream(stream);
 
-    // Audio element: handles voice for audio call (muted during video call to avoid double audio)
+    // Audio element: ALWAYS plays incoming audio cleanly (both voice call and video call)
     if (remoteAudioRef.current) {
       if (remoteAudioRef.current.srcObject !== stream) {
         remoteAudioRef.current.srcObject = stream;
       }
       remoteAudioRef.current.volume = 1.0;
-      remoteAudioRef.current.muted = (callType === "video");
+      remoteAudioRef.current.muted = false; // Always unmuted so voice is always heard!
       const playPromise = remoteAudioRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch((e) => {
           console.warn("Audio element autoplay restricted:", e);
-          if (callType === "audio") setAudioBlocked(true);
+          setAudioBlocked(true);
         });
       }
     }
 
-    // Video element: plays BOTH video and audio for video calls
+    // Video element: displays video for video calls (muted so mobile browsers never block autoplay)
     if (remoteVideoRef.current && callType === "video") {
       if (remoteVideoRef.current.srcObject !== stream) {
         remoteVideoRef.current.srcObject = stream;
       }
       remoteVideoRef.current.volume = 1.0;
-      remoteVideoRef.current.muted = false; // UNMUTED: allows remote audio to play directly!
+      remoteVideoRef.current.muted = true; // Muted video so browser allows instant video stream
       const videoPlay = remoteVideoRef.current.play();
       if (videoPlay !== undefined) {
         videoPlay.catch((e) => {
           console.warn("Video element autoplay restricted:", e);
-          setAudioBlocked(true);
         });
       }
     }
@@ -291,11 +292,11 @@ export const CallProvider = ({ children }) => {
   const enableAudio = useCallback(() => {
     resumeAudioContext();
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.muted = (callType === "video");
+      remoteAudioRef.current.muted = false;
       remoteAudioRef.current.play().catch(() => {});
     }
     if (remoteVideoRef.current && callType === "video") {
-      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.muted = true;
       remoteVideoRef.current.play().catch(() => {});
     }
     setAudioBlocked(false);
@@ -316,20 +317,19 @@ export const CallProvider = ({ children }) => {
         if (remoteVideoRef.current.srcObject !== remoteStream) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
-        remoteVideoRef.current.muted = false;
+        remoteVideoRef.current.muted = true;
         remoteVideoRef.current.play().catch((e) => {
           console.warn("Autoplay blocked on remote video:", e);
-          setAudioBlocked(true);
         });
       }
       if (remoteAudioRef.current) {
         if (remoteAudioRef.current.srcObject !== remoteStream) {
           remoteAudioRef.current.srcObject = remoteStream;
         }
-        remoteAudioRef.current.muted = (callType === "video");
+        remoteAudioRef.current.muted = false;
         remoteAudioRef.current.play().catch((e) => {
           console.warn("Autoplay blocked on remote audio:", e);
-          if (callType === "audio") setAudioBlocked(true);
+          setAudioBlocked(true);
         });
       }
     }

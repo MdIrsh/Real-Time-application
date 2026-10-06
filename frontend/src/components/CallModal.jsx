@@ -46,7 +46,7 @@ const CallModal = () => {
       if (remoteVideoRef.current.srcObject !== remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
       }
-      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.muted = true; // Muted to avoid browser autoplay restriction; audio element plays the voice
       remoteVideoRef.current.play().catch((err) => {
         console.warn("remoteVideo autoplay restricted:", err);
       });
@@ -129,11 +129,12 @@ const CallModal = () => {
         <div className="relative flex-1 my-3 flex items-center justify-center overflow-hidden rounded-2xl bg-zinc-900/90 border border-white/5">
           {callType === "video" ? (
             <div className="relative w-full h-full flex items-center justify-center bg-black">
-              {/* Remote Video Stream (Unmuted so remote person's voice plays loud and clear) */}
+              {/* Remote Video Stream (Muted so browser allows autoplay without gesture; audio element plays the sound) */}
               <video
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
+                muted
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   isConnected ? "opacity-100" : "opacity-0"
                 }`}

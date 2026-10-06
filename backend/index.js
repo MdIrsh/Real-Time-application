@@ -36,8 +36,15 @@ app.use(cors(corsOption));
 
 
 // routes
-app.use("/api/v1/user",userRoute );
-app.use("/api/v1/message",messageRoute)
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Real-Time Chat App Backend is alive and running!",
+    status: "healthy",
+  });
+});
+
+app.use("/api/v1/user", userRoute);
+app.use("/api/v1/message", messageRoute);
 
 
 server.listen(PORT, async () => {

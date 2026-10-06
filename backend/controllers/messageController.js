@@ -7,7 +7,7 @@ export const sendMessage = async (req, res) => {
   try {
     const senderId = req.id;
     const receiverId = req.params.id;
-    const { message, image } = req.body;
+    const { message, image, audio, audioDuration } = req.body;
 
     const sender = await User.findById(senderId).select("fullName username profilePhoto friends").lean();
     if (!sender) {
@@ -37,8 +37,10 @@ export const sendMessage = async (req, res) => {
       Message.create({
         senderId,
         receiverId,
-        message,
-        image,
+        message: message || (audio ? "🎤 Voice message" : ""),
+        image: image || null,
+        audio: audio || null,
+        audioDuration: Number(audioDuration) || 0,
         delivered: isReceiverOnline, // delivered if receiver is online
         seen: false, // only marked true once receiver views the chat
       }),

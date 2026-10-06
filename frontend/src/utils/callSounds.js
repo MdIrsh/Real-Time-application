@@ -28,6 +28,8 @@ if (typeof window !== "undefined") {
   };
   window.addEventListener("click", handleUserGesture, { passive: true });
   window.addEventListener("touchstart", handleUserGesture, { passive: true });
+  window.addEventListener("touchend", handleUserGesture, { passive: true });
+  window.addEventListener("pointerdown", handleUserGesture, { passive: true });
   window.addEventListener("keydown", handleUserGesture, { passive: true });
 }
 

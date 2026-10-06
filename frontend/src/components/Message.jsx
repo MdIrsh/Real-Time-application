@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
 const Message = ({ message }) => {
   const scroll = useRef();
@@ -67,6 +68,17 @@ const Message = ({ message }) => {
           </div>
         )}
 
+        {/* Audio Voice Note Player */}
+        {message?.audio && (
+          <div className="mb-1">
+            <VoiceMessagePlayer
+              audioUrl={message.audio}
+              duration={message.audioDuration}
+              isSentByMe={isSentByMe}
+            />
+          </div>
+        )}
+
         {/* Typing indicator or message content */}
         {isTyping ? (
           <div className="flex items-center gap-1.5 py-1 px-1">
@@ -87,7 +99,8 @@ const Message = ({ message }) => {
             </span>
           </div>
         ) : (
-          message?.message && (
+          message?.message &&
+          message.message !== "🎤 Voice message" && (
             <div className="text-[14.5px] leading-relaxed break-words font-normal select-text pr-14 inline-block whitespace-pre-wrap">
               {message?.message}
             </div>

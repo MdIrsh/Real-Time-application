@@ -76,10 +76,15 @@ const CallModal = () => {
   return (
     <div
       onClick={enableAudio}
+      onTouchStart={enableAudio}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all p-3 sm:p-6 animate-fadeIn cursor-pointer"
     >
       <div
         onClick={(e) => {
+          enableAudio();
+          e.stopPropagation();
+        }}
+        onTouchStart={(e) => {
           enableAudio();
           e.stopPropagation();
         }}
@@ -106,9 +111,10 @@ const CallModal = () => {
             <div className="mt-2 flex justify-center">
               <button
                 onClick={enableAudio}
-                className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg animate-bounce transition-all active:scale-95"
+                onTouchStart={enableAudio}
+                className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-xl animate-bounce transition-all active:scale-95"
               >
-                <MdVolumeUp className="text-base" /> Tap here to enable sound
+                <MdVolumeUp className="text-base" /> 🔊 Tap to turn on sound (आवाज चालू करें)
               </button>
             </div>
           )}
@@ -261,15 +267,15 @@ const CallModal = () => {
                   Speaker Volume
                 </span>
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  {Math.round(callVolume * 100)}%
+                  {Math.round(callVolume * 100)}%{callVolume > 1 ? " 🔥 Boost" : ""}
                 </span>
               </div>
 
-              {/* Range Slider */}
+              {/* Range Slider (Up to 200% Boost for weak phone speakers!) */}
               <input
                 type="range"
                 min="0"
-                max="1"
+                max="2"
                 step="0.05"
                 value={callVolume}
                 onChange={(e) => changeCallVolume(e.target.value)}
@@ -277,7 +283,7 @@ const CallModal = () => {
               />
 
               {/* Volume Presets */}
-              <div className="flex items-center justify-between gap-1 text-[11px]">
+              <div className="flex items-center justify-between gap-1 text-[10px]">
                 <button
                   onClick={() => changeCallVolume(0)}
                   className={`flex-1 py-1 rounded-lg border transition-all ${
@@ -286,27 +292,37 @@ const CallModal = () => {
                       : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
                   }`}
                 >
-                  Mute (0%)
-                </button>
-                <button
-                  onClick={() => changeCallVolume(0.5)}
-                  className={`flex-1 py-1 rounded-lg border transition-all ${
-                    callVolume > 0 && callVolume < 0.8
-                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
-                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Medium (50%)
+                  Mute
                 </button>
                 <button
                   onClick={() => changeCallVolume(1)}
                   className={`flex-1 py-1 rounded-lg border transition-all ${
-                    callVolume >= 0.8
+                    callVolume === 1
                       ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
                       : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
                   }`}
                 >
-                  Max (100%)
+                  100%
+                </button>
+                <button
+                  onClick={() => changeCallVolume(1.5)}
+                  className={`flex-1 py-1 rounded-lg border transition-all ${
+                    callVolume === 1.5
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  150% 🔊
+                </button>
+                <button
+                  onClick={() => changeCallVolume(2)}
+                  className={`flex-1 py-1 rounded-lg border transition-all ${
+                    callVolume === 2
+                      ? "bg-emerald-500/30 border-emerald-500/50 text-emerald-300 font-bold"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  200% 🔥
                 </button>
               </div>
             </div>

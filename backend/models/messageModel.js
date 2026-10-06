@@ -13,11 +13,19 @@ const messageModel = new mongoose.Schema({
   },
   message: {
     type: String,
-    required: true
+    default: ""
   },
   image: {
     type: String,
     default: null
+  },
+  audio: {
+    type: String,
+    default: null
+  },
+  audioDuration: {
+    type: Number,
+    default: 0
   },
   delivered: {
     type: Boolean,

@@ -17,24 +17,34 @@ const POPULAR_EMOJIS = [
 
 const SendInput = () => {
   const [message, setMessage] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
-  const recognitionRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const audioStreamRef = useRef(null);
+
   const dispatch = useDispatch();
   const { selectedUser, authUser } = useSelector((store) => store.user);
   const { socket } = useSelector((store) => store.socket);
   const { messages } = useSelector((store) => store.message);
 
-  // Clean up typing status when changing user or unmounting
+  // Clean up typing status and audio recorder when changing user or unmounting
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (socket && selectedUser?._id && selectedUser._id !== "meta-ai") {
         socket.emit("typing", { to: selectedUser._id, isTyping: false });
@@ -69,24 +79,14 @@ const SendInput = () => {
     }
   };
 
-  // Timer while recording voice
-  useEffect(() => {
-    let timer = null;
-    if (isListening) {
-      timer = setInterval(() => {
-        setRecordSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setRecordSeconds(0);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isListening]);
-
-  const sendMessage = async (textToSend, imageUrl = null) => {
+  const sendMessage = async (
+    textToSend,
+    imageUrl = null,
+    audioUrl = null,
+    audioDuration = 0
+  ) => {
     const currentText = (textToSend !== undefined ? textToSend : message).trim();
-    if (!currentText && !imageUrl) return;
+    if (!currentText && !imageUrl && !audioUrl) return;
     if (!selectedUser?._id) return;
 
     setMessage("");
@@ -100,13 +100,23 @@ const SendInput = () => {
       socket.emit("typing", { to: selectedUser._id, isTyping: false });
     }
 
+    const displayMsg =
+      currentText ||
+      (audioUrl
+        ? "🎤 Voice message"
+        : imageUrl
+        ? "📷 Shared an image"
+        : "");
+
     // Special handling for Meta AI
     if (selectedUser._id === "meta-ai") {
       const userMsg = {
         _id: `user-msg-${Date.now()}`,
         senderId: authUser?._id,
-        message: currentText || (imageUrl ? "📷 Shared an image" : ""),
+        message: displayMsg,
         image: imageUrl || null,
+        audio: audioUrl || null,
+        audioDuration: audioDuration || 0,
         createdAt: new Date().toISOString(),
       };
       const currentList = messages || [];
@@ -124,9 +134,11 @@ const SendInput = () => {
       dispatch(setMessages([...updatedWithUser, typingMsg]));
       localStorage.setItem("meta_ai_chat_history", JSON.stringify(updatedWithUser));
 
-      // Generate intelligent AI response (Knowledge Base + Live Llama 3 API)
+      // Generate intelligent AI response
       let aiPrompt = currentText;
-      if (imageUrl && !currentText) {
+      if (audioUrl) {
+        aiPrompt = "User sent a voice message. Acknowledge the voice note and ask how you can help them today.";
+      } else if (imageUrl && !currentText) {
         aiPrompt = "User shared an image. Acknowledge and offer help.";
       }
 
@@ -151,10 +163,12 @@ const SendInput = () => {
       senderId: authUser?._id || "demo-user-me",
       receiverId: selectedUser?._id,
       isMe: true,
-      message: currentText || (imageUrl ? "📷 Shared an image" : ""),
+      message: displayMsg,
       image: imageUrl || null,
-      delivered: false, // Single gray tick ✓ initially
-      seen: false, // Becomes blue tick only once seen
+      audio: audioUrl || null,
+      audioDuration: audioDuration || 0,
+      delivered: false, // Single gray tick initially
+      seen: false, // Becomes blue tick once seen
       createdAt: new Date().toISOString(),
     };
 
@@ -164,7 +178,7 @@ const SendInput = () => {
     dispatch(
       setLastMessage({
         userId: selectedUser._id,
-        text: currentText || (imageUrl ? "📷 Shared an image" : ""),
+        text: displayMsg,
         time: userMsg.createdAt,
         isMe: true,
         seen: false,
@@ -175,21 +189,26 @@ const SendInput = () => {
     const isDemoContact = selectedUser._id?.startsWith("demo-contact");
 
     if (isDemoContact) {
-      // 1. After 150ms: Turn to Double Gray Tick (Delivered)
       setTimeout(() => {
         dispatch(markMessageDelivered(userMsg._id));
       }, 150);
 
-      // 2. When contact replies after 450ms: Turn to Double Blue Tick (Seen)
-      const contactReplies = [
-        "Hey! Got your message 👍",
-        "Sounds good! How are you doing today?",
-        "Awesome! Thanks for testing this out 😊",
-        "Looks great! The chat interface is really smooth 🔥",
-        "Haha nice! Let's catch up soon 🙌",
-        "Super responsive! Loving this WhatsApp clone 🚀"
-      ];
-      const randomReply = contactReplies[Math.floor(Math.random() * contactReplies.length)];
+      const contactReplies = audioUrl
+        ? [
+            "🎙️ Got your voice note! Loud and clear 👍",
+            "Awesome voice message! Thanks for testing this out 😊",
+            "Sounds great! The voice recording feature works smoothly 🚀",
+          ]
+        : [
+            "Hey! Got your message 👍",
+            "Sounds good! How are you doing today?",
+            "Awesome! Thanks for testing this out 😊",
+            "Looks great! The chat interface is really smooth 🔥",
+            "Haha nice! Let's catch up soon 🙌",
+            "Super responsive! Loving this WhatsApp clone 🚀",
+          ];
+      const randomReply =
+        contactReplies[Math.floor(Math.random() * contactReplies.length)];
 
       setTimeout(() => {
         const replyMsg = {
@@ -225,8 +244,10 @@ const SendInput = () => {
       const res = await axios.post(
         `${BASE_URL}/api/v1/message/send/${selectedUser._id}`,
         {
-          message: currentText || (imageUrl ? "📷 Shared an image" : ""),
-          image: imageUrl,
+          message: displayMsg,
+          image: imageUrl || null,
+          audio: audioUrl || null,
+          audioDuration: audioDuration || 0,
         },
         {
           headers: {
@@ -239,6 +260,8 @@ const SendInput = () => {
         const newMsgObj = {
           ...res.data.newMessage,
           image: imageUrl || null,
+          audio: audioUrl || null,
+          audioDuration: audioDuration || 0,
           isMe: true,
           delivered: res.data.newMessage.delivered || false,
           seen: res.data.newMessage.seen || false,
@@ -252,8 +275,8 @@ const SendInput = () => {
 
   const onSubmitHandler = (e) => {
     e.preventDefault();
-    if (isListening) {
-      stopListening(true);
+    if (isRecordingVoice) {
+      stopVoiceRecordingAndSend();
     } else {
       sendMessage();
     }
@@ -287,87 +310,136 @@ const SendInput = () => {
     }
   };
 
-  // Start Mic Voice Recognition
-  const startListening = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      toast(
-        "Mic dictation is ready! Click mic again to speak, or type directly.",
-        { icon: "🎙️" }
-      );
+  // 🎙️ Start Real Audio Recording with MediaRecorder
+  const startVoiceRecording = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      toast.error("Microphone requires HTTPS or localhost!");
       return;
     }
 
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-IN";
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: false,
+          autoGainControl: true,
+        },
+      });
+      audioStreamRef.current = stream;
 
-      recognition.onstart = () => {
-        setIsListening(true);
-        toast("Listening... Speak now 🎙️", { icon: "🎤" });
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+      let options = {};
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          options = { mimeType: "audio/webm;codecs=opus" };
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          options = { mimeType: "audio/webm" };
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          options = { mimeType: "audio/mp4" };
+        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          options = { mimeType: "audio/ogg" };
         }
-        if (transcript) {
-          setMessage(transcript);
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
       };
 
-      recognition.onerror = (event) => {
-        console.log("Speech recognition error:", event.error);
-        setIsListening(false);
-        if (event.error === "not-allowed") {
-          toast.error("Please allow microphone access in your browser address bar!");
-        } else if (event.error !== "no-speech") {
-          toast.error(`Mic status: ${event.error}`);
-        }
-      };
+      mediaRecorder.start(100);
+      setIsRecordingVoice(true);
+      setRecordingSeconds(0);
 
-      recognition.onend = () => {
-        setIsListening(false);
-      };
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
 
-      recognitionRef.current = recognition;
-      recognition.start();
+      toast("Recording voice message... 🎙️", { icon: "🔴", duration: 1500 });
     } catch (err) {
-      console.log("Error starting mic:", err);
-      setIsListening(false);
-      toast.error("Could not start microphone.");
+      console.error("Voice recording error:", err);
+      toast.error("Microphone access denied! Allow mic to record voice note.");
+      setIsRecordingVoice(false);
     }
   };
 
-  const stopListening = (shouldSend = false) => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.log(e);
-      }
+  // ⏹️ Stop Recording & Send Voice Note
+  const stopVoiceRecordingAndSend = () => {
+    if (!mediaRecorderRef.current || !isRecordingVoice) return;
+
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
-    setIsListening(false);
-    if (shouldSend && message.trim()) {
-      sendMessage(message.trim());
+
+    const duration = recordingSeconds;
+    const recorder = mediaRecorderRef.current;
+
+    recorder.onstop = () => {
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+        audioStreamRef.current = null;
+      }
+
+      const mimeType = recorder.mimeType || "audio/webm";
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+      if (audioBlob.size < 300 || duration < 1) {
+        toast("Recording too short", { icon: "⏱️" });
+        setIsRecordingVoice(false);
+        setRecordingSeconds(0);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Audio = reader.result;
+        sendMessage("", null, base64Audio, duration);
+        toast.success("Voice message sent! 🎙️");
+      };
+      reader.readAsDataURL(audioBlob);
+
+      setIsRecordingVoice(false);
+      setRecordingSeconds(0);
+    };
+
+    try {
+      recorder.stop();
+    } catch (e) {
+      console.warn("Error stopping recorder:", e);
+      setIsRecordingVoice(false);
     }
   };
 
-  const cancelListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        console.log(e);
-      }
+  // 🗑️ Cancel & Discard Recording
+  const cancelVoiceRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
-    setIsListening(false);
-    setMessage("");
+
+    if (mediaRecorderRef.current) {
+      try {
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+    }
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+
+    audioChunksRef.current = [];
+    setIsRecordingVoice(false);
+    setRecordingSeconds(0);
+    toast("Voice note discarded 🗑️", { duration: 1200 });
   };
 
   const formatTimer = (secs) => {
@@ -419,31 +491,55 @@ const SendInput = () => {
         onSubmit={onSubmitHandler}
         className="bg-[#f0f2f5] px-3 py-2.5 flex items-center gap-2 border-t border-gray-200/80"
       >
-        {/* If listening: Show WhatsApp Style Voice Recording Bar */}
-        {isListening ? (
-          <div className="flex-1 flex items-center justify-between bg-white rounded-full px-4 py-2 border border-red-300 shadow-sm animate-pulse">
+        {/* If recording voice: Show WhatsApp Authentic Voice Recording Bar */}
+        {isRecordingVoice ? (
+          <div className="flex-1 flex items-center justify-between bg-white rounded-full px-4 py-2 border border-red-300 shadow-sm animate-fadeIn">
             {/* Left: Red recording dot & Timer */}
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-500 animate-ping shrink-0" />
-              <span className="text-xs font-semibold text-red-600">
-                {formatTimer(recordSeconds)}
+              <span className="text-xs font-bold text-red-600 font-mono">
+                {formatTimer(recordingSeconds)}
               </span>
             </div>
 
-            {/* Center: Live spoken transcript preview or listening label */}
-            <div className="flex-1 px-3 text-sm text-[#111b21] truncate font-medium">
-              {message || "Listening... Speak now"}
+            {/* Center: Sound Waveform animation */}
+            <div className="flex items-center gap-1 px-3">
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline mr-2">
+                Recording voice note...
+              </span>
+              <div className="flex items-center gap-1 h-5">
+                {[35, 70, 95, 55, 85, 40, 75, 50, 90, 65, 80].map((h, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      height: `${h}%`,
+                      animationDelay: `${i * 100}ms`,
+                    }}
+                    className="w-1 bg-red-500 rounded-full animate-pulse"
+                  />
+                ))}
+              </div>
             </div>
 
-            {/* Cancel button (Trash) */}
-            <button
-              type="button"
-              onClick={cancelListening}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors mr-1"
-              title="Cancel voice input"
-            >
-              <BsTrash className="w-4 h-4" />
-            </button>
+            {/* Right: Trash / Cancel button and Send button */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cancelVoiceRecording}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-90 transition-all"
+                title="Cancel & Delete recording"
+              >
+                <BsTrash className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={stopVoiceRecordingAndSend}
+                className="w-9 h-9 rounded-full bg-[#00a884] hover:bg-[#008f6f] active:scale-95 text-white flex items-center justify-center shadow-md transition-all"
+                title="Send voice note"
+              >
+                <IoSend className="w-4 h-4 ml-0.5" />
+              </button>
+            </div>
           </div>
         ) : (
           /* Normal Typing Input Bar */
@@ -499,7 +595,7 @@ const SendInput = () => {
         )}
 
         {/* Action Button: Send button OR Mic button */}
-        {message.trim() || isListening ? (
+        {message.trim() ? (
           <button
             type="submit"
             className={`w-10 h-10 rounded-full ${
@@ -511,16 +607,16 @@ const SendInput = () => {
           >
             <IoSend className="w-4 h-4 ml-0.5" />
           </button>
-        ) : (
+        ) : !isRecordingVoice ? (
           <button
             type="button"
-            onClick={startListening}
+            onClick={startVoiceRecording}
             className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-[#00a884] hover:bg-[#008f6f] active:scale-90 shadow-md transition-all"
-            title="Click to speak (Voice Input)"
+            title="Click to record voice message (वॉइस मैसेज रिकॉर्ड करें)"
           >
             <BsMicFill className="w-5 h-5" />
           </button>
-        )}
+        ) : null}
       </form>
     </div>
   );

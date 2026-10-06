@@ -8,8 +8,18 @@ const MicPermissionPrompt = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+  const [isHttpNetworkIP, setIsHttpNetworkIP] = useState(false);
 
   useEffect(() => {
+    // Detect if page is opened on local network IP via HTTP (which blocks mobile phone microphones)
+    if (typeof window !== "undefined") {
+      const isHttp =
+        window.location.protocol === "http:" &&
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1";
+      setIsHttpNetworkIP(isHttp);
+    }
+
     // Detect if page is opened inside WhatsApp or other in-app WebViews
     const ua = navigator.userAgent || navigator.vendor || window.opera || "";
     const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line|wv/i.test(ua);
@@ -84,6 +94,34 @@ const MicPermissionPrompt = () => {
           </div>
           <button
             onClick={() => setIsInAppBrowser(false)}
+            className="text-white/80 hover:text-white p-1 ml-2 shrink-0"
+            title="Dismiss"
+          >
+            <MdClose className="text-base" />
+          </button>
+        </div>
+      )}
+
+      {/* Local Network IP over HTTP Warning Banner for Mobile Phones */}
+      {isHttpNetworkIP && (
+        <div className="bg-rose-700 text-white px-3 py-2 text-xs flex items-center justify-between shadow-sm z-50 border-b border-rose-800 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <MdLock className="text-base shrink-0 animate-bounce" />
+            <span>
+              <strong>Phone HTTP Alert:</strong> Phone browser HTTP par microphone allow nahi karta. Call & audio ke liye{" "}
+              <a
+                href="https://real-time-application-cyan.vercel.app"
+                target="_blank"
+                rel="noreferrer"
+                className="underline font-bold text-amber-200 hover:text-white"
+              >
+                HTTPS Version (Vercel)
+              </a>{" "}
+              kholein!
+            </span>
+          </div>
+          <button
+            onClick={() => setIsHttpNetworkIP(false)}
             className="text-white/80 hover:text-white p-1 ml-2 shrink-0"
             title="Dismiss"
           >

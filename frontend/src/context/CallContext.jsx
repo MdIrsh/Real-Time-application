@@ -23,28 +23,27 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun.relay.metered.ca:80" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:openrelay.metered.ca:80" },
     {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "91da8aa34b5cbbc4d061261e",
-      credential: "KjeJVIphq75BFyNh",
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelay",
+      credential: "openrelay",
     },
     {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "91da8aa34b5cbbc4d061261e",
-      credential: "KjeJVIphq75BFyNh",
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelay",
+      credential: "openrelay",
     },
     {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "91da8aa34b5cbbc4d061261e",
-      credential: "KjeJVIphq75BFyNh",
-    },
-    {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "91da8aa34b5cbbc4d061261e",
-      credential: "KjeJVIphq75BFyNh",
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelay",
+      credential: "openrelay",
     },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 export const CallProvider = ({ children }) => {
@@ -64,16 +63,26 @@ export const CallProvider = ({ children }) => {
   const facingModeRef = useRef("user");
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
-  const [callVolume, setCallVolume] = useState(1.0); // 0.0 (mute) to 1.0 (max)
+  const [callVolume, setCallVolume] = useState(1.0); // 0.0 (mute) to 2.0 (boosted)
+  const callVolumeRef = useRef(1.0);
+
+  const audioSourceNodeRef = useRef(null);
+  const audioGainNodeRef = useRef(null);
 
   const changeCallVolume = useCallback((newVol) => {
-    const val = Math.max(0, Math.min(1, parseFloat(newVol)));
+    const val = Math.max(0, Math.min(2.0, parseFloat(newVol)));
     setCallVolume(val);
+    callVolumeRef.current = val;
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.volume = val;
+      remoteAudioRef.current.volume = Math.min(1.0, val);
     }
     if (remoteVideoRef.current) {
-      remoteVideoRef.current.volume = val;
+      remoteVideoRef.current.volume = Math.min(1.0, val);
+    }
+    if (audioGainNodeRef.current && typeof window !== "undefined") {
+      try {
+        audioGainNodeRef.current.gain.value = val;
+      } catch (e) {}
     }
   }, []);
 
@@ -101,6 +110,19 @@ export const CallProvider = ({ children }) => {
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+    }
+
+    if (audioSourceNodeRef.current) {
+      try {
+        audioSourceNodeRef.current.disconnect();
+      } catch (e) {}
+      audioSourceNodeRef.current = null;
+    }
+    if (audioGainNodeRef.current) {
+      try {
+        audioGainNodeRef.current.disconnect();
+      } catch (e) {}
+      audioGainNodeRef.current = null;
     }
 
     if (localStreamRef.current) {
@@ -142,6 +164,7 @@ export const CallProvider = ({ children }) => {
     setIsVideoOff(false);
     setMicPermissionDenied(false);
     setCallVolume(1.0);
+    callVolumeRef.current = 1.0;
     facingModeRef.current = "user";
     setFacingMode("user");
   }, []);
@@ -190,7 +213,7 @@ export const CallProvider = ({ children }) => {
       const constraints = {
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: false,
           autoGainControl: true,
         },
         video:
@@ -261,14 +284,40 @@ export const CallProvider = ({ children }) => {
       if (remoteAudioRef.current.srcObject !== stream) {
         remoteAudioRef.current.srcObject = stream;
       }
-      remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.volume = callVolumeRef.current;
       remoteAudioRef.current.muted = false; // Always unmuted so voice is always heard!
       const playPromise = remoteAudioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch((e) => {
-          console.warn("Audio element autoplay restricted:", e);
-          setAudioBlocked(true);
-        });
+        playPromise
+          .then(() => {
+            setAudioBlocked(false);
+          })
+          .catch((e) => {
+            console.warn("Audio element autoplay restricted:", e);
+            setAudioBlocked(true);
+
+            // Resilient fallback: Route through Web Audio API to play directly through speakers
+            try {
+              const ctx = resumeAudioContext();
+              if (ctx && stream && stream.getAudioTracks().length > 0) {
+                if (audioSourceNodeRef.current) {
+                  try { audioSourceNodeRef.current.disconnect(); } catch (err) {}
+                }
+                if (audioGainNodeRef.current) {
+                  try { audioGainNodeRef.current.disconnect(); } catch (err) {}
+                }
+                const source = ctx.createMediaStreamSource(stream);
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(callVolumeRef.current, ctx.currentTime);
+                source.connect(gain);
+                gain.connect(ctx.destination);
+                audioSourceNodeRef.current = source;
+                audioGainNodeRef.current = gain;
+              }
+            } catch (bridgeErr) {
+              console.warn("Web Audio bridge fallback warning:", bridgeErr);
+            }
+          });
       }
     }
 
@@ -299,6 +348,20 @@ export const CallProvider = ({ children }) => {
       remoteVideoRef.current.muted = true;
       remoteVideoRef.current.play().catch(() => {});
     }
+    if (remoteStreamRef.current && remoteStreamRef.current.getAudioTracks().length > 0) {
+      try {
+        const ctx = resumeAudioContext();
+        if (ctx && !audioSourceNodeRef.current) {
+          const source = ctx.createMediaStreamSource(remoteStreamRef.current);
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(callVolumeRef.current, ctx.currentTime);
+          source.connect(gain);
+          gain.connect(ctx.destination);
+          audioSourceNodeRef.current = source;
+          audioGainNodeRef.current = gain;
+        }
+      } catch (e) {}
+    }
     setAudioBlocked(false);
   }, [callType]);
 
@@ -326,8 +389,11 @@ export const CallProvider = ({ children }) => {
         if (remoteAudioRef.current.srcObject !== remoteStream) {
           remoteAudioRef.current.srcObject = remoteStream;
         }
+        remoteAudioRef.current.volume = callVolumeRef.current;
         remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.play().catch((e) => {
+        remoteAudioRef.current.play().then(() => {
+          setAudioBlocked(false);
+        }).catch((e) => {
           console.warn("Autoplay blocked on remote audio:", e);
           setAudioBlocked(true);
         });
@@ -350,6 +416,11 @@ export const CallProvider = ({ children }) => {
     }
 
     unlockAudioContext();
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.play().catch(() => {});
+    }
+
     setCallUser(user);
     setCallType(type);
     setIsVideoOff(type === "audio");
@@ -401,26 +472,24 @@ export const CallProvider = ({ children }) => {
       pc.addTrack(track, stream);
     });
 
-    // Handle remote tracks: accumulate without dropping existing tracks
+    // Handle remote tracks: use native event stream and listen for unmuting
     pc.ontrack = (event) => {
-      console.log("WebRTC track received:", event.track.kind);
-      if (!remoteStreamRef.current) {
-        remoteStreamRef.current = new MediaStream();
-      }
+      console.log("Caller WebRTC track received:", event.track.kind);
+      const incomingStream =
+        event.streams && event.streams[0]
+          ? event.streams[0]
+          : new MediaStream([event.track]);
 
-      if (event.streams && event.streams[0]) {
-        event.streams[0].getTracks().forEach((track) => {
-          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
-            remoteStreamRef.current.addTrack(track);
-          }
-        });
-      } else if (event.track) {
-        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
-          remoteStreamRef.current.addTrack(event.track);
+      remoteStreamRef.current = incomingStream;
+      setRemoteStream(incomingStream);
+      attachRemoteStream(incomingStream);
+
+      event.track.onunmute = () => {
+        console.log("Caller remote track unmuted, ensuring audio play:", event.track.kind);
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.play().catch(() => {});
         }
-      }
-
-      attachRemoteStream(remoteStreamRef.current);
+      };
     };
 
     // Monitor ICE connection state
@@ -468,6 +537,11 @@ export const CallProvider = ({ children }) => {
   const acceptIncomingCall = async () => {
     stopCallSounds();
     unlockAudioContext();
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.play().catch(() => {});
+    }
+
     const targetUser = callUserRef.current;
     const signal = incomingSignalRef.current;
     if (!targetUser || !signal) {
@@ -494,24 +568,22 @@ export const CallProvider = ({ children }) => {
     });
 
     pc.ontrack = (event) => {
-      console.log("WebRTC track received (receiver):", event.track.kind);
-      if (!remoteStreamRef.current) {
-        remoteStreamRef.current = new MediaStream();
-      }
+      console.log("Receiver WebRTC track received:", event.track.kind);
+      const incomingStream =
+        event.streams && event.streams[0]
+          ? event.streams[0]
+          : new MediaStream([event.track]);
 
-      if (event.streams && event.streams[0]) {
-        event.streams[0].getTracks().forEach((track) => {
-          if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
-            remoteStreamRef.current.addTrack(track);
-          }
-        });
-      } else if (event.track) {
-        if (!remoteStreamRef.current.getTracks().some((t) => t.id === event.track.id)) {
-          remoteStreamRef.current.addTrack(event.track);
+      remoteStreamRef.current = incomingStream;
+      setRemoteStream(incomingStream);
+      attachRemoteStream(incomingStream);
+
+      event.track.onunmute = () => {
+        console.log("Receiver remote track unmuted, ensuring audio play:", event.track.kind);
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.play().catch(() => {});
         }
-      }
-
-      attachRemoteStream(remoteStreamRef.current);
+      };
     };
 
     pc.oniceconnectionstatechange = () => {
@@ -686,6 +758,10 @@ export const CallProvider = ({ children }) => {
     const handleCallAccepted = async ({ signal }) => {
       stopCallSounds();
       setCallStatus("Connected");
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.play().catch(() => {});
+      }
       if (peerConnectionRef.current && signal) {
         try {
           await peerConnectionRef.current.setRemoteDescription(

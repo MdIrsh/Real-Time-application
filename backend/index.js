@@ -4,6 +4,7 @@ import connectDB from "./config/database.js";
 import userRoute from "./routes/userRoute.js";
 import messageRoute from "./routes/messageRoute.js"
 import reelRoute from "./routes/reelRoute.js";
+import statusRoute from "./routes/statusRoute.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { app, server } from "./socket/socket.js";
@@ -47,6 +48,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/reel", reelRoute);
+app.use("/api/v1/status", statusRoute);
 
 
 server.listen(PORT, async () => {

@@ -101,21 +101,23 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
         </div>
 
         {/* Search Bar */}
-        <div className="p-3 bg-[#0b141a] border-b border-[#202c33]">
-          <div className="relative flex items-center bg-[#202c33] rounded-full px-3 py-1.5 border border-transparent focus-within:border-[#25d366]/60 transition">
-            <IoSearchOutline size={16} className="text-[#8696a0] mr-2 shrink-0" />
+        <div className="p-3.5 bg-[#0b141a] border-b border-[#202c33]">
+          <div className="relative flex items-center bg-[#202c33] rounded-full px-4 h-12 border border-[#2a3942] focus-within:border-[#25d366] focus-within:ring-2 focus-within:ring-[#25d366]/25 shadow-inner transition-all">
+            <IoSearchOutline size={20} className="text-[#8696a0] mr-2.5 shrink-0" />
             <input
               type="text"
               placeholder="Search Bollywood songs or artists (e.g. Arijit, Kesariya)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-transparent text-xs text-[#e9edef] placeholder-[#8696a0] outline-hidden"
+              className="w-full bg-transparent text-sm sm:text-[15px] text-[#e9edef] placeholder-[#8696a0] outline-none border-none focus:outline-none focus:ring-0 leading-normal"
               autoFocus
             />
             {search && (
               <button
+                type="button"
                 onClick={() => setSearch("")}
-                className="text-[#8696a0] hover:text-[#e9edef] text-xs ml-1"
+                className="w-6 h-6 rounded-full bg-[#374248] hover:bg-[#4a5860] text-gray-300 hover:text-white flex items-center justify-center text-xs ml-1.5 transition cursor-pointer shrink-0"
+                title="Clear search"
               >
                 ✕
               </button>
@@ -123,15 +125,16 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
           </div>
 
           {/* Category Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2.5 pb-0.5">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
+                type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-medium shrink-0 transition cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition cursor-pointer active:scale-95 ${
                   selectedCategory === cat
-                    ? "bg-[#103629] text-[#25d366] border border-[#25d366]/50 font-semibold"
-                    : "bg-[#202c33] text-[#8696a0] hover:text-[#e9edef]"
+                    ? "bg-[#103629] text-[#25d366] border border-[#25d366]/60 font-semibold shadow-xs"
+                    : "bg-[#202c33] text-[#8696a0] hover:text-[#e9edef] hover:bg-[#26353d]"
                 }`}
               >
                 {cat}

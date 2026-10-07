@@ -294,21 +294,22 @@ const Sidebar = () => {
         <>
           {/* "Ask Meta AI or Search" Pill Input */}
           <div className="px-4 py-2 bg-[#0b141a] shrink-0">
-            <div className="relative flex items-center bg-[#202c33] rounded-full px-3.5 py-2 border border-transparent focus-within:border-[#00a884]/40 transition">
-              <IoSearchOutline size={18} className="text-[#8696a0] shrink-0 mr-2.5" />
+            <div className="relative flex items-center bg-[#202c33] rounded-full px-4 h-11 border border-transparent focus-within:border-[#00a884]/60 focus-within:ring-2 focus-within:ring-[#00a884]/20 transition-all">
+              <IoSearchOutline size={19} className="text-[#8696a0] shrink-0 mr-2.5" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 type="text"
                 placeholder="Ask Meta AI or Search"
-                className="w-full bg-transparent text-xs text-[#e9edef] placeholder-[#8696a0] outline-hidden"
+                className="w-full bg-transparent text-sm text-[#e9edef] placeholder-[#8696a0] outline-none border-none focus:outline-none focus:ring-0 leading-normal"
               />
               {search ? (
                 <button
+                  type="button"
                   onClick={() => setSearch("")}
-                  className="text-[#8696a0] hover:text-[#e9edef] transition ml-1 shrink-0"
+                  className="w-6 h-6 rounded-full bg-[#374248] hover:bg-[#4a5860] text-gray-300 hover:text-white flex items-center justify-center transition ml-1 shrink-0"
                 >
-                  <IoClose size={16} />
+                  <IoClose size={15} />
                 </button>
               ) : (
                 <button

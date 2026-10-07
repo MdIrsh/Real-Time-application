@@ -332,11 +332,14 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
 
   const isTextStatus =
     activeStatus.mediaType === "text" || !activeStatus.mediaUrl;
+  const displayName = isMyStatus
+    ? "My Status"
+    : activeStatus.user?.fullName || activeStatus.userName || "Contact";
   const avatarUrl =
-    activeStatus.userAvatar ||
     activeStatus.user?.profilePhoto ||
+    activeStatus.userAvatar ||
     `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(
-      activeStatus.userName || "Contact"
+      displayName
     )}`;
 
   const hasSong = !!activeStatus.song?.title;
@@ -388,14 +391,14 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               <div className="p-[2px] bg-[#25d366] rounded-full shrink-0">
                 <img
                   src={avatarUrl}
-                  alt={activeStatus.userName}
+                  alt={displayName}
                   className="w-9 h-9 rounded-full object-cover border border-black"
                 />
               </div>
 
               <div className="min-w-0 text-white">
                 <h4 className="font-bold text-xs truncate leading-tight drop-shadow flex items-center gap-1.5">
-                  <span>{isMyStatus ? "My Status" : activeStatus.userName}</span>
+                  <span>{displayName}</span>
                   {isMyStatus && (
                     <span className="text-[9px] bg-[#25d366] text-[#0b141a] font-extrabold px-1.5 py-0.2 rounded-full">
                       YOU

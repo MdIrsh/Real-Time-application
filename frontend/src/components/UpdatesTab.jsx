@@ -215,11 +215,13 @@ const UpdatesTab = ({ onOpenUpload }) => {
           ) : (
             <div className="flex flex-col divide-y divide-[#202c33]/30">
               {otherStatuses.map((status, index) => {
+                const displayName =
+                  status.user?.fullName || status.userName || "Contact";
                 const avatar =
-                  status.userAvatar ||
                   status.user?.profilePhoto ||
+                  status.userAvatar ||
                   `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(
-                    status.userName || "Friend"
+                    displayName
                   )}`;
 
                 const isViewed = status.viewers?.some(
@@ -243,14 +245,14 @@ const UpdatesTab = ({ onOpenUpload }) => {
                       >
                         <img
                           src={avatar}
-                          alt={status.userName}
+                          alt={displayName}
                           className="w-11 h-11 rounded-full object-cover border border-[#0b141a]"
                         />
                       </div>
 
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold text-[#e9edef] truncate">
-                          {status.userName}
+                          {displayName}
                         </h4>
                         <div className="text-xs text-[#8696a0] truncate mt-0.5 flex items-center gap-1.5">
                           <span className="shrink-0">{formatStatusTime(status.createdAt)}</span>

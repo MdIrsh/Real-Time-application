@@ -2,105 +2,35 @@ import { Status } from "../models/statusModel.js";
 import { User } from "../models/userModel.js";
 import { io } from "../socket/socket.js";
 
-// Authentic Demo Friend Statuses with songs so users immediately experience music statuses!
-const INITIAL_DEMO_STATUSES = [
-  {
-    userName: "Pooja Sharma",
-    userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=PoojaSharma",
-    mediaUrl: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-    mediaType: "image",
-    caption: "Sunset therapy after a long day at work 🌅☕ Peaceful vibes only! #MumbaiDiaries",
-    bgColor: "#128c7e",
-    song: {
-      title: "Kesariya",
-      artist: "Arijit Singh & Pritam (Brahmāstra)",
-      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3",
-      coverUrl: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
-    },
-    viewers: [],
-    createdAt: new Date(Date.now() - 25 * 60 * 1000), // 25 mins ago
-  },
-  {
-    userName: "Vikram Malhotra",
-    userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=VikramMalhotra",
-    mediaUrl: "",
-    mediaType: "text",
-    caption: "Har Har Mahadev! Kashi Vishwanath & Ganga Aarti trip booked with family! 🕉️✨ Can't wait! 🙏",
-    bgColor: "#7b1fa2", // Royal Purple WhatsApp text status
-    song: {
-      title: "Apna Bana Le",
-      artist: "Arijit Singh & Sachin-Jigar",
-      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3",
-      coverUrl: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg",
-    },
-    viewers: [],
-    createdAt: new Date(Date.now() - 75 * 60 * 1000), // 1h 15m ago
-  },
-  {
-    userName: "Neha Verma",
-    userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=NehaVerma",
-    mediaUrl: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=800&auto=format&fit=crop&q=80",
-    mediaType: "image",
-    caption: "Morning walk in nature 🌿🌸 Fresh air and positivity! Have a great Wednesday everyone ✨",
-    bgColor: "#075e54",
-    song: {
-      title: "Chaleya",
-      artist: "Arijit Singh, Shilpa Rao & Anirudh",
-      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3",
-      coverUrl: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg",
-    },
-    viewers: [],
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-  },
-  {
-    userName: "Aman Khan",
-    userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=AmanKhan",
-    mediaUrl: "",
-    mediaType: "text",
-    caption: "Adrak wali kulhad chai + thandi hawa = Ultimate Sukoon ☕🌧️ Tag your chai partner!",
-    bgColor: "#c2185b", // Crimson Pink WhatsApp text status
-    song: {
-      title: "Tum Hi Ho",
-      artist: "Arijit Singh & Mithoon (Aashiqui 2)",
-      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3",
-      coverUrl: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg",
-    },
-    viewers: [],
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-  },
-  {
-    userName: "Simran Kaur",
-    userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=SimranKaur",
-    mediaUrl: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=800&auto=format&fit=crop&q=80",
-    mediaType: "image",
-    caption: "Desi wedding celebrations start tonight! 💃✨ Dhol, bhangra & unlimited fun! 🕺🥁",
-    bgColor: "#d87b00",
-    song: {
-      title: "Tauba Tauba",
-      artist: "Karan Aujla (Bad Newz)",
-      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
-      coverUrl: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg",
-    },
-    viewers: [],
-    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
-  },
-];
-
+// Fetch all active statuses created by REAL registered users (past 24h)
 export const getAllStatuses = async (req, res) => {
   try {
     const currentUserId = req.id;
 
-    // Check if demo statuses exist with songs
-    const existingDemo = await Status.find({ user: null });
-    if (existingDemo.length < 5 || !existingDemo[0]?.song?.title) {
-      await Status.deleteMany({ user: null });
-      await Status.insertMany(INITIAL_DEMO_STATUSES);
-    }
+    // Purge any lingering dummy/demo statuses so only real users appear
+    await Status.deleteMany({
+      $or: [
+        { user: null },
+        { user: { $exists: false } },
+        {
+          userName: {
+            $in: [
+              "Pooja Sharma",
+              "Vikram Malhotra",
+              "Neha Verma",
+              "Aman Khan",
+              "Simran Kaur",
+            ],
+          },
+        },
+      ],
+    });
 
-    // Fetch user and contact statuses from past 24 hours
+    // Fetch user and contact statuses from past 24 hours (REAL users only)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const allStatuses = await Status.find({
-      $or: [{ createdAt: { $gte: oneDayAgo } }, { user: null }],
+      user: { $ne: null, $exists: true },
+      createdAt: { $gte: oneDayAgo },
     })
       .populate("user", "fullName username profilePhoto")
       .populate("viewers.user", "fullName username profilePhoto")
@@ -112,7 +42,7 @@ export const getAllStatuses = async (req, res) => {
     );
 
     const otherStatuses = allStatuses.filter(
-      (s) => !s.user || String(s.user._id || s.user) !== String(currentUserId)
+      (s) => s.user && String(s.user._id || s.user) !== String(currentUserId)
     );
 
     return res.status(200).json({

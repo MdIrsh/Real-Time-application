@@ -223,19 +223,19 @@ const MessageContainer = () => {
           </div>
         </div>
       ) : (
-        /* Empty State / WhatsApp Web Splash */
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#f0f2f5] border-b-[6px] border-emerald-500 p-8 text-center select-none">
-          <div className="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-6 shadow-sm">
+        /* Empty State / WhatsApp Web Splash in Dark Mode */
+        <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#111b21] border-b-[6px] border-[#00a884] p-8 text-center select-none text-[#e9edef]">
+          <div className="w-24 h-24 rounded-full bg-[#103629] flex items-center justify-center text-[#25d366] mb-6 shadow-md border border-[#202c33]">
             <BsChatSquareDots className="text-5xl" />
           </div>
-          <h2 className="text-3xl font-light text-[#41525d] mb-3">
+          <h2 className="text-3xl font-light text-[#e9edef] mb-3 tracking-tight">
             WhatsApp Web
           </h2>
-          <p className="text-sm text-[#667781] max-w-md leading-relaxed mb-8">
-            Send and receive messages privately. Only accepted friends appear here. Chat with <strong>Meta AI</strong> anytime for instant help.
+          <p className="text-sm text-[#8696a0] max-w-md leading-relaxed mb-8">
+            Send and receive messages privately. Watch Reels & Status, and chat with <strong>Meta AI</strong> anytime for instant help.
           </p>
           <div className="flex items-center gap-1.5 text-xs text-[#8696a0]">
-            <IoLockClosed className="text-xs" />
+            <IoLockClosed className="text-xs text-[#00a884]" />
             <span>End-to-end encrypted • Private connections only</span>
           </div>
         </div>

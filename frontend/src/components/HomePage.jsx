@@ -19,7 +19,7 @@ const HomePage = () => {
   }, [authUser, navigate]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none relative">
+    <div className="w-full h-full flex flex-col bg-[#0b141a] overflow-hidden select-none relative font-sans">
       {/* Proactive Microphone Permission Alert Banner */}
       <MicPermissionPrompt />
 
@@ -28,7 +28,7 @@ const HomePage = () => {
         <div
           className={`${
             selectedUser ? "hidden md:flex" : "flex"
-          } w-full md:w-[360px] lg:w-[400px] flex-col h-full border-r border-gray-200 shrink-0 bg-white overflow-hidden`}
+          } w-full md:w-[380px] lg:w-[420px] flex-col h-full border-r border-[#202c33] shrink-0 bg-[#0b141a] overflow-hidden`}
         >
           <Sidebar />
         </div>
@@ -37,7 +37,7 @@ const HomePage = () => {
         <div
           className={`${
             !selectedUser ? "hidden md:flex" : "flex"
-          } flex-1 flex-col h-full min-w-0 overflow-hidden`}
+          } flex-1 flex-col h-full min-w-0 overflow-hidden bg-[#0b141a]`}
         >
           <MessageContainer />
         </div>

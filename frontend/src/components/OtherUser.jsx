@@ -37,12 +37,12 @@ const OtherUser = ({ user }) => {
   return (
     <div
       onClick={selectedUserHandler}
-      className={`flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors border-b border-gray-100 select-none relative ${
+      className={`flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors border-b border-[#202c33]/50 select-none relative ${
         isSelected
-          ? "bg-[#f0f2f5]"
+          ? "bg-[#202c33]"
           : unreadCount > 0
-          ? "bg-emerald-50/40 hover:bg-emerald-50/70"
-          : "hover:bg-[#f5f6f6] bg-white"
+          ? "bg-[#111b21] hover:bg-[#202c33]/60"
+          : "hover:bg-[#202c33]/60 bg-[#0b141a]"
       }`}
     >
       {/* Avatar with status */}
@@ -50,11 +50,11 @@ const OtherUser = ({ user }) => {
         <img
           src={getAvatarUrl(user)}
           alt="user-profile"
-          className="w-12 h-12 rounded-full object-cover border border-gray-200"
+          className="w-12 h-12 rounded-full object-cover border border-[#202c33]"
           onError={(e) => handleImageError(e, user?.fullName)}
         />
         {isOnline && (
-          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#25d366] border-2 border-[#0b141a] rounded-full"></span>
         )}
       </div>
 
@@ -64,8 +64,8 @@ const OtherUser = ({ user }) => {
           <h4
             className={`text-[15px] truncate ${
               unreadCount > 0
-                ? "font-bold text-[#111b21]"
-                : "font-semibold text-[#111b21]"
+                ? "font-bold text-[#e9edef]"
+                : "font-semibold text-[#e9edef]"
             }`}
           >
             {user?.fullName}
@@ -73,9 +73,9 @@ const OtherUser = ({ user }) => {
           <span
             className={`text-[11px] shrink-0 ml-1 ${
               unreadCount > 0
-                ? "text-emerald-600 font-semibold"
+                ? "text-[#25d366] font-semibold"
                 : isOnline
-                ? "text-emerald-500 font-medium"
+                ? "text-[#25d366] font-medium"
                 : "text-[#8696a0]"
             }`}
           >
@@ -87,12 +87,12 @@ const OtherUser = ({ user }) => {
           <p
             className={`text-[13px] truncate pr-2 flex items-center gap-1 ${
               unreadCount > 0
-                ? "text-[#111b21] font-semibold"
-                : "text-[#667781]"
+                ? "text-[#e9edef] font-medium"
+                : "text-[#8696a0]"
             }`}
           >
             {isUserTyping ? (
-              <span className="text-emerald-600 font-semibold italic text-xs animate-pulse">
+              <span className="text-[#25d366] font-semibold italic text-xs animate-pulse">
                 typing...
               </span>
             ) : lastMsg ? (
@@ -115,7 +115,7 @@ const OtherUser = ({ user }) => {
 
           {/* Unread Message Count Badge */}
           {unreadCount > 0 && (
-            <span className="shrink-0 bg-[#25d366] text-white text-[11px] font-bold px-1.5 min-w-[20px] h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+            <span className="shrink-0 bg-[#25d366] text-[#0b141a] text-[11px] font-extrabold px-1.5 min-w-[20px] h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

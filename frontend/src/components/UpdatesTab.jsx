@@ -12,6 +12,8 @@ import {
   setIsViewerOpen,
   setStatusLoading,
   addOtherStatus,
+  viewStatusLocally,
+  removeStatus,
 } from "../redux/statusSlice";
 import { setIsReelsOpen } from "../redux/reelSlice";
 import { BASE_URL } from "../config/api";
@@ -39,7 +41,7 @@ const UpdatesTab = ({ onOpenUpload }) => {
   const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
 
-  // Real-time listener for incoming statuses from friends
+  // Real-time listener for incoming statuses & viewer notifications from friends
   useEffect(() => {
     if (!socket) return;
 
@@ -53,8 +55,23 @@ const UpdatesTab = ({ onOpenUpload }) => {
       }
     };
 
+    const handleStatusViewed = ({ statusId, viewer }) => {
+      dispatch(viewStatusLocally({ statusId, viewer }));
+    };
+
+    const handleStatusDeleted = (statusId) => {
+      dispatch(removeStatus(statusId));
+    };
+
     socket.on("newStatus", handleNewStatus);
-    return () => socket.off("newStatus", handleNewStatus);
+    socket.on("statusViewed", handleStatusViewed);
+    socket.on("statusDeleted", handleStatusDeleted);
+
+    return () => {
+      socket.off("newStatus", handleNewStatus);
+      socket.off("statusViewed", handleStatusViewed);
+      socket.off("statusDeleted", handleStatusDeleted);
+    };
   }, [socket, authUser?._id, dispatch]);
 
   // Fetch all statuses from backend
@@ -146,11 +163,25 @@ const UpdatesTab = ({ onOpenUpload }) => {
               <h4 className="text-sm font-semibold text-[#e9edef] leading-tight">
                 My status
               </h4>
-              <p className="text-xs text-[#8696a0] mt-0.5">
-                {hasMyStatus
-                  ? `${formatStatusTime(latestMyStatus.createdAt)} • ${myStatuses.length} updates`
-                  : "Tap to add status update"}
-              </p>
+              <div className="text-xs text-[#8696a0] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                {hasMyStatus ? (
+                  <>
+                    <span className="shrink-0">
+                      {formatStatusTime(latestMyStatus.createdAt)}
+                    </span>
+                    <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-1.5 py-0.2 rounded-full shrink-0">
+                      👁️ {latestMyStatus.viewers?.length || 0} views
+                    </span>
+                    {latestMyStatus.song?.title && (
+                      <span className="text-[10px] text-[#25d366] font-medium truncate max-w-[110px] shrink-0">
+                        🎵 {latestMyStatus.song.title}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span>Tap to add status update</span>
+                )}
+              </div>
             </div>
           </div>
 

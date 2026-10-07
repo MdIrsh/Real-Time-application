@@ -186,17 +186,40 @@ export const viewStatus = async (req, res) => {
     }
 
     const alreadyViewed = status.viewers?.some(
-      (v) => String(v.user) === String(userId)
+      (v) => String(v.user?._id || v.user) === String(userId)
+    );
+
+    const viewerUser = await User.findById(userId).select(
+      "fullName username profilePhoto"
     );
 
     if (!alreadyViewed) {
       status.viewers.push({ user: userId, viewedAt: new Date() });
       await status.save();
+
+      // Emit real-time statusViewed event so the status author sees who viewed instantly!
+      try {
+        io.emit("statusViewed", {
+          statusId,
+          viewer: {
+            user: viewerUser,
+            viewedAt: new Date(),
+          },
+        });
+      } catch (e) {
+        console.error("Socket emit statusViewed error:", e);
+      }
     }
+
+    const updatedStatus = await Status.findById(statusId).populate(
+      "viewers.user",
+      "fullName username profilePhoto"
+    );
 
     return res.status(200).json({
       success: true,
-      viewersCount: status.viewers.length,
+      viewersCount: updatedStatus?.viewers?.length || 0,
+      viewers: updatedStatus?.viewers || [],
     });
   } catch (error) {
     console.error("viewStatus error:", error);
@@ -219,6 +242,12 @@ export const deleteStatus = async (req, res) => {
     }
 
     await Status.findByIdAndDelete(statusId);
+
+    try {
+      io.emit("statusDeleted", statusId);
+    } catch (e) {
+      console.error("Socket emit statusDeleted error:", e);
+    }
 
     return res.status(200).json({
       success: true,

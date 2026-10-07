@@ -29,6 +29,7 @@ import toast from "react-hot-toast";
 import ReelCommentsDrawer from "./ReelCommentsDrawer";
 import ShareReelModal from "./ShareReelModal";
 import UploadReelModal from "./UploadReelModal";
+import { BOLLYWOOD_200_SONGS } from "../utils/bollywoodSongs200";
 
 // Format numbers like Instagram (1420 -> 1.4K, 120000 -> 120K)
 const formatCount = (num) => {
@@ -491,6 +492,10 @@ const DYNAMIC_VIDEOS = [
   "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/elephants.mp4",
   "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
   "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/bottle-detection.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/dog.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/rooster.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/finish_line.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/race_horses.mp4",
 ];
 
 const DYNAMIC_CAPTIONS = [
@@ -514,96 +519,41 @@ const DYNAMIC_CAPTIONS = [
   "Morning trek in the Western Ghats 🌿⛰️ Foggy mornings and cold air! #trekking #naturelover #exploreindia",
 ];
 
-const DYNAMIC_SONGS = [
-  {
-    title: "Kesariya • Arijit Singh & Pritam (Brahmāstra) 🧡",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3",
-    cover: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
-  },
-  {
-    title: "Apna Bana Le • Arijit Singh & Sachin-Jigar (Bhediya) 🌸",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3",
-    cover: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg",
-  },
-  {
-    title: "Tauba Tauba • Karan Aujla (Bad Newz) 🔥",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
-    cover: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg",
-  },
-  {
-    title: "Chaleya • Arijit Singh & Anirudh (Jawan) ✨",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3",
-    cover: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg",
-  },
-  {
-    title: "Heeriye • Jasleen Royal & Arijit Singh ❤️",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010912552003505.mp3",
-    cover: "https://c.saavncdn.com/022/Heeriye-feat-Arijit-Singh-Hindi-2023-20230928050405-500x500.jpg",
-  },
-  {
-    title: "Raataan Lambiyan • Jubin Nautiyal (Shershaah) 🌙",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910141318776.mp3",
-    cover: "https://c.saavncdn.com/238/Shershaah-Original-Motion-Picture-Soundtrack--Hindi-2021-20210815181610-500x500.jpg",
-  },
-  {
-    title: "Tum Hi Ho • Arijit Singh (Aashiqui 2) 🎶",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3",
-    cover: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg",
-  },
-  {
-    title: "Ilahi • Arijit Singh & Pritam (YJHD) 🏖️",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910090382254.mp3",
-    cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
-  },
-  {
-    title: "Kabira • Tochi Raina & Rekha Bhardwaj (YJHD) 💛",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910090382398.mp3",
-    cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
-  },
-  {
-    title: "Lut Gaye • Jubin Nautiyal & Emraan Hashmi 🌹",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910091194217.mp3",
-    cover: "https://c.saavncdn.com/106/Emraan-Hashmi-Hits-Hindi-2026-20260905191028-500x500.jpg",
-  },
-  {
-    title: "Zinda • Shankar-Ehsaan-Loy (Bhaag Milkha Bhaag) 🔥",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910140012874.mp3",
-    cover: "https://c.saavncdn.com/575/Bhaag-Milkha-Bhaag-Hindi-2013-20260120201340-500x500.jpg",
-  },
-  {
-    title: "Baarish • Ash King & Shashaa Tirupati (Half Girlfriend) 🌧️",
-    audio: "https://jiotunepreview.jio.com/content/Converted/010910440564900.mp3",
-    cover: "https://c.saavncdn.com/441/Half-Girlfriend-Hindi-2017-20180622-500x500.jpg",
-  },
-];
-
-// Generates dynamic reels on demand so scrolling is 100% infinite and never ends
+// Generates dynamic reels on demand powered by 200+ Hit Bollywood songs catalog
 const generateBatchOfReels = (count = 15, startIndex = 0) => {
   const batch = [];
+  const totalSongs = BOLLYWOOD_200_SONGS.length;
+  // Session random seeds ensure that every refresh and scroll serves fresh combinations
+  const seedSongOffset = Math.floor(Math.random() * totalSongs);
+  const seedVideoOffset = Math.floor(Math.random() * DYNAMIC_VIDEOS.length);
+  const seedCreatorOffset = Math.floor(Math.random() * DYNAMIC_CREATORS.length);
+
   for (let i = 0; i < count; i++) {
     const idx = startIndex + i;
-    const video = DYNAMIC_VIDEOS[idx % DYNAMIC_VIDEOS.length];
-    const song = DYNAMIC_SONGS[(idx * 7 + 3) % DYNAMIC_SONGS.length];
-    const creator = DYNAMIC_CREATORS[(idx * 11 + 5) % DYNAMIC_CREATORS.length];
-    const caption = DYNAMIC_CAPTIONS[(idx * 13 + 7) % DYNAMIC_CAPTIONS.length];
+    const video = DYNAMIC_VIDEOS[(seedVideoOffset + idx) % DYNAMIC_VIDEOS.length];
+    // Spread across the 200+ Bollywood hit catalog with prime stride
+    const songIndex = (seedSongOffset + idx * 7) % totalSongs;
+    const song = BOLLYWOOD_200_SONGS[songIndex];
+    const creator = DYNAMIC_CREATORS[(seedCreatorOffset + idx) % DYNAMIC_CREATORS.length];
+    const baseCaption = DYNAMIC_CAPTIONS[(idx * 11 + 5) % DYNAMIC_CAPTIONS.length];
     const uniqueId = `reel-inf-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
 
     batch.push({
       _id: uniqueId,
       creatorName: creator.name,
-      creatorAvatar: `https://api.dicebear.com/10.x/personas/svg?seed=${creator.seed}_${idx % 30}`,
+      creatorAvatar: `https://api.dicebear.com/10.x/personas/svg?seed=${creator.seed}_${(idx + seedCreatorOffset) % 40}`,
       videoUrl: video,
-      audioUrl: song.audio,
+      audioUrl: song.audioUrl,
       musicTitle: song.title,
-      musicCover: song.cover,
-      caption: caption,
-      likes: Array.from({ length: (idx * 317 + 1420) % 24000 + 800 }),
+      musicCover: song.coverUrl,
+      caption: `${baseCaption} 🎵 #${song.category.replace(/[^a-zA-Z0-9]/g, "")}`,
+      likes: Array.from({ length: ((idx * 317 + 1420) % 24000) + 800 }),
       sharesCount: ((idx * 613 + 420) % 36000) + 400,
       comments: [
         {
           userName: `user_${(idx * 17) % 89 + 10}`,
-          userAvatar: `https://api.dicebear.com/10.x/lorelei/svg?seed=Commenter${idx % 30}`,
-          text: "Pure Bollywood vibe! Loved this ❤️🔥",
+          userAvatar: `https://api.dicebear.com/10.x/lorelei/svg?seed=Commenter${(idx + seedCreatorOffset) % 40}`,
+          text: `Pure Bollywood vibe! Loved this ❤️🔥 #${song.category}`,
           createdAt: new Date(),
         },
       ],
@@ -838,8 +788,8 @@ const ReelsModal = () => {
         >
           <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif group-hover:text-pink-400 transition flex items-center gap-1.5">
             <span>Reels</span>
-            <span className="text-[10px] not-italic font-sans bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-extrabold px-1.5 py-0.2 rounded-full shadow-xs tracking-normal">
-              ♾️ Unlimited
+            <span className="text-[10px] not-italic font-sans bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-extrabold px-2 py-0.5 rounded-full shadow-xs tracking-normal">
+              🎵 200+ Bollywood Hits
             </span>
           </h2>
         </div>

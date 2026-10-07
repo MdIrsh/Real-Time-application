@@ -14,10 +14,14 @@ const CATEGORIES = [
   "Romantic",
   "Party",
   "Trending",
-  "Love",
+  "Soulful",
   "Classics",
+  "90s Hits",
+  "Love",
+  "Sad Songs",
+  "Punjabi Pop",
+  "Sufi",
   "Travel",
-  "Acoustic",
   "Workout",
 ];
 
@@ -70,13 +74,18 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
     onClose();
   };
 
-  // Filter songs based on search query and category
+  // Filter songs based on search query, movie name, artist, and category
   const filteredSongs = STATUS_SONGS.filter((song) => {
+    const q = search.toLowerCase().trim();
     const matchesSearch =
-      song.title.toLowerCase().includes(search.toLowerCase()) ||
-      song.artist.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      song.title.toLowerCase().includes(q) ||
+      song.artist.toLowerCase().includes(q) ||
+      (song.movie && song.movie.toLowerCase().includes(q)) ||
+      (song.category && song.category.toLowerCase().includes(q));
     const matchesCategory =
-      selectedCategory === "All" || song.category === selectedCategory;
+      selectedCategory === "All" ||
+      song.category?.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
 
@@ -87,7 +96,12 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
         <div className="px-4 py-3 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
           <div className="flex items-center gap-2">
             <IoMusicalNotes className="text-[#25d366]" size={18} />
-            <h3 className="font-bold text-sm text-[#e9edef]">Choose Music / Song</h3>
+            <h3 className="font-bold text-sm text-[#e9edef]">
+              Choose Music / Song{" "}
+              <span className="text-xs text-[#25d366] font-normal ml-1">
+                ({STATUS_SONGS.length}+ Hits)
+              </span>
+            </h3>
           </div>
           <button
             onClick={() => {

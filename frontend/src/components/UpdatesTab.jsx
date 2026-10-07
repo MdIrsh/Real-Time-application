@@ -201,10 +201,17 @@ const UpdatesTab = ({ onOpenUpload }) => {
                         <h4 className="text-sm font-semibold text-[#e9edef] truncate">
                           {status.userName}
                         </h4>
-                        <p className="text-xs text-[#8696a0] truncate mt-0.5">
-                          {formatStatusTime(status.createdAt)}
-                          {status.caption && ` • ${status.caption}`}
-                        </p>
+                        <div className="text-xs text-[#8696a0] truncate mt-0.5 flex items-center gap-1.5">
+                          <span className="shrink-0">{formatStatusTime(status.createdAt)}</span>
+                          {status.song?.title && (
+                            <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-1.5 py-0.2 rounded-full truncate flex items-center gap-0.5 shrink-0 max-w-[120px]">
+                              🎵 {status.song.title}
+                            </span>
+                          )}
+                          {status.caption && (
+                            <span className="truncate">• {status.caption}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

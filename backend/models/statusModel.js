@@ -32,6 +32,12 @@ const statusSchema = new mongoose.Schema(
       type: String,
       default: "#128c7e",
     },
+    song: {
+      title: { type: String, default: "" },
+      artist: { type: String, default: "" },
+      audioUrl: { type: String, default: "" },
+      coverUrl: { type: String, default: "" },
+    },
     viewers: [
       {
         user: {

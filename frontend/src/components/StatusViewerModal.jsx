@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   IoClose,
   IoSend,
   IoPause,
+  IoVolumeMute,
+  IoVolumeHigh,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import { setIsViewerOpen, viewStatusLocally } from "../redux/statusSlice";
@@ -40,8 +42,11 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
+
+  const audioPlayerRef = useRef(null);
 
   const DURATION_MS = 6000; // 6 seconds per status
   const INTERVAL_MS = 60; // 60ms tick
@@ -70,6 +75,66 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   }, [isViewerOpen, selectedStatus, effectiveStatuses, initialIndex]);
 
   const activeStatus = effectiveStatuses[currentIndex] || null;
+
+  const currentSongUrl = activeStatus?.song?.audioUrl;
+
+  // Handle Audio Playback for Status Stories with Music
+  useEffect(() => {
+    if (!isViewerOpen || !currentSongUrl) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+      return;
+    }
+
+    // Clean up previous audio
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+
+    const audio = new Audio(currentSongUrl);
+    audio.volume = 0.85;
+    audio.muted = isMuted;
+    audio.loop = true;
+    audio
+      .play()
+      .then(() => {
+        if (isPaused) {
+          audio.pause();
+        }
+      })
+      .catch(() => {});
+
+    audioPlayerRef.current = audio;
+
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, isViewerOpen, currentSongUrl]);
+
+  // Pause / Resume Audio when user holds the screen
+  useEffect(() => {
+    if (!audioPlayerRef.current) return;
+
+    if (isPaused) {
+      audioPlayerRef.current.pause();
+    } else {
+      audioPlayerRef.current.play().catch(() => {});
+    }
+  }, [isPaused]);
+
+  // Handle Mute / Unmute
+  useEffect(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
 
   // Mark status as viewed in backend and locally
   useEffect(() => {
@@ -170,6 +235,8 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       activeStatus.userName || "Contact"
     )}`;
 
+  const hasSong = !!activeStatus.song?.title;
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none animate-fade-in">
       {/* 9:16 WhatsApp Mobile Story Player Container */}
@@ -183,8 +250,8 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
         onTouchStart={() => setIsPaused(true)}
         onTouchEnd={() => setIsPaused(false)}
       >
-        {/* Top Header Overlay: Progress Bars + User Info + Close */}
-        <div className="absolute top-0 left-0 right-0 z-40 p-3 pt-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex flex-col gap-2.5">
+        {/* Top Header Overlay: Progress Bars + User Info + Music Badge + Close */}
+        <div className="absolute top-0 left-0 right-0 z-40 p-3 pt-4 bg-gradient-to-b from-black/85 via-black/45 to-transparent flex flex-col gap-2.5">
           {/* Segmented Story Progress Bar */}
           <div className="flex items-center gap-1.5 w-full">
             {effectiveStatuses.map((_, i) => (
@@ -207,7 +274,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             ))}
           </div>
 
-          {/* User Row */}
+          {/* User Row + Action Buttons */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Avatar with WhatsApp green status border */}
@@ -229,21 +296,73 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               </div>
             </div>
 
-            {/* Pause indicator + Close Button */}
+            {/* Mute + Pause indicator + Close Button */}
             <div className="flex items-center gap-2 text-white">
+              {hasSong && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMuted(!isMuted);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 flex items-center justify-center transition active:scale-95 text-white"
+                  title={isMuted ? "Unmute music" : "Mute music"}
+                >
+                  {isMuted ? <IoVolumeMute size={18} /> : <IoVolumeHigh size={18} />}
+                </button>
+              )}
+
               {isPaused && (
                 <div className="p-1 rounded-full bg-black/40 text-amber-300">
                   <IoPause size={14} />
                 </div>
               )}
+
               <button
-                onClick={() => dispatch(setIsViewerOpen(false))}
+                onClick={() => {
+                  if (audioPlayerRef.current) audioPlayerRef.current.pause();
+                  dispatch(setIsViewerOpen(false));
+                }}
                 className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 flex items-center justify-center transition active:scale-95"
               >
                 <IoClose size={20} />
               </button>
             </div>
           </div>
+
+          {/* Instagram / WhatsApp Music Badge Sticker */}
+          {hasSong && (
+            <div className="mx-auto mt-0.5 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 text-white shadow-xl animate-fade-in max-w-[88%] select-none">
+              <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/40">
+                <img
+                  src={activeStatus.song.coverUrl}
+                  alt="Album Art"
+                  className={`w-full h-full object-cover ${
+                    !isPaused && !isMuted ? "animate-spin" : ""
+                  }`}
+                  style={{ animationDuration: "5s" }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold truncate flex items-center gap-1.5">
+                  <span className="text-white drop-shadow truncate">
+                    {activeStatus.song.title}
+                  </span>
+                  <span className="text-gray-300 text-[10px] truncate">
+                    • {activeStatus.song.artist}
+                  </span>
+                </p>
+              </div>
+
+              {/* Animated Sound Equalizer Waves */}
+              {!isMuted && !isPaused && (
+                <div className="flex items-end gap-[2px] h-3 shrink-0 ml-1">
+                  <span className="w-[2px] h-2 bg-[#25d366] rounded-full animate-pulse" />
+                  <span className="w-[2px] h-3 bg-[#25d366] rounded-full animate-bounce" />
+                  <span className="w-[2px] h-1.5 bg-[#25d366] rounded-full animate-pulse" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Story Content Area */}

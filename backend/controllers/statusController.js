@@ -1,7 +1,7 @@
 import { Status } from "../models/statusModel.js";
 import { User } from "../models/userModel.js";
 
-// Authentic Demo Friend Statuses so users immediately see active WhatsApp stories!
+// Authentic Demo Friend Statuses with songs so users immediately experience music statuses!
 const INITIAL_DEMO_STATUSES = [
   {
     userName: "Pooja Sharma",
@@ -10,6 +10,12 @@ const INITIAL_DEMO_STATUSES = [
     mediaType: "image",
     caption: "Sunset therapy after a long day at work 🌅☕ Peaceful vibes only! #MumbaiDiaries",
     bgColor: "#128c7e",
+    song: {
+      title: "Kesariya",
+      artist: "Arijit Singh & Pritam (Brahmāstra)",
+      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3",
+      coverUrl: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
+    },
     viewers: [],
     createdAt: new Date(Date.now() - 25 * 60 * 1000), // 25 mins ago
   },
@@ -20,6 +26,12 @@ const INITIAL_DEMO_STATUSES = [
     mediaType: "text",
     caption: "Har Har Mahadev! Kashi Vishwanath & Ganga Aarti trip booked with family! 🕉️✨ Can't wait! 🙏",
     bgColor: "#7b1fa2", // Royal Purple WhatsApp text status
+    song: {
+      title: "Apna Bana Le",
+      artist: "Arijit Singh & Sachin-Jigar",
+      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3",
+      coverUrl: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg",
+    },
     viewers: [],
     createdAt: new Date(Date.now() - 75 * 60 * 1000), // 1h 15m ago
   },
@@ -30,6 +42,12 @@ const INITIAL_DEMO_STATUSES = [
     mediaType: "image",
     caption: "Morning walk in nature 🌿🌸 Fresh air and positivity! Have a great Wednesday everyone ✨",
     bgColor: "#075e54",
+    song: {
+      title: "Chaleya",
+      artist: "Arijit Singh, Shilpa Rao & Anirudh",
+      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3",
+      coverUrl: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg",
+    },
     viewers: [],
     createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
   },
@@ -40,6 +58,12 @@ const INITIAL_DEMO_STATUSES = [
     mediaType: "text",
     caption: "Adrak wali kulhad chai + thandi hawa = Ultimate Sukoon ☕🌧️ Tag your chai partner!",
     bgColor: "#c2185b", // Crimson Pink WhatsApp text status
+    song: {
+      title: "Tum Hi Ho",
+      artist: "Arijit Singh & Mithoon (Aashiqui 2)",
+      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3",
+      coverUrl: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg",
+    },
     viewers: [],
     createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
   },
@@ -50,6 +74,12 @@ const INITIAL_DEMO_STATUSES = [
     mediaType: "image",
     caption: "Desi wedding celebrations start tonight! 💃✨ Dhol, bhangra & unlimited fun! 🕺🥁",
     bgColor: "#d87b00",
+    song: {
+      title: "Tauba Tauba",
+      artist: "Karan Aujla (Bad Newz)",
+      audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
+      coverUrl: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg",
+    },
     viewers: [],
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
   },
@@ -59,9 +89,9 @@ export const getAllStatuses = async (req, res) => {
   try {
     const currentUserId = req.id;
 
-    // Check if demo statuses exist
+    // Check if demo statuses exist with songs
     const existingDemo = await Status.find({ user: null });
-    if (existingDemo.length < 5) {
+    if (existingDemo.length < 5 || !existingDemo[0]?.song?.title) {
       await Status.deleteMany({ user: null });
       await Status.insertMany(INITIAL_DEMO_STATUSES);
     }
@@ -99,15 +129,15 @@ export const getAllStatuses = async (req, res) => {
 export const createStatus = async (req, res) => {
   try {
     const authorId = req.id;
-    const { mediaUrl, mediaType, caption, bgColor } = req.body;
+    const { mediaUrl, mediaType, caption, bgColor, song } = req.body;
 
     const user = await User.findById(authorId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (!mediaUrl && !caption) {
-      return res.status(400).json({ message: "Status must have text or media" });
+    if (!mediaUrl && !caption && !song?.audioUrl) {
+      return res.status(400).json({ message: "Status must have text, media or a song" });
     }
 
     const newStatus = await Status.create({
@@ -118,6 +148,7 @@ export const createStatus = async (req, res) => {
       mediaType: mediaType || (mediaUrl ? "image" : "text"),
       caption: caption || "",
       bgColor: bgColor || "#128c7e",
+      song: song || {},
       viewers: [],
     });
 

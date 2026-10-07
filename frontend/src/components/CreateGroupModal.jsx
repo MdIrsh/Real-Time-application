@@ -5,6 +5,7 @@ import {
   IoCheckmark,
   IoSearchOutline,
   IoPeople,
+  IoCamera,
 } from "react-icons/io5";
 import { addGroup, setSelectedGroup, setIsCreateGroupOpen } from "../redux/groupSlice";
 import { setSelectedUser } from "../redux/userSlice";
@@ -14,7 +15,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const PRESET_ICONS = [
-  "🚀", "🔥", "🎉", "🎓", "⚽", "🏖️", "💼", "🎮", "🍕", "🎸", "🕉️", "☕"
+  "👥", "🚀", "🔥", "🎉", "🎓", "⚽", "🏖️", "💼", "🎮", "🍕", "🎸", "🕉️", "☕"
 ];
 
 const CreateGroupModal = () => {
@@ -26,6 +27,7 @@ const CreateGroupModal = () => {
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("👥");
+  const [uploadedAvatar, setUploadedAvatar] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [search, setSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +49,21 @@ const CreateGroupModal = () => {
     );
   };
 
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadedAvatar(reader.result);
+      toast.success("Group photo attached! 📸");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!groupName.trim()) {
@@ -60,9 +77,7 @@ const CreateGroupModal = () => {
 
     try {
       setIsSubmitting(true);
-      const groupAvatar = `https://api.dicebear.com/10.x/identicon/svg?seed=${encodeURIComponent(
-        groupName.trim()
-      )}`;
+      const groupAvatar = uploadedAvatar || selectedEmoji || "👥";
 
       const res = await axios.post(
         `${BASE_URL}/api/v1/group/create`,
@@ -92,6 +107,7 @@ const CreateGroupModal = () => {
         // Reset & Close
         setGroupName("");
         setDescription("");
+        setUploadedAvatar("");
         setSelectedMemberIds([]);
         dispatch(setIsCreateGroupOpen(false));
       }
@@ -135,9 +151,37 @@ const CreateGroupModal = () => {
           {/* Group Info Inputs */}
           <div className="p-4 bg-[#0b141a] border-b border-[#202c33] space-y-3 shrink-0">
             <div className="flex items-center gap-3">
-              {/* Group Emoji Avatar Badge */}
-              <div className="w-14 h-14 rounded-full bg-[#202c33] border-2 border-[#25d366]/40 flex items-center justify-center text-2xl shrink-0 shadow-md">
-                {selectedEmoji}
+              {/* Group Emoji Avatar Badge or Uploaded Photo */}
+              <div className="relative shrink-0">
+                <label className="w-14 h-14 rounded-full bg-[#202c33] border-2 border-[#25d366]/40 flex items-center justify-center text-2xl shrink-0 shadow-md overflow-hidden cursor-pointer block">
+                  {uploadedAvatar ? (
+                    <img
+                      src={uploadedAvatar}
+                      alt="group-dp"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{selectedEmoji}</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+                <label
+                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#25d366] hover:bg-[#22c35e] text-[#0b141a] rounded-full flex items-center justify-center cursor-pointer shadow border border-[#111b21] transition active:scale-95"
+                  title="Upload group photo"
+                >
+                  <IoCamera size={11} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               <div className="flex-1 min-w-0">

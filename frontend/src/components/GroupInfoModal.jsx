@@ -7,6 +7,8 @@ import {
   IoLogOutOutline,
   IoShieldCheckmark,
   IoCheckmark,
+  IoCamera,
+  IoSparkles,
 } from "react-icons/io5";
 import { setSelectedGroup, updateGroup } from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
@@ -14,12 +16,17 @@ import { BASE_URL } from "../config/api";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+const PRESET_ICONS = [
+  "👥", "🚀", "🔥", "🎉", "🎓", "⚽", "🏖️", "💼", "🎮", "🍕", "🎸", "🕉️", "☕", "❤️"
+];
+
 const GroupInfoModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const { selectedGroup } = useSelector((store) => store.group);
   const { authUser, otherUsers } = useSelector((store) => store.user);
 
   const [isAdding, setIsAdding] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedToAdd, setSelectedToAdd] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +46,64 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
         ? prev.filter((id) => id !== friendId)
         : [...prev, friendId]
     );
+  };
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose a valid image file");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Image file is too large (max 15MB)");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Url = reader.result;
+      try {
+        setLoading(true);
+        const res = await axios.post(
+          `${BASE_URL}/api/v1/group/update-avatar/${selectedGroup._id}`,
+          { groupAvatar: base64Url },
+          { withCredentials: true }
+        );
+        if (res.data?.success && res.data.group) {
+          dispatch(updateGroup(res.data.group));
+          toast.success("Group profile photo updated! 📸");
+        }
+      } catch (err) {
+        console.error("updateGroupAvatar error:", err);
+        toast.error(err.response?.data?.message || "Failed to update group DP");
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEmojiSelect = async (emoji) => {
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${BASE_URL}/api/v1/group/update-avatar/${selectedGroup._id}`,
+        { groupAvatar: emoji },
+        { withCredentials: true }
+      );
+      if (res.data?.success && res.data.group) {
+        dispatch(updateGroup(res.data.group));
+        toast.success(`Group icon set to ${emoji}! 🎉`);
+        setShowEmojiPicker(false);
+      }
+    } catch (err) {
+      toast.error("Failed to update group icon");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddMembers = async () => {
@@ -85,6 +150,10 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
   };
 
   const adminId = selectedGroup.admin?._id || selectedGroup.admin;
+  const isImageAvatar =
+    selectedGroup.groupAvatar &&
+    (selectedGroup.groupAvatar.startsWith("data:image") ||
+      selectedGroup.groupAvatar.startsWith("http"));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fade-in select-none">
@@ -105,20 +174,89 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Avatar & Title Hero */}
+          {/* Avatar & Title Hero with Change DP Controls */}
           <div className="flex flex-col items-center text-center pb-3 border-b border-[#202c33]">
-            <div className="w-20 h-20 rounded-full bg-[#103629] border-2 border-[#25d366]/50 flex items-center justify-center text-3xl font-bold text-[#25d366] shadow-xl mb-2">
-              {selectedGroup.name?.charAt(0)?.toUpperCase() || "👥"}
+            {/* Group DP with interactive camera icon overlay */}
+            <div className="relative group/dp cursor-pointer mb-2">
+              {isImageAvatar ? (
+                <img
+                  src={selectedGroup.groupAvatar}
+                  alt={selectedGroup.name}
+                  className="w-24 h-24 rounded-full object-cover border-3 border-[#25d366]/60 shadow-xl"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#103629] to-[#00a884]/40 border-3 border-[#25d366]/60 flex items-center justify-center text-4xl font-bold text-[#25d366] shadow-xl">
+                  {selectedGroup.groupAvatar && selectedGroup.groupAvatar.length <= 4
+                    ? selectedGroup.groupAvatar
+                    : selectedGroup.name?.charAt(0)?.toUpperCase() || "👥"}
+                </div>
+              )}
+
+              {/* Camera Icon Overlay Badge */}
+              <label
+                className="absolute bottom-0 right-0 w-8 h-8 bg-[#25d366] hover:bg-[#20ba59] text-[#0b141a] rounded-full flex items-center justify-center cursor-pointer shadow-lg active:scale-95 transition-transform border-2 border-[#111b21]"
+                title="Change Group DP"
+              >
+                <IoCamera size={16} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
+
             <h2 className="text-lg font-bold text-white">{selectedGroup.name}</h2>
             {selectedGroup.description && (
               <p className="text-xs text-[#8696a0] mt-1 max-w-xs">
                 {selectedGroup.description}
               </p>
             )}
-            <span className="text-[11px] text-[#25d366] font-semibold mt-1 bg-[#103629] px-2.5 py-0.5 rounded-full">
-              {selectedGroup.participants?.length || 0} participants
-            </span>
+
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[11px] text-[#25d366] font-semibold bg-[#103629] px-2.5 py-0.5 rounded-full">
+                {selectedGroup.participants?.length || 0} participants
+              </span>
+
+              {/* Upload Photo Button */}
+              <label className="px-2.5 py-1 bg-[#202c33] hover:bg-[#26353d] text-[11px] font-semibold text-[#25d366] rounded-lg border border-[#25d366]/30 cursor-pointer flex items-center gap-1 transition active:scale-95 shadow-sm">
+                <IoCamera size={13} />
+                <span>Change DP</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Emoji Picker Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="px-2 py-1 bg-[#202c33] hover:bg-[#26353d] text-[11px] text-gray-300 rounded-lg border border-white/10 transition active:scale-95 flex items-center gap-1 cursor-pointer"
+              >
+                <IoSparkles size={12} className="text-amber-400" />
+                <span>Icons</span>
+              </button>
+            </div>
+
+            {/* Quick Emoji Presets Bar */}
+            {showEmojiPicker && (
+              <div className="mt-3 p-2 bg-[#0b141a] rounded-xl border border-[#202c33] flex items-center justify-center gap-1.5 flex-wrap max-w-xs animate-fade-in">
+                {PRESET_ICONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleEmojiSelect(emoji)}
+                    className="w-7 h-7 rounded-lg bg-[#202c33] hover:bg-[#25d366]/20 hover:scale-110 flex items-center justify-center text-sm transition cursor-pointer"
+                    title={`Set ${emoji} as icon`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Members List */}
@@ -150,7 +288,7 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
                       setIsAdding(false);
                       setSelectedToAdd([]);
                     }}
-                    className="text-[11px] text-[#8696a0] hover:text-white"
+                    className="text-[11px] text-[#8696a0] hover:text-white cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -197,7 +335,7 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
                 <button
                   disabled={loading || selectedToAdd.length === 0}
                   onClick={handleAddMembers}
-                  className="w-full py-1.5 bg-[#25d366] hover:bg-[#22c35e] text-[#0b141a] font-bold text-xs rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-1.5 bg-[#25d366] hover:bg-[#22c35e] text-[#0b141a] font-bold text-xs rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? "Adding..." : `Add ${selectedToAdd.length} Friend(s)`}
                 </button>

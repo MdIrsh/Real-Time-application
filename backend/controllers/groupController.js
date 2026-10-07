@@ -304,3 +304,72 @@ export const leaveGroup = async (req, res) => {
     });
   }
 };
+
+// 7. Update Group Avatar / DP
+export const updateGroupAvatar = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { groupId } = req.params;
+    const { groupAvatar } = req.body;
+
+    if (!groupAvatar) {
+      return res.status(400).json({
+        message: "Group avatar image is required",
+        success: false,
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ message: "Group not found", success: false });
+    }
+
+    const isMember = group.participants.some(
+      (pId) => (pId._id || pId).toString() === userId.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({
+        message: "Only group members can update group DP",
+        success: false,
+      });
+    }
+
+    group.groupAvatar = groupAvatar;
+    await group.save();
+
+    const populatedGroup = await Group.findById(groupId)
+      .populate("participants", "fullName username profilePhoto gender")
+      .populate("admin", "fullName username profilePhoto");
+
+    // Broadcast to group room & participants
+    io.to(`group-chat-${groupId}`).emit("groupAvatarUpdated", {
+      groupId,
+      groupAvatar,
+      group: populatedGroup,
+    });
+
+    group.participants.forEach((mId) => {
+      const socketId = getReceiverSocketId(mId);
+      if (socketId) {
+        io.to(socketId).emit("groupAvatarUpdated", {
+          groupId,
+          groupAvatar,
+          group: populatedGroup,
+        });
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Group DP updated successfully! 📸",
+      group: populatedGroup,
+    });
+  } catch (error) {
+    console.error("updateGroupAvatar error:", error);
+    return res.status(500).json({
+      message: error?.message || "Failed to update group DP",
+      success: false,
+    });
+  }
+};
+

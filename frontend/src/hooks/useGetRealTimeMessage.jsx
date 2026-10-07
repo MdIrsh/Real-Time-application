@@ -12,7 +12,7 @@ import {
   setUserTyping,
   updateUserProfilePhoto,
 } from "../redux/userSlice";
-import { addGroupMessage, setSelectedGroup } from "../redux/groupSlice";
+import { addGroupMessage, setSelectedGroup, updateGroup } from "../redux/groupSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import toast from "react-hot-toast";
@@ -284,8 +284,21 @@ const useGetRealTimeMessage = () => {
       }
     };
 
+    // When a group's profile photo/avatar is updated
+    const handleGroupAvatarUpdated = (data) => {
+      if (data?.groupId) {
+        dispatch(
+          updateGroup({
+            _id: data.groupId,
+            groupAvatar: data.groupAvatar,
+          })
+        );
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("newGroupMessage", handleNewGroupMessage);
+    socket.on("groupAvatarUpdated", handleGroupAvatarUpdated);
     socket.on("messagesSeen", handleMessagesSeen);
     socket.on("userTyping", handleUserTyping);
     socket.on("userProfileUpdated", handleUserProfileUpdated);
@@ -293,6 +306,7 @@ const useGetRealTimeMessage = () => {
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("newGroupMessage", handleNewGroupMessage);
+      socket.off("groupAvatarUpdated", handleGroupAvatarUpdated);
       socket.off("messagesSeen", handleMessagesSeen);
       socket.off("userTyping", handleUserTyping);
       socket.off("userProfileUpdated", handleUserProfileUpdated);

@@ -176,7 +176,8 @@ const MessageContainer = () => {
                   className="relative shrink-0 cursor-pointer"
                 >
                   {selectedGroup.groupAvatar &&
-                  !selectedGroup.groupAvatar.includes("dicebear.com") ? (
+                  (selectedGroup.groupAvatar.startsWith("data:image") ||
+                    selectedGroup.groupAvatar.startsWith("http")) ? (
                     <img
                       src={selectedGroup.groupAvatar}
                       alt={selectedGroup.name}
@@ -184,7 +185,9 @@ const MessageContainer = () => {
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-[#103629] border border-[#25d366]/40 flex items-center justify-center text-lg font-bold text-[#25d366] shadow-sm">
-                      {selectedGroup.name?.charAt(0)?.toUpperCase() || "👥"}
+                      {selectedGroup.groupAvatar && selectedGroup.groupAvatar.length <= 4
+                        ? selectedGroup.groupAvatar
+                        : selectedGroup.name?.charAt(0)?.toUpperCase() || "👥"}
                     </div>
                   )}
                   <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#103629] text-[#25d366] rounded-full flex items-center justify-center text-[9px] border border-white">

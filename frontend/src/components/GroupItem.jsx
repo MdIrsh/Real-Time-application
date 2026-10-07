@@ -41,7 +41,9 @@ const GroupItem = ({ group }) => {
     >
       {/* Group Avatar / Icon Badge */}
       <div className="relative shrink-0">
-        {group?.groupAvatar && !group.groupAvatar.includes("dicebear.com") ? (
+        {group?.groupAvatar &&
+        (group.groupAvatar.startsWith("data:image") ||
+          group.groupAvatar.startsWith("http")) ? (
           <img
             src={group.groupAvatar}
             alt={group.name}
@@ -49,7 +51,9 @@ const GroupItem = ({ group }) => {
           />
         ) : (
           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#103629] to-[#00a884]/30 border border-[#25d366]/40 flex items-center justify-center text-xl text-[#25d366] shadow-inner font-bold">
-            {group?.name?.charAt(0)?.toUpperCase() || "👥"}
+            {group?.groupAvatar && group.groupAvatar.length <= 4
+              ? group.groupAvatar
+              : group?.name?.charAt(0)?.toUpperCase() || "👥"}
           </div>
         )}
         <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#103629] text-[#25d366] border border-[#0b141a] flex items-center justify-center text-[10px]">

@@ -12,6 +12,8 @@ import { BASE_URL } from './config/api';
 import useGetRealTimeMessage from './hooks/useGetRealTimeMessage';
 import { CallProvider } from './context/CallContext';
 import WhatsAppInAppModal from './components/WhatsAppInAppModal';
+import GroupCallModal from './components/GroupCallModal';
+import IncomingGroupCallAlert from './components/IncomingGroupCallAlert';
 
 const router = createBrowserRouter([
   {
@@ -83,6 +85,8 @@ function App() {
       <WhatsAppInAppModal />
       <CallProvider>
         <RouterProvider router={router} />
+        <GroupCallModal />
+        <IncomingGroupCallAlert />
       </CallProvider>
     </div>
   );

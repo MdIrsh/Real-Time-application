@@ -7,10 +7,12 @@ import { setSelectedUser } from "../redux/userSlice";
 import { setMessages } from "../redux/messageSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { MetaAiRing } from "../utils/metaAi";
+import { openGroupCall } from "../redux/groupCallSlice";
 import {
   IoChevronBack,
   IoCallOutline,
   IoVideocamOutline,
+  IoPeopleOutline,
   IoEllipsisVertical,
   IoLockClosed,
   IoShieldCheckmark,
@@ -20,9 +22,9 @@ import {
 import toast from "react-hot-toast";
 
 const MessageContainer = () => {
-  const { selectedUser, otherUsers, onlineUsers, typingUsers } = useSelector(
-    (store) => store.user
-  );
+  const { authUser, selectedUser, otherUsers, onlineUsers, typingUsers } =
+    useSelector((store) => store.user);
+  const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
   const { startCall } = useCall();
 
@@ -44,6 +46,30 @@ const MessageContainer = () => {
       return;
     }
     startCall({ user: selectedUser, type });
+  };
+
+  const handleStartGroupCall = () => {
+    if (!isAcceptedFriend) {
+      toast.error("🔒 Group call is locked until friend request is accepted!");
+      return;
+    }
+    const roomId = `room-${Date.now().toString(36)}`;
+    dispatch(
+      openGroupCall({
+        roomId,
+        callType: "video",
+        roomTitle: `Group Call with ${selectedUser?.fullName}`,
+      })
+    );
+    if (socket && selectedUser?._id && authUser?._id) {
+      socket.emit("inviteToGroupCall", {
+        toUserId: selectedUser._id,
+        roomId,
+        fromUser: authUser,
+        callType: "video",
+      });
+      toast.success(`Started Group Call & invited ${selectedUser.fullName}! 👥`);
+    }
   };
 
   const clearChatHandler = () => {
@@ -149,6 +175,24 @@ const MessageContainer = () => {
                 }
               >
                 <IoVideocamOutline className="text-2xl" />
+              </button>
+
+              {/* Group Call Room Icon */}
+              <button
+                disabled={!isAcceptedFriend}
+                onClick={handleStartGroupCall}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  isAcceptedFriend
+                    ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
+                    : "text-gray-400 cursor-not-allowed opacity-50"
+                }`}
+                title={
+                  isAcceptedFriend
+                    ? "Start Group Call Room 👥"
+                    : "Calling locked (Accept friend request first)"
+                }
+              >
+                <IoPeopleOutline className="text-2xl" />
               </button>
 
               {/* Audio / Phone Call Icon */}

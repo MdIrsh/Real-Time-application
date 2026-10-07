@@ -4,6 +4,7 @@ import messageReducer from "./messageSlice.js";
 import socketReducer from "./socketSlice.js";
 import reelReducer from "./reelSlice.js";
 import statusReducer from "./statusSlice.js";
+import groupCallReducer from "./groupCallSlice.js";
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     socket: socketReducer,
     reel: reelReducer,
     status: statusReducer,
+    groupCall: groupCallReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

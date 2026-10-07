@@ -16,6 +16,7 @@ const io=new Server(server,{
   },
 });
 const userSocketMap = {}; // { userId: socketId }
+const groupCallRooms = {}; // { roomId: { [socketId]: { user, socketId, isMuted, isVideoOff } } }
 
 export const getReceiverSocketId = (receiverId) => {
   if (!receiverId) return null;
@@ -115,12 +116,126 @@ io.on('connection', (socket) => {
     }
   });
 
+  // --- Group Call WebRTC Signaling Events ---
+  socket.on("joinGroupCall", ({ roomId, user, isMuted = false, isVideoOff = false }) => {
+    try {
+      if (!roomId) return;
+      if (!groupCallRooms[roomId]) {
+        groupCallRooms[roomId] = {};
+      }
+
+      groupCallRooms[roomId][socket.id] = {
+        user,
+        socketId: socket.id,
+        isMuted,
+        isVideoOff,
+      };
+
+      socket.join(`group-call-${roomId}`);
+
+      const existingPeers = Object.values(groupCallRooms[roomId]).filter(
+        (p) => p.socketId !== socket.id
+      );
+
+      socket.emit("groupCallExistingPeers", {
+        roomId,
+        peers: existingPeers,
+      });
+
+      socket.to(`group-call-${roomId}`).emit("groupCallPeerJoined", {
+        peer: {
+          user,
+          socketId: socket.id,
+          isMuted,
+          isVideoOff,
+        },
+      });
+    } catch (err) {
+      console.error("joinGroupCall error:", err);
+    }
+  });
+
+  socket.on("groupCallSignal", ({ toSocketId, signal, fromUser, isOffer }) => {
+    if (toSocketId) {
+      io.to(toSocketId).emit("groupCallSignal", {
+        fromSocketId: socket.id,
+        signal,
+        fromUser,
+        isOffer,
+      });
+    }
+  });
+
+  socket.on("groupCallIceCandidate", ({ toSocketId, candidate }) => {
+    if (toSocketId && candidate) {
+      io.to(toSocketId).emit("groupCallIceCandidate", {
+        fromSocketId: socket.id,
+        candidate,
+      });
+    }
+  });
+
+  socket.on("groupCallMediaState", ({ roomId, isMuted, isVideoOff }) => {
+    if (roomId && groupCallRooms[roomId]?.[socket.id]) {
+      groupCallRooms[roomId][socket.id].isMuted = isMuted;
+      groupCallRooms[roomId][socket.id].isVideoOff = isVideoOff;
+
+      socket.to(`group-call-${roomId}`).emit("groupCallPeerMediaChanged", {
+        socketId: socket.id,
+        isMuted,
+        isVideoOff,
+      });
+    }
+  });
+
+  socket.on("leaveGroupCall", ({ roomId }) => {
+    try {
+      if (roomId && groupCallRooms[roomId]) {
+        delete groupCallRooms[roomId][socket.id];
+        if (Object.keys(groupCallRooms[roomId]).length === 0) {
+          delete groupCallRooms[roomId];
+        }
+        socket.leave(`group-call-${roomId}`);
+        socket.to(`group-call-${roomId}`).emit("groupCallPeerLeft", {
+          socketId: socket.id,
+        });
+      }
+    } catch (err) {
+      console.error("leaveGroupCall error:", err);
+    }
+  });
+
+  socket.on("inviteToGroupCall", ({ toUserId, roomId, fromUser, callType }) => {
+    const receiverSocketId = getReceiverSocketId(toUserId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("incomingGroupCallInvite", {
+        roomId,
+        fromUser,
+        callType: callType || "video",
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('user disconnected', socket.id);
     if (userId && userSocketMap[userId] === socket.id) {
       delete userSocketMap[userId];
     }
     io.emit('getOnlineUsers', Object.keys(userSocketMap));
+
+    // Clean up any group call rooms this socket was in
+    for (const roomId in groupCallRooms) {
+      if (groupCallRooms[roomId]?.[socket.id]) {
+        delete groupCallRooms[roomId][socket.id];
+        if (Object.keys(groupCallRooms[roomId]).length === 0) {
+          delete groupCallRooms[roomId];
+        } else {
+          io.to(`group-call-${roomId}`).emit("groupCallPeerLeft", {
+            socketId: socket.id,
+          });
+        }
+      }
+    }
   });
 });
 

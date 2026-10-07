@@ -5,15 +5,18 @@ import {
   IoVideocam,
   IoSearchOutline,
   IoPersonAddOutline,
+  IoPeople,
 } from "react-icons/io5";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useCall } from "../context/CallContext";
+import { openGroupCall } from "../redux/groupCallSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 
 const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
   const [search, setSearch] = useState("");
   const { otherUsers, onlineUsers } = useSelector((store) => store.user);
   const { startCall } = useCall();
+  const dispatch = useDispatch();
 
   if (!isOpen) return null;
 
@@ -50,6 +53,38 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
             className="w-8 h-8 rounded-full flex items-center justify-center text-[#8696a0] hover:text-white hover:bg-[#2a3942] transition"
           >
             <IoClose size={20} />
+          </button>
+        </div>
+
+        {/* Start Group Call Card */}
+        <div className="p-3 bg-gradient-to-r from-[#103629]/80 to-[#111b21] border-b border-[#202c33] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-[#25d366]/20 text-[#25d366] flex items-center justify-center shrink-0 border border-[#25d366]/40 shadow-xs">
+              <IoPeople size={18} />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-bold text-white truncate">
+                New Group Call Room 👥
+              </h4>
+              <p className="text-[10.5px] text-[#8696a0] truncate">
+                Call multiple friends in a single video room
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              onClose();
+              dispatch(
+                openGroupCall({
+                  roomId: `group-${Date.now().toString(36)}`,
+                  callType: "video",
+                  roomTitle: "Group Video Room",
+                })
+              );
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#25d366] hover:bg-[#22c35e] text-[#0b141a] font-bold text-xs flex items-center gap-1 transition active:scale-95 cursor-pointer shrink-0 shadow-md"
+          >
+            <span>Start</span>
           </button>
         </div>
 

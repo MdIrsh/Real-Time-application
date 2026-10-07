@@ -20,7 +20,10 @@ const GroupItem = ({ group }) => {
       })
     : "";
 
-  const handleSelectGroup = () => {
+  const handleSelectGroup = (e) => {
+    if (e) {
+      e.stopPropagation();
+    }
     dispatch(setSelectedGroup(group));
     dispatch(setSelectedUser(null));
   };
@@ -28,7 +31,9 @@ const GroupItem = ({ group }) => {
   return (
     <div
       onClick={handleSelectGroup}
-      className={`flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors border-b border-[#202c33]/50 select-none relative ${
+      role="button"
+      tabIndex={0}
+      className={`flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors border-b border-[#202c33]/50 select-none relative active:bg-[#202c33] ${
         isSelected
           ? "bg-[#202c33]"
           : "hover:bg-[#202c33]/60 bg-[#0b141a]"

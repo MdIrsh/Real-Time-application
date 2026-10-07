@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SendInput from "./SendInput";
 import Messages from "./Messages";
 import GroupInfoModal from "./GroupInfoModal";
@@ -38,13 +38,6 @@ const MessageContainer = () => {
 
   const [showMenu, setShowMenu] = useState(false);
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      dispatch(setSelectedUser(null));
-      dispatch(setSelectedGroup(null));
-    };
-  }, [dispatch]);
 
   const isMetaAi = selectedUser?._id === "meta-ai";
   // Accepted friend verification: must be Meta AI or in accepted friends list (otherUsers)

@@ -38,7 +38,7 @@ const UploadStatusModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -47,19 +47,54 @@ const UploadStatusModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("File size must be under 15MB");
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File size must be under 20MB");
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
     setMediaPreview(previewUrl);
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setMediaData(reader.result);
-    };
-    reader.readAsDataURL(file);
+    if (file.type.startsWith("image/")) {
+      // High-performance client-side image compression
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1280;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.82);
+          setMediaData(compressedBase64);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Video files
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaData(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {

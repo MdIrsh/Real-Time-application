@@ -11,6 +11,7 @@ import {
   setSelectedStatus,
   setIsViewerOpen,
   setStatusLoading,
+  addOtherStatus,
 } from "../redux/statusSlice";
 import { setIsReelsOpen } from "../redux/reelSlice";
 import { BASE_URL } from "../config/api";
@@ -35,7 +36,26 @@ const UpdatesTab = ({ onOpenUpload }) => {
     (store) => store.status
   );
   const { authUser } = useSelector((store) => store.user);
+  const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
+
+  // Real-time listener for incoming statuses from friends
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewStatus = (incomingStatus) => {
+      if (!incomingStatus) return;
+      const isFromMe =
+        String(incomingStatus.user?._id || incomingStatus.user) ===
+        String(authUser?._id);
+      if (!isFromMe) {
+        dispatch(addOtherStatus(incomingStatus));
+      }
+    };
+
+    socket.on("newStatus", handleNewStatus);
+    return () => socket.off("newStatus", handleNewStatus);
+  }, [socket, authUser?._id, dispatch]);
 
   // Fetch all statuses from backend
   useEffect(() => {

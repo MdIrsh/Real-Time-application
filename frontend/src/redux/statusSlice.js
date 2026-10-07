@@ -21,6 +21,15 @@ const statusSlice = createSlice({
       state.myStatuses.unshift(action.payload);
       state.allStatuses.unshift(action.payload);
     },
+    addOtherStatus: (state, action) => {
+      const incoming = action.payload;
+      if (!state.otherStatuses.some((s) => s._id === incoming._id)) {
+        state.otherStatuses.unshift(incoming);
+      }
+      if (!state.allStatuses.some((s) => s._id === incoming._id)) {
+        state.allStatuses.unshift(incoming);
+      }
+    },
     setSelectedStatus: (state, action) => {
       state.selectedStatus = action.payload;
     },
@@ -46,6 +55,7 @@ const statusSlice = createSlice({
 export const {
   setStatuses,
   addMyStatus,
+  addOtherStatus,
   setSelectedStatus,
   setIsViewerOpen,
   setIsUploadOpen,

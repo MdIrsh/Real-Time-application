@@ -1,5 +1,6 @@
 import { Status } from "../models/statusModel.js";
 import { User } from "../models/userModel.js";
+import { io } from "../socket/socket.js";
 
 // Authentic Demo Friend Statuses with songs so users immediately experience music statuses!
 const INITIAL_DEMO_STATUSES = [
@@ -156,6 +157,12 @@ export const createStatus = async (req, res) => {
       "user",
       "fullName username profilePhoto"
     );
+
+    try {
+      io.emit("newStatus", populatedStatus);
+    } catch (e) {
+      console.error("Socket emit newStatus error:", e);
+    }
 
     return res.status(201).json({
       success: true,

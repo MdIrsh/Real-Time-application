@@ -6,11 +6,14 @@ import {
   IoSend,
   IoColorPaletteOutline,
   IoMusicalNotes,
+  IoPlay,
+  IoPause,
 } from "react-icons/io5";
 import { useDispatch } from "react-redux";
 import { addMyStatus } from "../redux/statusSlice";
 import { BASE_URL } from "../config/api";
 import MusicPickerModal from "./MusicPickerModal";
+import { STATUS_SONGS } from "../utils/statusSongs";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -33,6 +36,8 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
   const [mediaPreview, setMediaPreview] = useState("");
   const [mediaData, setMediaData] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const previewAudioRef = useRef(null);
   const fileInputRef = useRef(null);
   const dispatch = useDispatch();
 
@@ -40,7 +45,33 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
     if (isOpen) {
       setStatusType(initialType);
     }
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      setIsPreviewPlaying(false);
+    };
   }, [isOpen, initialType]);
+
+  const togglePreviewAudio = () => {
+    if (!selectedSong) return;
+    if (isPreviewPlaying) {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      setIsPreviewPlaying(false);
+    } else {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      const audio = new Audio(selectedSong.audioUrl);
+      audio.volume = 0.8;
+      audio.play().catch(() => {});
+      audio.onended = () => setIsPreviewPlaying(false);
+      previewAudioRef.current = audio;
+      setIsPreviewPlaying(true);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -347,13 +378,13 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
             )}
 
             {/* Song / Music Selector Bar */}
-            <div className="p-2.5 rounded-xl bg-[#0b141a] border border-[#202c33]">
+            <div className="p-2.5 rounded-xl bg-[#0b141a] border border-[#202c33] flex flex-col gap-2">
               {selectedSong ? (
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img
                     src={selectedSong.coverUrl}
                     alt={selectedSong.title}
-                    className="w-9 h-9 rounded-lg object-cover shadow shrink-0"
+                    className="w-10 h-10 rounded-lg object-cover shadow shrink-0 border border-white/10"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-[#e9edef] truncate">
@@ -364,17 +395,43 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
                       {selectedSong.artist}
                     </p>
                   </div>
+
                   <div className="flex items-center gap-1 shrink-0">
+                    {/* Play/Pause Audio Preview */}
                     <button
                       type="button"
-                      onClick={() => setIsMusicPickerOpen(true)}
-                      className="text-xs text-[#25d366] hover:underline px-2 py-1 font-medium cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        togglePreviewAudio();
+                      }}
+                      className="w-7 h-7 rounded-full bg-[#103629] text-[#25d366] hover:bg-[#25d366] hover:text-[#0b141a] flex items-center justify-center text-xs transition cursor-pointer"
+                      title={isPreviewPlaying ? "Pause Preview" : "Play Preview"}
+                    >
+                      {isPreviewPlaying ? <IoPause size={13} /> : <IoPlay size={13} className="ml-0.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsMusicPickerOpen(true);
+                      }}
+                      className="text-xs text-[#25d366] hover:underline px-1.5 py-1 font-medium cursor-pointer"
                     >
                       Change
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSelectedSong(null)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (previewAudioRef.current) {
+                          previewAudioRef.current.pause();
+                        }
+                        setIsPreviewPlaying(false);
+                        setSelectedSong(null);
+                      }}
                       className="w-6 h-6 rounded-full bg-[#202c33] text-[#8696a0] hover:text-white flex items-center justify-center text-xs transition cursor-pointer"
                       title="Remove music"
                     >
@@ -383,14 +440,45 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
                   </div>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsMusicPickerOpen(true)}
-                  className="w-full py-2 px-3 rounded-lg bg-[#202c33] hover:bg-[#2a3942] active:scale-98 transition flex items-center justify-center gap-2 text-xs font-semibold text-[#25d366] cursor-pointer"
-                >
-                  <IoMusicalNotes size={16} />
-                  <span>🎵 Add Bollywood Music / Song</span>
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMusicPickerOpen(true);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-lg bg-[#202c33] hover:bg-[#2a3942] active:scale-98 transition flex items-center justify-center gap-2 text-xs font-semibold text-[#25d366] cursor-pointer border border-[#25d366]/30 hover:border-[#25d366]/60 shadow-sm"
+                  >
+                    <IoMusicalNotes size={16} />
+                    <span>🎵 Add Bollywood Music / Song</span>
+                  </button>
+
+                  {/* 1-Tap Quick Pick Trending Songs */}
+                  <div className="flex flex-col gap-1 pt-0.5">
+                    <span className="text-[10px] text-[#8696a0] font-medium flex items-center gap-1">
+                      <span>⚡ Quick 1-Tap Select:</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                      {STATUS_SONGS.slice(0, 6).map((song) => (
+                        <button
+                          key={song.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedSong(song);
+                            toast.success(`Selected "${song.title}"! 🎵`, { id: "song-quick" });
+                          }}
+                          className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#103629]/60 hover:bg-[#103629] text-[#25d366] border border-[#25d366]/30 hover:border-[#25d366] shrink-0 transition cursor-pointer flex items-center gap-1 active:scale-95"
+                        >
+                          <span>🎵</span>
+                          <span className="truncate max-w-[85px]">{song.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 

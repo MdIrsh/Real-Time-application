@@ -7,6 +7,7 @@ import {
   IoCheckmarkCircle,
 } from "react-icons/io5";
 import { STATUS_SONGS } from "../utils/statusSongs";
+import toast from "react-hot-toast";
 
 const CATEGORIES = [
   "All",
@@ -65,6 +66,7 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
     }
     setPlayingSongId(null);
     onSelectSong(song);
+    toast.success(`Selected "${song.title}"! 🎵`, { id: "song-pick-toast" });
     onClose();
   };
 
@@ -79,7 +81,7 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
   });
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fade-in select-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 animate-fade-in select-none">
       <div className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col h-[560px] max-h-[90vh]">
         {/* Header */}
         <div className="px-4 py-3 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
@@ -207,10 +209,13 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleSelect(song)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#25d366]/15 hover:bg-[#25d366] text-[#25d366] hover:text-[#0b141a] transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelect(song);
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#25d366]/20 hover:bg-[#25d366] text-[#25d366] hover:text-[#0b141a] transition cursor-pointer"
                     >
-                      {isSelected ? "Selected" : "Add"}
+                      {isSelected ? "✓ Selected" : "+ Add"}
                     </button>
                   </div>
                 </div>

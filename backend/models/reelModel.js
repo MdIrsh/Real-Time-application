@@ -31,6 +31,10 @@ const reelSchema = new mongoose.Schema(
       type: String,
       default: "Original Audio - Trending Sound 🎵",
     },
+    musicCover: {
+      type: String,
+      default: "",
+    },
     likes: [
       {
         type: mongoose.Schema.Types.ObjectId,

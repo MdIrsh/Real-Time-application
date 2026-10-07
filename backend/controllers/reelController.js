@@ -1,229 +1,241 @@
 import { Reel } from "../models/reelModel.js";
 import { User } from "../models/userModel.js";
 
-// 12 Distinct Pure Indian Desi Reels with popular Bollywood tracks & unique videos
+// 12 Authentic Indian Bollywood Reels with 9:16 vertical videos and real Bollywood audio tracks
 const INITIAL_DEMO_REELS = [
   {
-    creatorName: "Rohit Vlogs (Mumbai)",
+    creatorName: "rohit_mumbai_vlogs",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=RohitMumbai",
-    videoUrl: "https://vjs.zencdn.net/v/oceans.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    caption: "Mumbai ki shaam, thandi hawa aur Marine Drive par cutting chai ☕🌅 Yeh sukoon kahin aur nahi! #mumbai #marinedrive #sukoon #kesariya",
-    musicTitle: "Kesariya - Arijit Singh (Brahmāstra) 🧡",
+    videoUrl: "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/sea_turtle.mp4",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3",
+    caption: "Mumbai ki shaam aur Marine Drive par cutting chai ☕🌅 Yeh sukoon kahin aur nahi! Tag your sunset buddy. #mumbai #marinedrive #kesariya #sukoon #bollywood",
+    musicTitle: "Kesariya • Arijit Singh & Pritam (Brahmāstra) 🧡",
+    musicCover: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Aakash",
+        userName: "aakash_travels",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Aakash",
-        text: "Marine drive ki chai is pure love! ☕❤️",
+        text: "Marine drive sunset is pure magic! 🌅☕",
         createdAt: new Date(),
       },
       {
-        userName: "Sneha",
+        userName: "sneha_kapoor",
         userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Sneha",
-        text: "Best sunset spot in India 🌅",
+        text: "Kesariya on loop forever! ❤️",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 142,
+    sharesCount: 14200,
   },
   {
-    creatorName: "Kashi Banaras Diaries",
+    creatorName: "kashi_banaras_diaries",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=BanarasKashi",
     videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    caption: "Banaras ki subah aur Ganga Aarti ka pavitra sukoon 🕉️✨ Har Har Mahadev! #varanasi #kashi #gangaaarti #sukoon #apnabanale",
-    musicTitle: "Apna Bana Le - Arijit Singh (Bhediya) 🌸",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3",
+    caption: "Subah-e-Banaras aur Dashashwamedh Ghat ki pavitra aarti 🕉️✨ Har Har Mahadev! Man ko adbhut shanti mil gayi. #varanasi #kashi #gangaaarti #apnabanale #spiritual",
+    musicTitle: "Apna Bana Le • Arijit Singh & Sachin-Jigar (Bhediya) 🌸",
+    musicCover: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Shubham",
+        userName: "shubham_singh",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Shubham",
         text: "Har Har Mahadev! Kashi Vishwanath ki jai 🙏✨",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 198,
+    sharesCount: 29800,
   },
   {
-    creatorName: "DJ Gurpreet Singh",
+    creatorName: "dj_gurpreet_singh",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=GurpreetSingh",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/people-detection.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    caption: "Desi shaadi me Bhangra aur Punjabi Dhol ka swag alag hi hota hai! 🕺🥁 Full energy hook step! #taubatauba #karanaujla #punjabi #bhangra",
-    musicTitle: "Tauba Tauba - Karan Aujla (Bad Newz) 🔥",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
+    caption: "Desi shaadi me Bhangra aur Punjabi Dhol ka swag alag hi hota hai! 🕺🥁 Full energy hook step! #taubatauba #karanaujla #punjabi #bhangra #viral",
+    musicTitle: "Tauba Tauba • Karan Aujla (Bad Newz) 🔥",
+    musicCover: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Manpreet",
-        userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Manpreet",
+        userName: "manpreet_kaur",
+        userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Manpreet",
         text: "Oye balle balle! Energy next level hai paaji! ⚡🕺",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 240,
+    sharesCount: 42100,
   },
   {
-    creatorName: "Delhi Foodie Junction",
+    creatorName: "delhi_foodie_junction",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=DelhiFoodie",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-    caption: "Chandni Chowk ke famous spicy chole bhature aur garam rabdi jalebi 🍛😋 Dilwalon ki Dilli! #delhifood #streetfood #foodie #chaleya",
-    musicTitle: "Chaleya - Arijit Singh & Anirudh (Jawan) ✨",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3",
+    caption: "Chandni Chowk ke spicy chole bhature aur garam rabdi jalebi 🍛😋 Dilwalon ki Dilli ka swaad! #delhifood #streetfood #chaleya #jawan #foodie",
+    musicTitle: "Chaleya • Arijit Singh, Shilpa Rao & Anirudh (Jawan) ✨",
+    musicCover: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Vikas",
+        userName: "vikas_vlogs",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Vikas",
         text: "Dilli ke chole bhature ka koi mukabla nahi! 🤤",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 165,
+    sharesCount: 31600,
   },
   {
-    creatorName: "Kashmir Paradise Vlogs",
+    creatorName: "kashmir_paradise_vlogs",
     creatorAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=AanyaKashmir",
-    videoUrl: "https://test-videos.co.uk/vids/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-    caption: "Gar firdaus bar roo-e zameen ast... Kashmir sach me jannat hai! ❄️🏔️ Dal Lake aur baraf ka nazara. #kashmir #gulmarg #paradise #heeriye",
-    musicTitle: "Heeriye - Arijit Singh & Jasleen Royal ❤️",
+    videoUrl: "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/snow_horses.mp4",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010912552003505.mp3",
+    caption: "Gar firdaus bar roo-e zameen ast... Kashmir sach me jannat hai! ❄️🏔️ Gulmarg baraf aur Shikara ride. #kashmir #gulmarg #heeriye #paradise #travel",
+    musicTitle: "Heeriye • Jasleen Royal & Arijit Singh ❤️",
+    musicCover: "https://c.saavncdn.com/022/Heeriye-feat-Arijit-Singh-Hindi-2023-20230928050405-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Zubair",
+        userName: "zubair_kashmiri",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Zubair",
         text: "Welcome to Heaven on Earth Kashmir! 🏔️❤️",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 310,
+    sharesCount: 51200,
   },
   {
-    creatorName: "India Highway Drives",
+    creatorName: "speed_drives_india",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=IndiaDrives",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/driver-action-recognition.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
-    caption: "Mumbai-Pune expressway par late night drive aur Shershaah gaane 🚗💨 Sukoon bhari raatein. #raataanlambiyan #nightdrive #longdrive",
-    musicTitle: "Raataan Lambiyan - Jubin Nautiyal (Shershaah) 🌙",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910141318776.mp3",
+    caption: "Mumbai-Pune expressway par late night drive aur Shershaah gaane 🚗💨 Sukoon bhari hawayein. #raataanlambiyan #nightdrive #longdrive #shershaah",
+    musicTitle: "Raataan Lambiyan • Jubin Nautiyal & Asees Kaur (Shershaah) 🌙",
+    musicCover: "https://c.saavncdn.com/238/Shershaah-Original-Motion-Picture-Soundtrack--Hindi-2021-20210815181610-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Ritik",
+        userName: "ritik_car_lover",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Ritik",
         text: "Late night drives with good music is pure therapy 🚗🎶",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 185,
+    sharesCount: 28500,
   },
   {
-    creatorName: "College Ke Din",
+    creatorName: "college_ke_din",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=CollegeKeDin",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/classroom.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    caption: "College ke woh befikre din aur dosto ke sath backbench ki masti 🎓❤️ Tag your best school/college friends! #collegelife #dosti #yaari #tumhiho",
-    musicTitle: "Tum Hi Ho - Arijit Singh (Aashiqui 2) 🎶",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3",
+    caption: "College ke woh befikre din aur backbench ki dosti! 🎓❤️ Tag your best friends jinke bina zindagi adhoori hai. #collegelife #dosti #yaari #tumhiho",
+    musicTitle: "Tum Hi Ho • Arijit Singh & Mithoon (Aashiqui 2) 🎶",
+    musicCover: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Rahul",
+        userName: "rahul_verma",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Rahul",
         text: "Miss those golden college days with my gang! 😭❤️",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 220,
+    sharesCount: 39000,
   },
   {
-    creatorName: "Jaipur Royals Heritage",
+    creatorName: "jaipur_royals_heritage",
     creatorAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=JaipurRoyals",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/head-pose-face-detection-female-and-male.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    caption: "Padharo Mhare Desh! 🏰🦚 Pink City Jaipur ka shahi andaaz aur Hawa Mahal ki khoobsurti. #jaipur #rajasthan #heritage #lutgaye",
-    musicTitle: "Lut Gaye - Jubin Nautiyal & Emraan Hashmi 🌹",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910091194217.mp3",
+    caption: "Padharo Mhare Desh! 🏰🦚 Pink City Jaipur ka shahi andaaz aur Hawa Mahal ki khoobsurti. #jaipur #rajasthan #heritage #lutgaye #culture",
+    musicTitle: "Lut Gaye • Jubin Nautiyal & Emraan Hashmi 🌹",
+    musicCover: "https://c.saavncdn.com/106/Emraan-Hashmi-Hits-Hindi-2026-20260905191028-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Meenakshi",
+        userName: "meenakshi_rathore",
         userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Meenakshi",
         text: "Rajasthan culture is unmatched in the world! 🦚🏰",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 175,
+    sharesCount: 27500,
   },
   {
-    creatorName: "Desi Akhada Fitness",
+    creatorName: "desi_akhada_fitness",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=PahalwanFitness",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-    caption: "Desi akhada, mitti aur sachhi mehnat! Haar mat maano, lagan se sab sambhav hai 💪🇮🇳 #desiakhada #fitness #hardwork #jaihind",
-    musicTitle: "Zinda - Bhaag Milkha Bhaag 🔥",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910140012874.mp3",
+    caption: "Desi akhada, mitti aur sachhi mehnat! Haar mat maano, lagan se sab sambhav hai 💪🇮🇳 #desiakhada #fitness #hardwork #jaihind #zinda",
+    musicTitle: "Zinda • Shankar-Ehsaan-Loy & Siddharth (Bhaag Milkha Bhaag) 🔥",
+    musicCover: "https://c.saavncdn.com/575/Bhaag-Milkha-Bhaag-Hindi-2013-20260120201340-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Kuldeep",
+        userName: "kuldeep_yadav",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Kuldeep",
         text: "Desi diet aur mitti ki taakat! Jai Hind 🇮🇳💪",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 290,
+    sharesCount: 62000,
   },
   {
-    creatorName: "Goa Beach Sunsets",
-    creatorAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=SunnyGoa",
-    videoUrl: "https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    caption: "Goa beach par golden sunset aur waves ki aawaz 🌴🌊 Zindagi jeene ka naam hai! #goa #beachvibes #travelindia #ilahi",
-    musicTitle: "Ilahi - Yeh Jawaani Hai Deewani (Arijit) 🏖️",
+    creatorName: "kerala_gods_own_country",
+    creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=KeralaTravel",
+    videoUrl: "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/elephants.mp4",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910090382254.mp3",
+    caption: "God's Own Country Kerala 🐘🌴 Munnar ke haseen pahad aur backwaters boat ride. Nature at its finest! #kerala #munnar #travelindia #ilahi #yjhd",
+    musicTitle: "Ilahi • Arijit Singh & Pritam (YJHD) 🏖️",
+    musicCover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Karan",
+        userName: "karan_malhotra",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Karan",
-        text: "Goa trip plan ban gaya dosto ke sath! 🏖️💃",
+        text: "Munnar is literal heaven on earth! 🌴🐘",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 205,
+    sharesCount: 34500,
   },
   {
-    creatorName: "Kolkata City Of Joy",
+    creatorName: "kolkata_city_of_joy",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=KolkataCity",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-    caption: "Howrah bridge ki shaam aur yellow taxi ka safar 🚕💛 Kolkata is pure emotion! #kolkata #cityofjoy #howrah #kabira",
-    musicTitle: "Kabira - Yeh Jawaani Hai Deewani 💛",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910090382398.mp3",
+    caption: "Howrah bridge ki shaam aur yellow taxi ka suhana safar 🚕💛 Kolkata is pure emotion! #kolkata #cityofjoy #howrah #kabira #retro",
+    musicTitle: "Kabira • Tochi Raina & Rekha Bhardwaj (YJHD) 💛",
+    musicCover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Debashis",
+        userName: "debashis_roy",
         userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Debashis",
         text: "Aami tomake bhalobhashi Kolkata! 💛",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 160,
+    sharesCount: 26800,
   },
   {
-    creatorName: "Desi Chai Lover",
+    creatorName: "chai_aur_baarish",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=ChaiLover",
     videoUrl: "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/bottle-detection.mp4",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
-    caption: "Baarish ka mausam aur garam kulhad wali adrak chai ☕🌧️ Isse better sukoon kuch nahi! #chai #monsoon #baarish #desivibes",
-    musicTitle: "Baarish - Half Girlfriend (Ash King) 🌧️",
+    audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910440564900.mp3",
+    caption: "Baarish ka mausam aur garam kulhad wali adrak chai ☕🌧️ Isse better sukoon kuch nahi! Tag your chai partner. #chai #monsoon #baarish #desivibes",
+    musicTitle: "Baarish • Ash King & Shashaa Tirupati (Half Girlfriend) 🌧️",
+    musicCover: "https://c.saavncdn.com/441/Half-Girlfriend-Hindi-2017-20180622-500x500.jpg",
     likes: [],
     comments: [
       {
-        userName: "Roshni",
+        userName: "roshni_patil",
         userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Roshni",
         text: "Barish + Adrak Chai = Heaven! ☕🌧️",
         createdAt: new Date(),
       },
     ],
-    sharesCount: 315,
+    sharesCount: 48900,
   },
 ];
 
@@ -235,13 +247,13 @@ export const getAllReels = async (req, res) => {
       .populate("comments.user", "fullName username profilePhoto")
       .sort({ createdAt: -1 });
 
-    // Force replace demo reels with the full 12 Indian Desi collection
+    // Cleanly replace old demo reels with 12 fresh Indian Bollywood reels with JioSaavn audio
     const existingDemo = await Reel.find({ author: null });
-    const hasIndianCollection = existingDemo.some((r) =>
-      r.caption?.includes("Marine") || r.caption?.includes("Banaras")
-    );
+    const hasAll12 =
+      existingDemo.length >= 12 &&
+      existingDemo.some((r) => r.audioUrl?.includes("jiotunepreview"));
 
-    if (!hasIndianCollection || existingDemo.length < INITIAL_DEMO_REELS.length) {
+    if (!hasAll12) {
       await Reel.deleteMany({ author: null });
       await Reel.insertMany(INITIAL_DEMO_REELS);
     }
@@ -262,7 +274,7 @@ export const getAllReels = async (req, res) => {
 export const createReel = async (req, res) => {
   try {
     const authorId = req.id;
-    const { videoUrl, audioUrl, caption, musicTitle } = req.body;
+    const { videoUrl, audioUrl, caption, musicTitle, musicCover } = req.body;
 
     if (!videoUrl) {
       return res.status(400).json({ message: "Video is required to post a Reel" });
@@ -272,12 +284,13 @@ export const createReel = async (req, res) => {
 
     const newReel = await Reel.create({
       author: authorId,
-      creatorName: user?.fullName || user?.username || "You",
+      creatorName: user?.username || user?.fullName || "user_creator",
       creatorAvatar: user?.profilePhoto || "",
       videoUrl,
       audioUrl: audioUrl || "",
       caption: caption || "",
-      musicTitle: musicTitle || "Original Audio - " + (user?.fullName || "User"),
+      musicTitle: musicTitle || "Original Audio • " + (user?.fullName || "User"),
+      musicCover: musicCover || "",
       likes: [],
       comments: [],
     });
@@ -352,7 +365,7 @@ export const addComment = async (req, res) => {
 
     const newComment = {
       user: userId,
-      userName: user?.fullName || user?.username || "User",
+      userName: user?.username || user?.fullName || "User",
       userAvatar: user?.profilePhoto || "",
       text: text.trim(),
       createdAt: new Date(),

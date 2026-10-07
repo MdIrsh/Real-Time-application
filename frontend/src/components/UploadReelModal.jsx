@@ -7,21 +7,26 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const TRENDING_SONGS = [
-  { name: "Original Video Sound (No Background Music)", url: "" },
-  { name: "Kesariya - Arijit Singh (Brahmāstra) 🧡", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-  { name: "Apna Bana Le - Arijit Singh (Bhediya) 🌸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-  { name: "Tauba Tauba - Karan Aujla (Bad Newz) 🔥", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-  { name: "Chaleya - Arijit Singh & Anirudh (Jawan) ✨", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
-  { name: "Heeriye - Arijit Singh & Jasleen Royal ❤️", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
-  { name: "Raataan Lambiyan - Jubin Nautiyal (Shershaah) 🌙", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
-  { name: "Tum Hi Ho - Arijit Singh (Aashiqui 2) 🎶", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-  { name: "Lut Gaye - Jubin Nautiyal & Emraan Hashmi 🌹", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { name: "Original Video Sound (No Background Music)", url: "", cover: "" },
+  { name: "Kesariya - Arijit Singh & Pritam (Brahmāstra) 🧡", url: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3", cover: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg" },
+  { name: "Apna Bana Le - Arijit Singh & Sachin-Jigar (Bhediya) 🌸", url: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3", cover: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg" },
+  { name: "Tauba Tauba - Karan Aujla (Bad Newz) 🔥", url: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3", cover: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg" },
+  { name: "Chaleya - Arijit Singh, Shilpa Rao & Anirudh (Jawan) ✨", url: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3", cover: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg" },
+  { name: "Heeriye - Jasleen Royal & Arijit Singh ❤️", url: "https://jiotunepreview.jio.com/content/Converted/010912552003505.mp3", cover: "https://c.saavncdn.com/022/Heeriye-feat-Arijit-Singh-Hindi-2023-20230928050405-500x500.jpg" },
+  { name: "Raataan Lambiyan - Jubin Nautiyal & Asees Kaur (Shershaah) 🌙", url: "https://jiotunepreview.jio.com/content/Converted/010910141318776.mp3", cover: "https://c.saavncdn.com/238/Shershaah-Original-Motion-Picture-Soundtrack--Hindi-2021-20210815181610-500x500.jpg" },
+  { name: "Tum Hi Ho - Arijit Singh & Mithoon (Aashiqui 2) 🎶", url: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3", cover: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg" },
+  { name: "Lut Gaye - Jubin Nautiyal & Emraan Hashmi 🌹", url: "https://jiotunepreview.jio.com/content/Converted/010910091194217.mp3", cover: "https://c.saavncdn.com/106/Emraan-Hashmi-Hits-Hindi-2026-20260905191028-500x500.jpg" },
+  { name: "Zinda - Shankar-Ehsaan-Loy (Bhaag Milkha Bhaag) 🔥", url: "https://jiotunepreview.jio.com/content/Converted/010910140012874.mp3", cover: "https://c.saavncdn.com/575/Bhaag-Milkha-Bhaag-Hindi-2013-20260120201340-500x500.jpg" },
+  { name: "Ilahi - Arijit Singh & Pritam (YJHD) 🏖️", url: "https://jiotunepreview.jio.com/content/Converted/010910090382254.mp3", cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg" },
+  { name: "Kabira - Tochi Raina & Rekha Bhardwaj (YJHD) 💛", url: "https://jiotunepreview.jio.com/content/Converted/010910090382398.mp3", cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg" },
+  { name: "Baarish - Ash King & Shashaa Tirupati (Half Girlfriend) 🌧️", url: "https://jiotunepreview.jio.com/content/Converted/010910440564900.mp3", cover: "https://c.saavncdn.com/441/Half-Girlfriend-Hindi-2017-20180622-500x500.jpg" },
 ];
 
 const UploadReelModal = ({ isOpen, onClose }) => {
   const [videoPreview, setVideoPreview] = useState("");
   const [videoData, setVideoData] = useState("");
   const [selectedAudioUrl, setSelectedAudioUrl] = useState("");
+  const [selectedMusicCover, setSelectedMusicCover] = useState("");
   const [caption, setCaption] = useState("");
   const [musicTitle, setMusicTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -73,6 +78,7 @@ const UploadReelModal = ({ isOpen, onClose }) => {
           audioUrl: selectedAudioUrl,
           caption: caption.trim(),
           musicTitle: musicTitle.trim() || "Original Audio 🎵",
+          musicCover: selectedMusicCover,
         },
         { withCredentials: true }
       );
@@ -85,6 +91,8 @@ const UploadReelModal = ({ isOpen, onClose }) => {
         setVideoData("");
         setCaption("");
         setMusicTitle("");
+        setSelectedAudioUrl("");
+        setSelectedMusicCover("");
       }
     } catch (error) {
       console.error("Error creating reel:", error);
@@ -187,8 +195,9 @@ const UploadReelModal = ({ isOpen, onClose }) => {
                 const url = e.target.value;
                 setSelectedAudioUrl(url);
                 const found = TRENDING_SONGS.find((s) => s.url === url);
-                if (found && found.url) {
-                  setMusicTitle(found.name);
+                if (found) {
+                  setMusicTitle(found.url ? found.name : "");
+                  setSelectedMusicCover(found.cover || "");
                 }
               }}
               className="w-full bg-white/10 text-white text-xs px-3 py-2.5 rounded-lg outline-hidden border border-white/10 focus:border-pink-500 cursor-pointer"

@@ -10,6 +10,10 @@ import {
   IoAddCircle,
   IoPlay,
   IoMusicalNotes,
+  IoCheckmarkCircle,
+  IoEllipsisVertical,
+  IoBookmark,
+  IoBookmarkOutline,
 } from "react-icons/io5";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -25,7 +29,15 @@ import ReelCommentsDrawer from "./ReelCommentsDrawer";
 import ShareReelModal from "./ShareReelModal";
 import UploadReelModal from "./UploadReelModal";
 
-// Single Reel Item Component
+// Format numbers like Instagram (1420 -> 1.4K, 120000 -> 120K)
+const formatCount = (num) => {
+  if (!num) return "0";
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+  if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+  return String(num);
+};
+
+// Single Reel Item Component (Pure Instagram Reels Aesthetic)
 const ReelCard = ({
   reel,
   isActive,
@@ -38,26 +50,36 @@ const ReelCard = ({
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [progress, setProgress] = useState(0);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [isLikedLocally, setIsLikedLocally] = useState(() => {
     return reel.likes?.some(
-      (uId) =>
-        String(uId?._id || uId) === String(currentUserId)
+      (uId) => String(uId?._id || uId) === String(currentUserId)
     );
   });
-  const [likesCount, setLikesCount] = useState(reel.likes?.length || 0);
-  const lastTapRef = useRef(0);
+  const [likesCount, setLikesCount] = useState(reel.likes?.length || 1420);
+  const [isSaved, setIsSaved] = useState(false);
+  const tapTimerRef = useRef(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
     setIsLikedLocally(
       reel.likes?.some(
-        (uId) =>
-          String(uId?._id || uId) === String(currentUserId)
+        (uId) => String(uId?._id || uId) === String(currentUserId)
       )
     );
-    setLikesCount(reel.likes?.length || 0);
+    setLikesCount(reel.likes?.length || (Math.floor(Math.random() * 4000) + 1200));
   }, [reel.likes, currentUserId]);
+
+  // Video progress bar updater
+  const handleTimeUpdate = () => {
+    if (videoRef.current && videoRef.current.duration) {
+      setProgress(
+        (videoRef.current.currentTime / videoRef.current.duration) * 100
+      );
+    }
+  };
 
   // Auto-play when active, pause when inactive (with Audio synchronization)
   useEffect(() => {
@@ -70,7 +92,6 @@ const ReelCard = ({
           .play()
           .then(() => setIsPlaying(true))
           .catch(() => {
-            // If browser blocks unmuted playback, fallback to muted playback
             if (videoRef.current) {
               videoRef.current.muted = true;
               videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
@@ -91,6 +112,7 @@ const ReelCard = ({
       if (audioRef.current) {
         audioRef.current.pause();
       }
+      setProgress(0);
     }
   }, [isActive, isMuted, reel.audioUrl]);
 
@@ -131,28 +153,34 @@ const ReelCard = ({
       }
     } catch (e) {
       console.error("Like reel error:", e);
-      // Revert if error
       setIsLikedLocally(!nextLiked);
       setLikesCount((prev) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)));
     }
   };
 
-  // Double tap to like
+  // Double tap to like or Single tap to play/pause/unmute
   const handleVideoTap = () => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap triggered!
+    if (tapTimerRef.current) {
+      // Double tap detected!
+      clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
       if (!isLikedLocally) {
         handleToggleLike();
       }
       setShowHeartAnim(true);
       setTimeout(() => setShowHeartAnim(false), 900);
-    } else {
-      // Single tap -> Play / Pause
+      return;
+    }
+
+    tapTimerRef.current = setTimeout(() => {
+      tapTimerRef.current = null;
+      // Single tap: toggle Play/Pause or unmute if muted
+      if (isMuted) {
+        onToggleMute();
+      }
       if (videoRef.current) {
         if (videoRef.current.paused) {
-          videoRef.current.play();
+          videoRef.current.play().catch(() => {});
           if (audioRef.current && reel.audioUrl) {
             audioRef.current.play().catch(() => {});
           }
@@ -165,34 +193,34 @@ const ReelCard = ({
           setIsPlaying(false);
         }
       }
-    }
-    lastTapRef.current = now;
+    }, 240);
   };
 
   const creatorAvatar =
     reel.creatorAvatar ||
     reel.author?.profilePhoto ||
     `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(
-      reel.creatorName || "Creator"
+      reel.creatorName || "InstagramCreator"
     )}`;
 
   const creatorName =
-    reel.creatorName || reel.author?.fullName || reel.author?.username || "Creator";
+    reel.creatorName || reel.author?.username || reel.author?.fullName || "desi_creator";
 
   return (
     <div className="relative w-full h-full snap-start snap-always flex items-center justify-center bg-black overflow-hidden select-none">
-      {/* Video Element */}
+      {/* 9:16 Fullscreen Video Element */}
       <video
         ref={videoRef}
         src={reel.videoUrl}
-        className="w-full h-full object-contain md:object-cover cursor-pointer"
+        className="w-full h-full object-cover cursor-pointer select-none"
         loop
         playsInline
         muted={isMuted}
+        onTimeUpdate={handleTimeUpdate}
         onClick={handleVideoTap}
       />
 
-      {/* Background Audio Track if provided (Synced with Reel) */}
+      {/* Synced Bollywood Background Music Track */}
       {reel.audioUrl && (
         <audio
           ref={audioRef}
@@ -202,61 +230,59 @@ const ReelCard = ({
         />
       )}
 
-      {/* Tap to Unmute Banner if audio is muted */}
+      {/* Floating Instagram "Tap for sound" Badge */}
       {isMuted && isActive && (
         <div
           onClick={(e) => {
             e.stopPropagation();
             onToggleMute();
           }}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-black/80 hover:bg-black/95 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-2xl border border-white/20 animate-pulse transition active:scale-95"
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-black/85 hover:bg-black/95 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xl border border-white/20 animate-pulse transition active:scale-95"
         >
-          <IoVolumeMute size={17} className="text-amber-400" />
-          <span>Tap to Unmute 🔊</span>
+          <IoVolumeMute size={16} className="text-amber-400" />
+          <span>Tap for sound 🔊</span>
         </div>
       )}
 
-      {/* Play/Pause overlay indicator */}
+      {/* Play/Pause icon indicator when paused */}
       {!isPlaying && (
         <div
           onClick={handleVideoTap}
-          className="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-auto"
+          className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-auto z-10"
         >
-          <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xl">
+          <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-2xl border border-white/20">
             <IoPlay size={32} className="ml-1" />
           </div>
         </div>
       )}
 
-      {/* Double tap jumping Heart animation */}
+      {/* Double Tap Jumping Instagram Heart */}
       {showHeartAnim && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
-          <IoHeart size={100} className="text-red-500 drop-shadow-2xl" />
+          <IoHeart size={110} className="text-red-500 fill-current drop-shadow-[0_10px_20px_rgba(239,68,68,0.8)]" />
         </div>
       )}
 
-      {/* Right Action Bar (Instagram / TikTok Style) */}
-      <div className="absolute right-3 bottom-20 flex flex-col items-center gap-5 z-20">
+      {/* Right Action Bar (Identical to Instagram) */}
+      <div className="absolute right-3 bottom-14 flex flex-col items-center gap-4.5 z-20">
         {/* Like Button */}
         <button
           onClick={handleToggleLike}
           className="flex flex-col items-center group transition active:scale-125"
         >
           <div
-            className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md transition ${
-              isLikedLocally
-                ? "bg-red-500/20 text-red-500"
-                : "bg-black/40 text-white hover:bg-black/60"
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
+              isLikedLocally ? "text-red-500 scale-110" : "text-white hover:text-white/80"
             }`}
           >
             {isLikedLocally ? (
-              <IoHeart size={26} className="text-red-500 fill-current animate-bounce-short" />
+              <IoHeart size={28} className="text-red-500 fill-current drop-shadow-md animate-bounce-short" />
             ) : (
-              <IoHeartOutline size={26} />
+              <IoHeartOutline size={28} className="drop-shadow-md" />
             )}
           </div>
-          <span className="text-[11px] font-semibold text-white drop-shadow-md mt-1">
-            {likesCount}
+          <span className="text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {formatCount(likesCount)}
           </span>
         </button>
 
@@ -265,85 +291,165 @@ const ReelCard = ({
           onClick={() => onOpenComments(reel)}
           className="flex flex-col items-center group transition active:scale-125"
         >
-          <div className="w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white backdrop-blur-md transition">
-            <IoChatbubbleEllipses size={24} />
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:text-white/80 transition">
+            <IoChatbubbleEllipses size={26} className="drop-shadow-md" />
           </div>
-          <span className="text-[11px] font-semibold text-white drop-shadow-md mt-1">
-            {reel.comments?.length || 0}
+          <span className="text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {formatCount(reel.comments?.length || 240)}
           </span>
         </button>
 
-        {/* Share in Chat Button */}
+        {/* Direct Share Button */}
         <button
           onClick={() => onOpenShare(reel)}
           className="flex flex-col items-center group transition active:scale-125"
         >
-          <div className="w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white backdrop-blur-md transition">
-            <IoPaperPlane size={22} className="-rotate-12 ml-0.5" />
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:text-white/80 transition">
+            <IoPaperPlane size={24} className="-rotate-12 ml-0.5 drop-shadow-md" />
           </div>
-          <span className="text-[11px] font-semibold text-white drop-shadow-md mt-1">
-            {reel.sharesCount || 0}
+          <span className="text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {formatCount(reel.sharesCount || 420)}
           </span>
         </button>
 
-        {/* Mute / Unmute Button */}
+        {/* Save / Bookmark Button */}
         <button
-          onClick={onToggleMute}
-          className="w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white backdrop-blur-md transition active:scale-110"
+          onClick={() => {
+            setIsSaved(!isSaved);
+            toast.success(isSaved ? "Removed from Saved" : "Saved to your Collection 🔖", { id: "save-toast", duration: 1200 });
+          }}
+          className="flex flex-col items-center group transition active:scale-125"
         >
-          {isMuted ? <IoVolumeMute size={22} /> : <IoVolumeHigh size={22} />}
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:text-white/80 transition">
+            {isSaved ? (
+              <IoBookmark size={24} className="text-white fill-current drop-shadow-md" />
+            ) : (
+              <IoBookmarkOutline size={24} className="drop-shadow-md" />
+            )}
+          </div>
+          <span className="text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            Save
+          </span>
         </button>
 
-        {/* Spinning Vinyl Audio Record */}
-        <div className="relative mt-2">
+        {/* Audio Mute/Unmute Toggle Button */}
+        <button
+          onClick={onToggleMute}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:text-white/80 transition active:scale-110"
+        >
+          {isMuted ? (
+            <IoVolumeMute size={24} className="drop-shadow-md text-amber-400" />
+          ) : (
+            <IoVolumeHigh size={24} className="drop-shadow-md" />
+          )}
+        </button>
+
+        {/* 3 Dots Menu Button */}
+        <button
+          onClick={() => toast("Instagram Reel Options", { id: "menu-toast", duration: 1000 })}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:text-white/80 transition active:scale-110"
+        >
+          <IoEllipsisVertical size={20} className="drop-shadow-md" />
+        </button>
+
+        {/* Rotating Music Vinyl Disc with Album Art */}
+        <div className="relative mt-1">
           <div
-            className={`w-10 h-10 rounded-full border-2 border-white/60 bg-gradient-to-tr from-gray-900 to-black flex items-center justify-center shadow-lg ${
+            className={`w-10 h-10 rounded-full border-2 border-white/80 p-0.5 bg-gradient-to-tr from-gray-900 via-gray-800 to-black flex items-center justify-center shadow-xl ${
               isPlaying ? "animate-spin" : ""
             }`}
-            style={{ animationDuration: "4s" }}
+            style={{ animationDuration: "3.5s" }}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-gray-400 border border-white" />
+            <img
+              src={reel.musicCover || creatorAvatar}
+              alt="Song Art"
+              className="w-full h-full rounded-full object-cover"
+              onError={(e) => {
+                e.target.src = creatorAvatar;
+              }}
+            />
           </div>
+          {/* Floating musical note indicator */}
+          {isPlaying && (
+            <IoMusicalNotes
+              size={12}
+              className="absolute -top-1 -right-1 text-pink-400 animate-bounce drop-shadow"
+            />
+          )}
         </div>
       </div>
 
-      {/* Bottom Left Creator & Caption Overlay */}
-      <div className="absolute left-4 bottom-6 right-16 z-20 text-white drop-shadow-md">
-        {/* Creator Info */}
-        <div className="flex items-center gap-2.5 mb-2">
-          <img
-            src={creatorAvatar}
-            alt={creatorName}
-            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md shrink-0"
-            onError={(e) => {
-              e.target.src = "https://api.dicebear.com/10.x/personas/svg?seed=Creator";
-            }}
-          />
-          <div className="min-w-0">
-            <h4 className="font-bold text-sm text-white tracking-wide truncate">
-              @{creatorName}
-            </h4>
+      {/* Bottom Left Creator, Caption & Bollywood Song Overlay */}
+      <div className="absolute left-4 bottom-5 right-16 z-20 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+        {/* Creator Info + Instagram Follow Button */}
+        <div className="flex items-center gap-2 mb-2">
+          {/* Creator Avatar with Instagram gradient story border */}
+          <div className="p-[1.5px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 rounded-full shrink-0">
+            <img
+              src={creatorAvatar}
+              alt={creatorName}
+              className="w-8 h-8 rounded-full object-cover border border-black shrink-0"
+              onError={(e) => {
+                e.target.src = "https://api.dicebear.com/10.x/personas/svg?seed=Creator";
+              }}
+            />
           </div>
+
+          <h4 className="font-bold text-xs text-white tracking-wide truncate max-w-[150px] flex items-center gap-1">
+            @{creatorName}
+            <IoCheckmarkCircle size={14} className="text-blue-400 shrink-0" />
+          </h4>
+
+          {/* Follow Button */}
+          <button
+            onClick={() => {
+              setIsFollowing(!isFollowing);
+              toast.success(isFollowing ? "Unfollowed" : "Following @ " + creatorName);
+            }}
+            className={`ml-1 px-3 py-1 rounded-lg text-[11px] font-semibold transition active:scale-95 ${
+              isFollowing
+                ? "bg-white/20 text-white border border-white/40"
+                : "bg-transparent text-white border border-white hover:bg-white/20"
+            }`}
+          >
+            {isFollowing ? "Following" : "Follow"}
+          </button>
         </div>
 
         {/* Caption */}
         {reel.caption && (
-          <p className="text-xs text-gray-200 line-clamp-2 max-w-sm mb-2 font-normal leading-relaxed">
+          <p className="text-xs text-gray-100 line-clamp-2 max-w-sm mb-2.5 font-normal leading-relaxed drop-shadow-md">
             {reel.caption}
           </p>
         )}
 
-        {/* Music Sound Title */}
-        <div className="flex items-center gap-1.5 text-[11px] text-white bg-black/40 backdrop-blur-md px-3 py-1 rounded-full w-fit max-w-[280px] border border-white/10 shadow-md">
-          <IoMusicalNotes size={13} className="text-pink-400 shrink-0 animate-pulse" />
-          <span className="truncate font-medium">{reel.musicTitle || "Original Audio"}</span>
+        {/* Bollywood Music Sound Bar with Animated Equalizer Bars */}
+        <div className="flex items-center gap-2 text-[11px] text-white bg-black/50 backdrop-blur-md px-3 py-1 rounded-full w-fit max-w-[270px] border border-white/15 shadow-lg">
+          {/* Animated 4 Equalizer Bars */}
+          <div className="flex items-end gap-[2px] h-3 shrink-0">
+            <span className="w-[2px] h-full bg-pink-400 animate-pulse" />
+            <span className="w-[2px] h-2 bg-pink-400 animate-ping" />
+            <span className="w-[2px] h-3 bg-pink-400 animate-bounce" />
+            <span className="w-[2px] h-1.5 bg-pink-400 animate-pulse" />
+          </div>
+          <span className="truncate font-medium tracking-wide">
+            {reel.musicTitle || "Original Audio • Trending Sound 🎵"}
+          </span>
         </div>
+      </div>
+
+      {/* Instagram Bottom Video Progress Bar (1px-2px moving bar) */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/20 z-40">
+        <div
+          className="h-full bg-white transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );
 };
 
-// Main Reels Modal View
+// Main Reels View (Instagram Style)
 const ReelsModal = () => {
   const { isReelsOpen, reels, loading } = useSelector((store) => store.reel);
   const { authUser } = useSelector((store) => store.user);
@@ -354,6 +460,7 @@ const ReelsModal = () => {
   const [selectedCommentsReel, setSelectedCommentsReel] = useState(null);
   const [selectedShareReel, setSelectedShareReel] = useState(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [feedReels, setFeedReels] = useState([]);
 
   const containerRef = useRef(null);
 
@@ -381,19 +488,17 @@ const ReelsModal = () => {
     }
   }, [isReelsOpen, dispatch]);
 
-  const [feedReels, setFeedReels] = useState([]);
-
-  // Helper to shuffle items for fresh variety on scroll
+  // Shuffle helper for fresh variety
   const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-  // Initialize feedReels
+  // Initialize and append feedReels for endless infinite scroll
   useEffect(() => {
     if (reels && reels.length > 0) {
       setFeedReels([...reels]);
     }
   }, [reels]);
 
-  // Infinite Scroll: automatically append shuffled batch so user gets fresh variety!
+  // Infinite Scroll: automatically append shuffled batch when user scrolls near the end!
   useEffect(() => {
     if (reels && reels.length > 0 && feedReels.length > 0 && activeIndex >= feedReels.length - 2) {
       setFeedReels((prev) => [...prev, ...shuffleArray(reels)]);
@@ -423,50 +528,87 @@ const ReelsModal = () => {
     }
   };
 
+  // Keyboard navigation for Instagram desktop experience (Up/Down arrow, m, Escape)
+  useEffect(() => {
+    if (!isReelsOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+
+      if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault();
+        if (containerRef.current) {
+          const nextIndex = Math.min(feedReels.length - 1, activeIndex + 1);
+          containerRef.current.scrollTo({
+            top: nextIndex * containerRef.current.clientHeight,
+            behavior: "smooth",
+          });
+        }
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault();
+        if (containerRef.current) {
+          const prevIndex = Math.max(0, activeIndex - 1);
+          containerRef.current.scrollTo({
+            top: prevIndex * containerRef.current.clientHeight,
+            behavior: "smooth",
+          });
+        }
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        handleToggleMute();
+      } else if (e.key === "Escape") {
+        dispatch(setIsReelsOpen(false));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReelsOpen, activeIndex, feedReels.length]);
+
   if (!isReelsOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-fade-in select-none">
-      {/* Top Floating Control Bar */}
-      <div className="absolute top-0 left-0 right-0 z-40 px-4 py-3.5 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+      {/* Top Instagram Header */}
+      <div className="absolute top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/30 to-transparent">
         {/* Back Button */}
         <button
           onClick={() => dispatch(setIsReelsOpen(false))}
-          className="flex items-center gap-1.5 text-white bg-black/40 hover:bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-medium transition"
+          className="flex items-center gap-1.5 text-white bg-black/40 hover:bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold transition active:scale-95"
         >
           <IoArrowBack size={18} />
           <span>Chats</span>
         </button>
 
-        {/* Reels Title */}
+        {/* Reels Title (Instagram style) */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xl">🎬</span>
-          <h2 className="text-white font-extrabold text-base tracking-wide bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
+          <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif">
             Reels
           </h2>
         </div>
 
-        {/* Upload Reel Button */}
+        {/* Create / Post Reel Button */}
         <button
           onClick={() => setIsUploadOpen(true)}
-          className="flex items-center gap-1 text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg shadow-purple-600/30 transition active:scale-95"
+          className="flex items-center gap-1 text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:opacity-90 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg shadow-rose-600/30 transition active:scale-95"
         >
           <IoAddCircle size={17} />
           <span>Post</span>
         </button>
       </div>
 
-      {/* Main Snap Scroll Container */}
+      {/* Main Snap Scroll Container (9:16 aspect ratio feel) */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="w-full max-w-[480px] h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar relative shadow-2xl bg-black"
+        className="w-full max-w-[440px] h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar relative shadow-2xl bg-black"
         style={{ scrollbarWidth: "none" }}
       >
         {loading ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-white gap-3">
-            <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-gray-400">Loading reels & music...</p>
+            <div className="w-8 h-8 border-3 border-pink-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-gray-400">Loading Bollywood reels...</p>
           </div>
         ) : feedReels.length === 0 ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-white p-6 text-center">
@@ -477,7 +619,7 @@ const ReelsModal = () => {
             </p>
             <button
               onClick={() => setIsUploadOpen(true)}
-              className="mt-4 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-xs font-semibold"
+              className="mt-4 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full text-xs font-semibold"
             >
               Upload First Reel 🚀
             </button>
@@ -498,19 +640,21 @@ const ReelsModal = () => {
         )}
       </div>
 
-      {/* Modals & Drawers */}
+      {/* Comments Drawer */}
       <ReelCommentsDrawer
         reel={selectedCommentsReel}
         isOpen={Boolean(selectedCommentsReel)}
         onClose={() => setSelectedCommentsReel(null)}
       />
 
+      {/* Share Modal */}
       <ShareReelModal
         reel={selectedShareReel}
         isOpen={Boolean(selectedShareReel)}
         onClose={() => setSelectedShareReel(null)}
       />
 
+      {/* Upload Modal */}
       <UploadReelModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}

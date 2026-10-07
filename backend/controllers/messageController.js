@@ -14,12 +14,19 @@ export const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Sender not found" });
     }
 
-    // Check friendship: messaging locked unless request is accepted!
+    // Check friendship: messaging locked unless request is accepted (or replying/reacting to a status)
     const isFriend = sender.friends?.some(
       (fId) => fId.toString() === receiverId.toString()
     );
 
-    if (!isFriend) {
+    const isStatusReply =
+      typeof message === "string" &&
+      (message.startsWith("[STATUS_REPLY") ||
+        message.startsWith("[STATUS_REACT") ||
+        message.startsWith("[Replied to status") ||
+        message.startsWith("[Reacted "));
+
+    if (!isFriend && !isStatusReply) {
       return res.status(403).json({
         message: "You can only send messages to accepted friends.",
         locked: true,

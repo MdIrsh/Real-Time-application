@@ -41,7 +41,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const { isViewerOpen, selectedStatus, allStatuses } = useSelector(
     (store) => store.status
   );
-  const { authUser } = useSelector((store) => store.user);
+  const { authUser, selectedUser } = useSelector((store) => store.user);
   const { messages } = useSelector((store) => store.message);
   const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
@@ -54,6 +54,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
@@ -224,9 +225,17 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     }
   }, [currentIndex]);
 
-  // Auto-advancing timer (paused when holding or when viewers sheet is open)
+  // Auto-advancing timer (paused when holding, viewers sheet open, typing reply, or input focused)
   useEffect(() => {
-    if (!isViewerOpen || isPaused || showViewersSheet || !activeStatus) return;
+    const shouldPause =
+      !isViewerOpen ||
+      isPaused ||
+      showViewersSheet ||
+      isInputFocused ||
+      replyText.trim().length > 0 ||
+      !activeStatus;
+
+    if (shouldPause) return;
 
     const timer = setInterval(() => {
       setProgress((prev) => {
@@ -239,7 +248,15 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     }, INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [isViewerOpen, isPaused, showViewersSheet, activeStatus, handleNext]);
+  }, [
+    isViewerOpen,
+    isPaused,
+    showViewersSheet,
+    isInputFocused,
+    replyText,
+    activeStatus,
+    handleNext,
+  ]);
 
   // Send reply as a chat message to the status creator
   const handleSendReply = async (e) => {
@@ -247,17 +264,30 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     if (!replyText.trim() || !activeStatus) return;
 
     const targetUserId = activeStatus.user?._id || activeStatus.user;
+    const authorName =
+      activeStatus.user?.fullName || activeStatus.userName || "Contact";
+
     if (!targetUserId) {
       toast.success("Replied to status! 💬", { id: "reply-toast" });
       setReplyText("");
+      setIsInputFocused(false);
+      setIsPaused(false);
       return;
     }
 
     try {
       setIsSendingReply(true);
-      const textToSend = `[Replied to status: "${
-        activeStatus.caption || "Status"
-      }"] ${replyText.trim()}`;
+      const payload = {
+        caption: activeStatus.caption || "",
+        mediaUrl: activeStatus.mediaUrl || "",
+        mediaType:
+          activeStatus.mediaType || (activeStatus.mediaUrl ? "image" : "text"),
+        bgColor: activeStatus.bgColor || "#128c7e",
+        songTitle: activeStatus.song?.title || "",
+        authorName,
+      };
+      const textToSend = `[STATUS_REPLY:${JSON.stringify(payload)}] ${replyText.trim()}`;
+
       const res = await axios.post(
         `${BASE_URL}/api/v1/message/send/${targetUserId}`,
         { message: textToSend },
@@ -265,16 +295,22 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       );
 
       if (res.data?.newMessage) {
-        dispatch(setMessages([...(messages || []), res.data.newMessage]));
-        toast.success(`Reply sent to ${activeStatus.userName}! 💬`, {
+        if (
+          selectedUser?._id &&
+          String(selectedUser._id) === String(targetUserId)
+        ) {
+          dispatch(setMessages([...(messages || []), res.data.newMessage]));
+        }
+        toast.success(`Reply sent to ${authorName}! 💬`, {
           id: "reply-toast",
         });
         setReplyText("");
+        setIsInputFocused(false);
+        setIsPaused(false);
       }
     } catch (err) {
       console.error("Reply error:", err);
-      toast.success("Reply sent! 💬", { id: "reply-toast" });
-      setReplyText("");
+      toast.error(err.response?.data?.message || "Failed to send reply");
     } finally {
       setIsSendingReply(false);
     }
@@ -284,20 +320,39 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const handleSendQuickReaction = async (emoji) => {
     if (!activeStatus) return;
     const targetUserId = activeStatus.user?._id || activeStatus.user;
-    toast.success(`Reacted ${emoji} to status!`, { id: "react-toast", duration: 1500 });
+    const authorName =
+      activeStatus.user?.fullName || activeStatus.userName || "Contact";
+    toast.success(`Reacted ${emoji} to status!`, {
+      id: "react-toast",
+      duration: 1500,
+    });
 
     if (targetUserId) {
       try {
-        const textToSend = `[Reacted ${emoji} to status: "${
-          activeStatus.caption || "Status"
-        }"]`;
+        const payload = {
+          caption: activeStatus.caption || "",
+          mediaUrl: activeStatus.mediaUrl || "",
+          mediaType:
+            activeStatus.mediaType || (activeStatus.mediaUrl ? "image" : "text"),
+          bgColor: activeStatus.bgColor || "#128c7e",
+          songTitle: activeStatus.song?.title || "",
+          authorName,
+          emoji,
+        };
+        const textToSend = `[STATUS_REACT:${JSON.stringify(payload)}]`;
+
         const res = await axios.post(
           `${BASE_URL}/api/v1/message/send/${targetUserId}`,
           { message: textToSend },
           { withCredentials: true }
         );
         if (res.data?.newMessage) {
-          dispatch(setMessages([...(messages || []), res.data.newMessage]));
+          if (
+            selectedUser?._id &&
+            String(selectedUser._id) === String(targetUserId)
+          ) {
+            dispatch(setMessages([...(messages || []), res.data.newMessage]));
+          }
         }
       } catch (err) {
         console.error("React error:", err);
@@ -541,7 +596,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
 
               {/* Caption Overlay */}
               {activeStatus.caption && (
-                <div className="absolute bottom-20 left-4 right-4 z-30 bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl text-center shadow-lg border border-white/10">
+                <div className="absolute bottom-28 left-4 right-4 z-30 bg-black/65 backdrop-blur-md px-4 py-2.5 rounded-2xl text-center shadow-lg border border-white/10 pointer-events-none">
                   <p className="text-white text-sm font-medium leading-snug drop-shadow">
                     {activeStatus.caption}
                   </p>
@@ -573,16 +628,26 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             </button>
           </div>
         ) : (
-          <div className="p-3 pb-4 bg-gradient-to-t from-black/95 via-black/75 to-transparent z-40 flex flex-col gap-2">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            className="p-3 pb-5 bg-gradient-to-t from-black via-black/90 to-transparent z-40 flex flex-col gap-2.5"
+          >
             {/* Quick WhatsApp Story Reactions Bar */}
             {showEmojiRow && (
-              <div className="flex items-center justify-between px-2.5 py-1.5 bg-black/60 backdrop-blur-lg rounded-2xl border border-white/10 shadow-lg animate-fade-in">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-black/70 backdrop-blur-xl rounded-2xl border border-white/15 shadow-xl animate-fade-in">
                 {QUICK_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
-                    onClick={() => handleSendQuickReaction(emoji)}
-                    className="text-lg hover:scale-130 active:scale-95 transition-transform cursor-pointer p-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendQuickReaction(emoji);
+                    }}
+                    className="text-xl hover:scale-135 active:scale-90 transition-transform cursor-pointer p-1"
                     title={`React ${emoji}`}
                   >
                     {emoji}
@@ -594,36 +659,45 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             {/* Perfect WhatsApp Reply Chat Box */}
             <form
               onSubmit={handleSendReply}
-              className="flex items-center gap-2 bg-[#202c33]/95 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/15 focus-within:border-[#25d366] shadow-2xl transition-all"
+              className="flex items-center gap-2 bg-[#202c33] rounded-full px-3.5 py-2 border border-white/20 focus-within:border-[#25d366] focus-within:ring-1 focus-within:ring-[#25d366]/40 shadow-2xl transition-all"
             >
               <button
                 type="button"
-                onClick={() => setShowEmojiRow(!showEmojiRow)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEmojiRow(!showEmojiRow);
+                }}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
                   showEmojiRow
-                    ? "text-[#25d366]"
+                    ? "text-[#25d366] bg-[#25d366]/10"
                     : "text-[#8696a0] hover:text-[#e9edef]"
                 }`}
                 title="Toggle Reactions"
               >
-                <IoHappyOutline size={20} />
+                <IoHappyOutline size={21} />
               </button>
 
               <input
                 type="text"
-                placeholder={`Reply to ${activeStatus.userName || "status"}...`}
+                placeholder={`Reply to ${displayName}...`}
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                onFocus={() => setIsPaused(true)}
-                onBlur={() => !replyText && setIsPaused(false)}
-                className="flex-1 bg-transparent text-xs sm:text-sm text-[#e9edef] placeholder-[#8696a0] outline-hidden px-1"
+                onFocus={() => {
+                  setIsInputFocused(true);
+                  setIsPaused(true);
+                }}
+                onBlur={() => {
+                  setIsInputFocused(false);
+                  if (!replyText.trim()) setIsPaused(false);
+                }}
+                className="flex-1 bg-transparent text-sm text-[#e9edef] placeholder-[#8696a0] outline-hidden px-1"
               />
 
               {replyText.trim() ? (
                 <button
                   type="submit"
                   disabled={isSendingReply}
-                  className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02906f] text-[#0b141a] flex items-center justify-center transition active:scale-95 cursor-pointer font-bold shrink-0 shadow-md"
+                  className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02906f] text-[#0b141a] flex items-center justify-center transition active:scale-90 cursor-pointer font-bold shrink-0 shadow-md"
                   title="Send Reply"
                 >
                   <IoSend size={15} />
@@ -631,11 +705,14 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               ) : (
                 <button
                   type="button"
-                  onClick={() => handleSendQuickReaction("❤️")}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:scale-115 active:scale-90 transition cursor-pointer shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendQuickReaction("❤️");
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:scale-125 active:scale-90 transition cursor-pointer shrink-0"
                   title="Send Heart"
                 >
-                  <IoHeart size={21} />
+                  <IoHeart size={22} />
                 </button>
               )}
             </form>

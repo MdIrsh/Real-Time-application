@@ -1,7 +1,88 @@
 import React, { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
+import {
+  IoCheckmarkDoneSharp,
+  IoCheckmarkSharp,
+  IoPlayCircleOutline,
+} from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+
+// Helper to parse WhatsApp status reply and reaction messages
+const parseStatusReply = (rawText) => {
+  if (!rawText || typeof rawText !== "string") return null;
+
+  // 1. JSON structured status reply: [STATUS_REPLY:{...}] replyText
+  const replyMatch = rawText.match(/^\[STATUS_REPLY:(\{.*?\})\]\s*(.*)$/s);
+  if (replyMatch) {
+    try {
+      const meta = JSON.parse(replyMatch[1]);
+      return {
+        type: "reply",
+        caption: meta.caption || "",
+        mediaUrl: meta.mediaUrl || "",
+        mediaType: meta.mediaType || "text",
+        bgColor: meta.bgColor || "#128c7e",
+        songTitle: meta.songTitle || "",
+        authorName: meta.authorName || "Status",
+        text: replyMatch[2] || "",
+      };
+    } catch (e) {}
+  }
+
+  // 2. JSON structured status reaction: [STATUS_REACT:{...}]
+  const reactMatch = rawText.match(/^\[STATUS_REACT:(\{.*?\})\]$/s);
+  if (reactMatch) {
+    try {
+      const meta = JSON.parse(reactMatch[1]);
+      return {
+        type: "reaction",
+        emoji: meta.emoji || "❤️",
+        caption: meta.caption || "",
+        mediaUrl: meta.mediaUrl || "",
+        mediaType: meta.mediaType || "text",
+        bgColor: meta.bgColor || "#128c7e",
+        songTitle: meta.songTitle || "",
+        authorName: meta.authorName || "Status",
+      };
+    } catch (e) {}
+  }
+
+  // 3. Fallback for legacy [Replied to status: "caption"] replyText
+  const legacyReply = rawText.match(
+    /^\[Replied to status:\s*"([^"]*)"\]\s*(.*)$/s
+  );
+  if (legacyReply) {
+    return {
+      type: "reply",
+      caption: legacyReply[1] || "Status update",
+      mediaUrl: "",
+      mediaType: "text",
+      bgColor: "#128c7e",
+      songTitle: "",
+      authorName: "Status",
+      text: legacyReply[2] || "",
+    };
+  }
+
+  // 4. Fallback for legacy [Reacted emoji to status: "caption"]
+  const legacyReact = rawText.match(
+    /^\[Reacted\s+(\S+)\s+to status:\s*"([^"]*)"\]$/s
+  );
+  if (legacyReact) {
+    return {
+      type: "reaction",
+      emoji: legacyReact[1] || "❤️",
+      caption: legacyReact[2] || "Status update",
+      mediaUrl: "",
+      mediaType: "text",
+      bgColor: "#128c7e",
+      songTitle: "",
+      authorName: "Status",
+    };
+  }
+
+  return null;
+};
 
 const Message = ({ message }) => {
   const scroll = useRef();
@@ -22,6 +103,7 @@ const Message = ({ message }) => {
     message?.senderId === "demo-user-me";
   const isMetaAi = message?.senderId === "meta-ai";
   const isTyping = message?.isTyping;
+  const statusInfo = parseStatusReply(message?.message);
 
   const formattedTime = message?.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -57,6 +139,54 @@ const Message = ({ message }) => {
           </div>
         )}
 
+        {/* WhatsApp Quoted Status Preview Card */}
+        {statusInfo && (
+          <div
+            className={`mb-2 p-2 rounded-xl flex items-center justify-between gap-3 overflow-hidden border-l-[3.5px] border-[#25d366] transition ${
+              isSentByMe
+                ? "bg-black/5 dark:bg-black/15"
+                : "bg-black/5 dark:bg-white/10"
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#00a884]">
+                <IoPlayCircleOutline size={14} className="shrink-0" />
+                <span className="truncate">
+                  {statusInfo.authorName
+                    ? `${statusInfo.authorName}'s Status`
+                    : "Status"}
+                </span>
+                {statusInfo.songTitle && (
+                  <span className="text-[10px] text-gray-500 font-normal truncate flex items-center gap-0.5">
+                    • 🎵 {statusInfo.songTitle}
+                  </span>
+                )}
+              </div>
+              <p className="text-[12px] text-[#3b4a54] line-clamp-1 mt-0.5 font-medium">
+                {statusInfo.caption ||
+                  (statusInfo.mediaUrl
+                    ? "📷 Photo Status"
+                    : "Status update")}
+              </p>
+            </div>
+
+            {statusInfo.mediaUrl ? (
+              <img
+                src={statusInfo.mediaUrl}
+                alt="Status thumbnail"
+                className="w-10 h-10 rounded-lg object-cover shrink-0 border border-black/10 shadow-xs"
+              />
+            ) : (
+              <div
+                className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-white text-[11px] font-bold shadow-xs p-1 text-center"
+                style={{ backgroundColor: statusInfo.bgColor || "#128c7e" }}
+              >
+                Aa
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Image preview if message has image */}
         {message?.image && (
           <div className="mb-1.5 rounded-xl overflow-hidden max-w-sm">
@@ -79,7 +209,7 @@ const Message = ({ message }) => {
           </div>
         )}
 
-        {/* Typing indicator or message content */}
+        {/* Typing indicator, Reaction, or Message text */}
         {isTyping ? (
           <div className="flex items-center gap-1.5 py-1 px-1">
             <span
@@ -98,6 +228,16 @@ const Message = ({ message }) => {
               Meta AI is thinking...
             </span>
           </div>
+        ) : statusInfo ? (
+          statusInfo.type === "reaction" ? (
+            <div className="text-3xl py-1 px-1 flex items-center gap-1.5 select-none animate-bounce">
+              <span>{statusInfo.emoji}</span>
+            </div>
+          ) : (
+            <div className="text-[14.5px] leading-relaxed break-words font-normal select-text pr-14 inline-block whitespace-pre-wrap">
+              {statusInfo.text}
+            </div>
+          )
         ) : (
           message?.message &&
           message.message !== "🎤 Voice message" && (

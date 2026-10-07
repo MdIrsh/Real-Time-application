@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   IoClose,
   IoImageOutline,
@@ -24,8 +24,8 @@ const STATUS_COLORS = [
   "#202c33", // Dark Slate
 ];
 
-const UploadStatusModal = ({ isOpen, onClose }) => {
-  const [statusType, setStatusType] = useState("image"); // "image" | "text"
+const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
+  const [statusType, setStatusType] = useState(initialType); // "image" | "text"
   const [textCaption, setTextCaption] = useState("");
   const [selectedColor, setSelectedColor] = useState(STATUS_COLORS[0]);
   const [selectedSong, setSelectedSong] = useState(null);
@@ -35,6 +35,12 @@ const UploadStatusModal = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (isOpen) {
+      setStatusType(initialType);
+    }
+  }, [isOpen, initialType]);
 
   if (!isOpen) return null;
 

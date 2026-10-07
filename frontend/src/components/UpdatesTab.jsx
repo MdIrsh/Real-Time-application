@@ -2,7 +2,8 @@ import React, { useEffect } from "react";
 import {
   IoAdd,
   IoCamera,
-  IoPlayCircle,
+  IoPencil,
+  IoMusicalNotes,
   IoChevronForward,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,7 +16,6 @@ import {
   viewStatusLocally,
   removeStatus,
 } from "../redux/statusSlice";
-import { setIsReelsOpen } from "../redux/reelSlice";
 import { BASE_URL } from "../config/api";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import axios from "axios";
@@ -277,43 +277,69 @@ const UpdatesTab = ({ onOpenUpload }) => {
 
       <div className="h-[1px] bg-[#202c33] my-1" />
 
-      {/* 3. Channels & Reels Section */}
-      <div>
-        <div className="flex items-center justify-between mb-2 px-1">
-          <h3 className="font-bold text-base text-[#e9edef]">Trending Reels</h3>
-          <button
-            onClick={() => dispatch(setIsReelsOpen(true))}
-            className="text-xs font-bold text-[#25d366] hover:underline"
-          >
-            See all →
-          </button>
+      {/* 3. Status Lagane Ka Option (Quick Creation Options) */}
+      <div className="flex flex-col gap-2.5 pb-2">
+        <div className="flex items-center justify-between mb-0.5 px-1">
+          <h3 className="font-bold text-sm text-[#e9edef] flex items-center gap-1.5">
+            <span>Status Lagayein</span>
+            <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-2 py-0.2 rounded-full">
+              New Story
+            </span>
+          </h3>
         </div>
 
-        {/* Big Reels Banner */}
+        {/* Option 1: Photo / Video Status with Song */}
         <div
-          onClick={() => dispatch(setIsReelsOpen(true))}
-          className="p-4 rounded-2xl bg-gradient-to-r from-pink-900/40 via-purple-900/35 to-blue-900/35 border border-purple-500/30 hover:border-purple-400 flex items-center justify-between cursor-pointer transition shadow-xl group"
+          onClick={() => onOpenUpload("image")}
+          className="p-3.5 rounded-2xl bg-gradient-to-r from-[#103629]/60 via-[#103629]/30 to-[#0b141a] border border-[#25d366]/30 hover:border-[#25d366] transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-lg"
         >
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-2xl shadow-lg shrink-0 group-hover:scale-105 transition">
-              🎬
+            <div className="w-11 h-11 rounded-2xl bg-[#00a884] text-[#0b141a] flex items-center justify-center text-xl shadow-lg shrink-0 group-hover:scale-105 transition">
+              <IoCamera size={22} />
             </div>
             <div className="min-w-0">
-              <h4 className="text-sm font-bold text-[#e9edef] flex items-center gap-2">
-                Instagram & Bollywood Reels
-                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-extrabold tracking-wider">
-                  HOT
+              <h5 className="text-xs font-bold text-[#e9edef] flex items-center gap-1.5">
+                <span>Photo / Video Status</span>
+                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-[#25d366] text-[#0b141a] font-black">
+                  + SONG
                 </span>
-              </h4>
-              <p className="text-xs text-[#8696a0] truncate mt-0.5">
-                Watch full 9:16 vertical reels with Kesariya, Apna Bana Le & more
+              </h5>
+              <p className="text-[11px] text-[#8696a0] truncate mt-0.5 flex items-center gap-1">
+                <IoMusicalNotes size={12} className="text-[#25d366] shrink-0" />
+                <span>Upload photo/video + Bollywood music</span>
               </p>
             </div>
           </div>
+          <span className="text-xs font-bold text-[#25d366] px-3 py-1.5 rounded-xl bg-[#25d366]/15 group-hover:bg-[#25d366] group-hover:text-[#0b141a] transition shrink-0 ml-2">
+            Upload →
+          </span>
+        </div>
 
-          <div className="w-9 h-9 rounded-full bg-white/10 group-hover:bg-[#25d366] group-hover:text-[#0b141a] text-white flex items-center justify-center transition shrink-0 ml-2">
-            <IoPlayCircle size={22} />
+        {/* Option 2: Colorful Text Status with Song */}
+        <div
+          onClick={() => onOpenUpload("text")}
+          className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/50 via-purple-950/20 to-[#0b141a] border border-purple-500/30 hover:border-purple-400 transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-lg"
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-xl shadow-lg shrink-0 group-hover:scale-105 transition">
+              <IoPencil size={20} />
+            </div>
+            <div className="min-w-0">
+              <h5 className="text-xs font-bold text-[#e9edef] flex items-center gap-1.5">
+                <span>Text Status</span>
+                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-purple-500 text-white font-black">
+                  COLOR
+                </span>
+              </h5>
+              <p className="text-[11px] text-[#8696a0] truncate mt-0.5 flex items-center gap-1">
+                <IoMusicalNotes size={12} className="text-purple-400 shrink-0" />
+                <span>Type thoughts with 7 vibrant colors & song</span>
+              </p>
+            </div>
           </div>
+          <span className="text-xs font-bold text-purple-400 px-3 py-1.5 rounded-xl bg-purple-500/15 group-hover:bg-purple-500 group-hover:text-white transition shrink-0 ml-2">
+            Write →
+          </span>
         </div>
       </div>
     </div>

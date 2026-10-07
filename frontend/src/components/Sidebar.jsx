@@ -45,6 +45,7 @@ const Sidebar = () => {
   const [activeBottomTab, setActiveBottomTab] = useState("chats"); // "chats" | "updates" | "communities" | "calls"
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [isUploadStatusOpen, setIsUploadStatusOpen] = useState(false);
+  const [statusUploadType, setStatusUploadType] = useState("image"); // "image" | "text"
   const [notifPermission, setNotifPermission] = useState(() =>
     getNotificationPermission()
   );
@@ -266,7 +267,12 @@ const Sidebar = () => {
 
       {/* 2 & 3 & 4. Conditional Main Body: Updates Tab vs Chats Tab */}
       {activeBottomTab === "updates" ? (
-        <UpdatesTab onOpenUpload={() => setIsUploadStatusOpen(true)} />
+        <UpdatesTab
+          onOpenUpload={(type = "image") => {
+            setStatusUploadType(type);
+            setIsUploadStatusOpen(true);
+          }}
+        />
       ) : (
         <>
           {/* "Ask Meta AI or Search" Pill Input */}
@@ -445,7 +451,10 @@ const Sidebar = () => {
         <div className="absolute right-4 bottom-20 flex flex-col items-center gap-3 z-30 pointer-events-auto select-none">
           {/* Pencil Button for Text Status */}
           <button
-            onClick={() => setIsUploadStatusOpen(true)}
+            onClick={() => {
+              setStatusUploadType("text");
+              setIsUploadStatusOpen(true);
+            }}
             className="w-10 h-10 rounded-full bg-[#202c33] hover:bg-[#2a3942] active:scale-95 shadow-xl border border-[#2a3942] text-[#e9edef] flex items-center justify-center transition-all cursor-pointer"
             title="Text Status"
           >
@@ -454,7 +463,10 @@ const Sidebar = () => {
 
           {/* Camera Button for Photo/Video Status */}
           <button
-            onClick={() => setIsUploadStatusOpen(true)}
+            onClick={() => {
+              setStatusUploadType("image");
+              setIsUploadStatusOpen(true);
+            }}
             className="w-13 h-13 rounded-2xl bg-[#00a884] hover:bg-[#02906f] active:scale-95 text-[#0b141a] shadow-2xl flex items-center justify-center transition-all cursor-pointer font-bold"
             title="Photo / Video Status"
           >
@@ -515,11 +527,10 @@ const Sidebar = () => {
           </span>
         </button>
 
-        {/* Updates / Reels Tab */}
+        {/* Updates Tab */}
         <button
           onClick={() => {
             setActiveBottomTab("updates");
-            dispatch(setIsReelsOpen(true));
           }}
           className="flex flex-col items-center gap-1 group cursor-pointer transition active:scale-95 relative"
         >
@@ -649,6 +660,7 @@ const Sidebar = () => {
       {/* WhatsApp Status Modals */}
       <UploadStatusModal
         isOpen={isUploadStatusOpen || isUploadOpen}
+        initialType={statusUploadType}
         onClose={() => {
           setIsUploadStatusOpen(false);
           dispatch(setIsUploadOpen(false));

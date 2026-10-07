@@ -381,6 +381,22 @@ const ReelsModal = () => {
     }
   }, [isReelsOpen, dispatch]);
 
+  const [feedReels, setFeedReels] = useState([]);
+
+  // Initialize and append feedReels for endless infinite scroll
+  useEffect(() => {
+    if (reels && reels.length > 0) {
+      setFeedReels([...reels]);
+    }
+  }, [reels]);
+
+  // Infinite Scroll: automatically append more reels when user scrolls near the end!
+  useEffect(() => {
+    if (reels && reels.length > 0 && feedReels.length > 0 && activeIndex >= feedReels.length - 2) {
+      setFeedReels((prev) => [...prev, ...reels]);
+    }
+  }, [activeIndex, feedReels.length, reels]);
+
   // Track active reel on scroll
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -389,7 +405,7 @@ const ReelsModal = () => {
     const height = container.clientHeight;
     const newIndex = Math.round(scrollPosition / height);
 
-    if (newIndex !== activeIndex && newIndex >= 0 && newIndex < reels.length) {
+    if (newIndex !== activeIndex && newIndex >= 0 && newIndex < feedReels.length) {
       setActiveIndex(newIndex);
     }
   };
@@ -447,14 +463,14 @@ const ReelsModal = () => {
         {loading ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-white gap-3">
             <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-gray-400">Loading reels...</p>
+            <p className="text-xs text-gray-400">Loading reels & music...</p>
           </div>
-        ) : reels.length === 0 ? (
+        ) : feedReels.length === 0 ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-white p-6 text-center">
             <span className="text-5xl mb-3">🎬</span>
             <h3 className="font-bold text-lg">No Reels Yet!</h3>
             <p className="text-xs text-gray-400 mt-1 max-w-xs">
-              Be the first one to create a trending short reel in the app!
+              Be the first one to create a trending short reel with music!
             </p>
             <button
               onClick={() => setIsUploadOpen(true)}
@@ -464,9 +480,9 @@ const ReelsModal = () => {
             </button>
           </div>
         ) : (
-          reels.map((reel, index) => (
+          feedReels.map((reel, index) => (
             <ReelCard
-              key={reel._id || index}
+              key={`${reel._id || "reel"}-${index}`}
               reel={reel}
               isActive={index === activeIndex}
               isMuted={isMuted}

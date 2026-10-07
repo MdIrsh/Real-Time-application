@@ -6,9 +6,20 @@ import { BASE_URL } from "../config/api";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+const TRENDING_SONGS = [
+  { name: "Original Video Sound (No Background Music)", url: "" },
+  { name: "Golden Hour - Acoustic Sunset 🎸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+  { name: "Feel Good - Indie Pop Beats 🎶", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { name: "Synthwave Dreams - Retro Electro ⚡", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+  { name: "Summer Club Anthem - Dance Beat 🔥", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+  { name: "Midnight Chill - Lo-Fi Beats 🌸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+  { name: "Urban Groove - Hip Hop Bass 🎧", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
+];
+
 const UploadReelModal = ({ isOpen, onClose }) => {
   const [videoPreview, setVideoPreview] = useState("");
   const [videoData, setVideoData] = useState("");
+  const [selectedAudioUrl, setSelectedAudioUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [musicTitle, setMusicTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -57,6 +68,7 @@ const UploadReelModal = ({ isOpen, onClose }) => {
         `${BASE_URL}/api/v1/reel/create`,
         {
           videoUrl: finalVideo,
+          audioUrl: selectedAudioUrl,
           caption: caption.trim(),
           musicTitle: musicTitle.trim() || "Original Audio 🎵",
         },
@@ -160,6 +172,31 @@ const UploadReelModal = ({ isOpen, onClose }) => {
               onChange={(e) => setCaption(e.target.value)}
               className="w-full bg-white/10 text-white text-sm px-3.5 py-2.5 rounded-xl outline-hidden border border-white/10 focus:border-blue-500 placeholder-gray-500 resize-none"
             />
+          </div>
+
+          {/* Choose Song / Music Track */}
+          <div>
+            <label className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+              <IoMusicalNotes size={13} className="text-pink-400" /> Choose Song / Music Track
+            </label>
+            <select
+              value={selectedAudioUrl}
+              onChange={(e) => {
+                const url = e.target.value;
+                setSelectedAudioUrl(url);
+                const found = TRENDING_SONGS.find((s) => s.url === url);
+                if (found && found.url) {
+                  setMusicTitle(found.name);
+                }
+              }}
+              className="w-full bg-white/10 text-white text-xs px-3 py-2.5 rounded-lg outline-hidden border border-white/10 focus:border-pink-500 cursor-pointer"
+            >
+              {TRENDING_SONGS.map((song, i) => (
+                <option key={i} value={song.url} className="bg-[#222] text-white">
+                  {song.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Music Audio title */}

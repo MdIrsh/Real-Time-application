@@ -63,6 +63,60 @@ const INITIAL_DEMO_REELS = [
     ],
     sharesCount: 45,
   },
+  {
+    creatorName: "Rohan & DJ Beats",
+    creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=DJRohan",
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+    caption: "Weekend party mood activated 🔥 Crank up the volume! #party #music #banger",
+    musicTitle: "Summer Club Anthem - Dance Beat 🔥",
+    likes: [],
+    comments: [
+      {
+        userName: "Zoya",
+        userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Zoya",
+        text: "Such a vibe track! 🎧💃",
+        createdAt: new Date(),
+      },
+    ],
+    sharesCount: 61,
+  },
+  {
+    creatorName: "Luna Lo-Fi",
+    creatorAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=LunaLofi",
+    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    caption: "Late night study session vibes 🌸 Relax and breathe deep. #lofi #chill #study",
+    musicTitle: "Midnight Chill - Lo-Fi Beats 🌸",
+    likes: [],
+    comments: [
+      {
+        userName: "Sameer",
+        userAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=Sameer",
+        text: "Pure peace for the soul 🕊️",
+        createdAt: new Date(),
+      },
+    ],
+    sharesCount: 38,
+  },
+  {
+    creatorName: "Urban Streets",
+    creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=UrbanStreets",
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
+    caption: "Skate park energy 🛹 Keep moving forward no matter what! #urban #skate #hiphop",
+    musicTitle: "Urban Groove - Hip Hop Bass 🎧",
+    likes: [],
+    comments: [
+      {
+        userName: "Ananya",
+        userAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=Ananya",
+        text: "Skills on point! 💯",
+        createdAt: new Date(),
+      },
+    ],
+    sharesCount: 52,
+  },
 ];
 
 export const getAllReels = async (req, res) => {
@@ -73,12 +127,12 @@ export const getAllReels = async (req, res) => {
       .populate("comments.user", "fullName username profilePhoto")
       .sort({ createdAt: -1 });
 
-    // If database has no reels yet, seed with initial demo reels so user can watch immediately!
+    // If database has no reels or fewer than 6, seed with initial demo reels so user can watch immediately!
     if (!reels || reels.length === 0) {
       const seeded = await Reel.insertMany(INITIAL_DEMO_REELS);
       reels = seeded;
     } else {
-      // Update any existing demo reels in DB with valid video & audio URLs
+      // Ensure existing demo reels in DB have valid video & audio URLs
       for (const reel of reels) {
         if (!reel.author) {
           const match = INITIAL_DEMO_REELS.find((d) => d.creatorName === reel.creatorName);
@@ -104,7 +158,7 @@ export const getAllReels = async (req, res) => {
 export const createReel = async (req, res) => {
   try {
     const authorId = req.id;
-    const { videoUrl, caption, musicTitle } = req.body;
+    const { videoUrl, audioUrl, caption, musicTitle } = req.body;
 
     if (!videoUrl) {
       return res.status(400).json({ message: "Video is required to post a Reel" });
@@ -117,6 +171,7 @@ export const createReel = async (req, res) => {
       creatorName: user?.fullName || user?.username || "You",
       creatorAvatar: user?.profilePhoto || "",
       videoUrl,
+      audioUrl: audioUrl || "",
       caption: caption || "",
       musicTitle: musicTitle || "Original Audio - " + (user?.fullName || "User"),
       likes: [],

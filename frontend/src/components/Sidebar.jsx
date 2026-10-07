@@ -379,34 +379,6 @@ const Sidebar = () => {
 
           {/* Chats List Container */}
           <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b141a] relative">
-            {/* Quick Reels Banner (visible when in "All" filter and not searching) */}
-            {!search && activeFilter === "all" && (
-              <div
-                onClick={() => dispatch(setIsReelsOpen(true))}
-                className="mx-3.5 my-2 p-2.5 rounded-2xl bg-gradient-to-r from-pink-900/30 via-purple-900/25 to-blue-900/25 border border-purple-500/30 hover:border-purple-400/60 flex items-center justify-between cursor-pointer transition-all hover:scale-[1.01] active:scale-98 shadow-md select-none"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white text-lg shadow-md shrink-0">
-                    🎬
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-[#e9edef] flex items-center gap-1.5">
-                      Trending Reels & Status
-                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-extrabold tracking-wider">
-                        NEW
-                      </span>
-                    </h4>
-                    <p className="text-[11px] text-[#8696a0] truncate">
-                      12 Indian Bollywood reels with real music
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs text-pink-400 font-semibold px-2.5 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 transition shrink-0 ml-1">
-                  Watch →
-                </span>
-              </div>
-            )}
-
             {/* Pinned Meta AI Contact Row */}
             {(!search || "meta ai".includes(search.toLowerCase())) &&
               (activeFilter === "all" || activeFilter === "favorites") && (

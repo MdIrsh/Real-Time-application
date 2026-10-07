@@ -14,6 +14,7 @@ import {
   IoEllipsisVertical,
   IoBookmark,
   IoBookmarkOutline,
+  IoRefresh,
 } from "react-icons/io5";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -461,20 +462,83 @@ const ReelsModal = () => {
   const [selectedShareReel, setSelectedShareReel] = useState(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [feedReels, setFeedReels] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const containerRef = useRef(null);
 
-  // Fetch Reels on mount or when opening
+  // Fisher-Yates array shuffle for true randomized fresh feed
+  const shuffleArray = (arr) => {
+    const array = [...arr];
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  };
+
+  // Refresh handler to fetch and randomize fresh reels
+  const handleRefreshReels = async () => {
+    try {
+      setIsRefreshing(true);
+      const res = await axios.get(`${BASE_URL}/api/v1/reel/all?_t=${Date.now()}`, {
+        withCredentials: true,
+      });
+
+      let freshList = [];
+      if (res.data?.reels && res.data.reels.length > 0) {
+        freshList = res.data.reels;
+      } else if (reels && reels.length > 0) {
+        freshList = reels;
+      }
+
+      if (freshList.length > 0) {
+        const freshlyShuffled = shuffleArray(freshList);
+        dispatch(setReels(freshlyShuffled));
+        setFeedReels(freshlyShuffled);
+        setActiveIndex(0);
+        if (containerRef.current) {
+          containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        toast.success("✨ New Reels Feed Loaded!", {
+          id: "reels-refresh-toast",
+          duration: 1800,
+          icon: "🎬",
+        });
+      }
+    } catch (err) {
+      console.error("Refresh reels error:", err);
+      if (reels && reels.length > 0) {
+        const freshlyShuffled = shuffleArray(reels);
+        setFeedReels(freshlyShuffled);
+        setActiveIndex(0);
+        if (containerRef.current) {
+          containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        toast.success("✨ New Reels Shuffled!", {
+          id: "reels-refresh-toast",
+          duration: 1800,
+          icon: "🎬",
+        });
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  // Fetch Reels on mount or when opening (randomized)
   useEffect(() => {
     if (isReelsOpen) {
       const fetchReels = async () => {
         try {
           dispatch(setReelsLoading(true));
-          const res = await axios.get(`${BASE_URL}/api/v1/reel/all`, {
+          const res = await axios.get(`${BASE_URL}/api/v1/reel/all?_t=${Date.now()}`, {
             withCredentials: true,
           });
           if (res.data?.reels) {
-            dispatch(setReels(res.data.reels));
+            const randomized = shuffleArray(res.data.reels);
+            dispatch(setReels(randomized));
+            setFeedReels(randomized);
+            setActiveIndex(0);
           }
         } catch (err) {
           console.error("Error fetching reels:", err);
@@ -487,9 +551,6 @@ const ReelsModal = () => {
       fetchReels();
     }
   }, [isReelsOpen, dispatch]);
-
-  // Shuffle helper for fresh variety
-  const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
   // Initialize and append feedReels for endless infinite scroll
   useEffect(() => {
@@ -581,21 +642,42 @@ const ReelsModal = () => {
           <span>Chats</span>
         </button>
 
-        {/* Reels Title (Instagram style) */}
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif">
+        {/* Reels Title (Instagram style - Tap to Refresh) */}
+        <div
+          className="flex items-center gap-1.5 cursor-pointer group"
+          onClick={handleRefreshReels}
+          title="Tap to refresh reels feed"
+        >
+          <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif group-hover:text-pink-400 transition">
             Reels
           </h2>
         </div>
 
-        {/* Create / Post Reel Button */}
-        <button
-          onClick={() => setIsUploadOpen(true)}
-          className="flex items-center gap-1 text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:opacity-90 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg shadow-rose-600/30 transition active:scale-95"
-        >
-          <IoAddCircle size={17} />
-          <span>Post</span>
-        </button>
+        {/* Header Action Buttons: Refresh + Post */}
+        <div className="flex items-center gap-2">
+          {/* Refresh for New Reels Button */}
+          <button
+            onClick={handleRefreshReels}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 text-white bg-black/50 hover:bg-black/80 active:scale-95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold transition border border-white/15 shadow-md cursor-pointer disabled:opacity-50"
+            title="Refresh for New Reels"
+          >
+            <IoRefresh
+              size={15}
+              className={`text-[#25d366] ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          {/* Create / Post Reel Button */}
+          <button
+            onClick={() => setIsUploadOpen(true)}
+            className="flex items-center gap-1 text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:opacity-90 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg shadow-rose-600/30 transition active:scale-95 cursor-pointer"
+          >
+            <IoAddCircle size={17} />
+            <span>Post</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Snap Scroll Container (9:16 aspect ratio feel) */}

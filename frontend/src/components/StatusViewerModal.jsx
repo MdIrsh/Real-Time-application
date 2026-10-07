@@ -8,6 +8,8 @@ import {
   IoEyeOutline,
   IoChevronUpOutline,
   IoTrashOutline,
+  IoHappyOutline,
+  IoHeart,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -19,6 +21,8 @@ import { setMessages } from "../redux/messageSlice";
 import { BASE_URL } from "../config/api";
 import axios from "axios";
 import toast from "react-hot-toast";
+
+const QUICK_REACTIONS = ["😂", "❤️", "🔥", "👏", "😍", "😮", "😢", "💯"];
 
 // Helper for WhatsApp relative time ("Today, 4:20 PM" or "25m ago")
 const formatStatusTime = (dateStr) => {
@@ -55,6 +59,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
   const [isDeletingStatus, setIsDeletingStatus] = useState(false);
+  const [showEmojiRow, setShowEmojiRow] = useState(true);
 
   const audioPlayerRef = useRef(null);
 
@@ -272,6 +277,31 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       setReplyText("");
     } finally {
       setIsSendingReply(false);
+    }
+  };
+
+  // Quick 1-tap reaction (heart, laugh, fire, etc.)
+  const handleSendQuickReaction = async (emoji) => {
+    if (!activeStatus) return;
+    const targetUserId = activeStatus.user?._id || activeStatus.user;
+    toast.success(`Reacted ${emoji} to status!`, { id: "react-toast", duration: 1500 });
+
+    if (targetUserId) {
+      try {
+        const textToSend = `[Reacted ${emoji} to status: "${
+          activeStatus.caption || "Status"
+        }"]`;
+        const res = await axios.post(
+          `${BASE_URL}/api/v1/message/send/${targetUserId}`,
+          { message: textToSend },
+          { withCredentials: true }
+        );
+        if (res.data?.newMessage) {
+          dispatch(setMessages([...(messages || []), res.data.newMessage]));
+        }
+      } catch (err) {
+        console.error("React error:", err);
+      }
     }
   };
 
@@ -518,18 +548,18 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
           )}
         </div>
 
-        {/* Bottom Bar: Viewers Bar for My Status VS Reply Bar for Friends */}
+        {/* Bottom Bar: Viewers Bar for My Status VS Perfect WhatsApp Chat/Reply Bar for Friends */}
         {isMyStatus ? (
-          <div className="p-3 pb-5 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-40 flex flex-col items-center">
+          <div className="p-3 pb-5 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-40 flex flex-col items-center">
             <button
               type="button"
               onClick={() => {
                 setIsPaused(true);
                 setShowViewersSheet(true);
               }}
-              className="flex items-center gap-2 py-1.5 px-4 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white shadow-xl transition active:scale-95 cursor-pointer group"
+              className="flex items-center gap-2 py-2 px-5 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/20 text-white shadow-2xl transition active:scale-95 cursor-pointer group"
             >
-              <IoEyeOutline size={16} className="text-[#25d366]" />
+              <IoEyeOutline size={17} className="text-[#25d366]" />
               <span className="text-xs font-semibold">
                 {viewersList.length} {viewersList.length === 1 ? "view" : "views"}
               </span>
@@ -540,27 +570,71 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             </button>
           </div>
         ) : (
-          <div className="p-3 pb-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-40">
+          <div className="p-3 pb-4 bg-gradient-to-t from-black/95 via-black/75 to-transparent z-40 flex flex-col gap-2">
+            {/* Quick WhatsApp Story Reactions Bar */}
+            {showEmojiRow && (
+              <div className="flex items-center justify-between px-2.5 py-1.5 bg-black/60 backdrop-blur-lg rounded-2xl border border-white/10 shadow-lg animate-fade-in">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleSendQuickReaction(emoji)}
+                    className="text-lg hover:scale-130 active:scale-95 transition-transform cursor-pointer p-1"
+                    title={`React ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Perfect WhatsApp Reply Chat Box */}
             <form
               onSubmit={handleSendReply}
-              className="flex items-center gap-2 bg-[#202c33]/90 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 focus-within:border-[#25d366]"
+              className="flex items-center gap-2 bg-[#202c33]/95 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/15 focus-within:border-[#25d366] shadow-2xl transition-all"
             >
+              <button
+                type="button"
+                onClick={() => setShowEmojiRow(!showEmojiRow)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
+                  showEmojiRow
+                    ? "text-[#25d366]"
+                    : "text-[#8696a0] hover:text-[#e9edef]"
+                }`}
+                title="Toggle Reactions"
+              >
+                <IoHappyOutline size={20} />
+              </button>
+
               <input
                 type="text"
-                placeholder={`Reply to ${activeStatus.userName}...`}
+                placeholder={`Reply to ${activeStatus.userName || "status"}...`}
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 onFocus={() => setIsPaused(true)}
-                onBlur={() => setIsPaused(false)}
-                className="flex-1 bg-transparent text-xs text-white placeholder-gray-400 outline-hidden"
+                onBlur={() => !replyText && setIsPaused(false)}
+                className="flex-1 bg-transparent text-xs sm:text-sm text-[#e9edef] placeholder-[#8696a0] outline-hidden px-1"
               />
-              <button
-                type="submit"
-                disabled={!replyText.trim() || isSendingReply}
-                className="w-7 h-7 rounded-full bg-[#00a884] text-[#0b141a] flex items-center justify-center disabled:opacity-40 transition active:scale-95 cursor-pointer font-bold shrink-0"
-              >
-                <IoSend size={13} />
-              </button>
+
+              {replyText.trim() ? (
+                <button
+                  type="submit"
+                  disabled={isSendingReply}
+                  className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02906f] text-[#0b141a] flex items-center justify-center transition active:scale-95 cursor-pointer font-bold shrink-0 shadow-md"
+                  title="Send Reply"
+                >
+                  <IoSend size={15} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleSendQuickReaction("❤️")}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:scale-115 active:scale-90 transition cursor-pointer shrink-0"
+                  title="Send Heart"
+                >
+                  <IoHeart size={21} />
+                </button>
+              )}
             </form>
           </div>
         )}

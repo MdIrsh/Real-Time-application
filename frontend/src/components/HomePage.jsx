@@ -4,6 +4,7 @@ import MessageContainer from "./MessageContainer";
 import CallModal from "./CallModal";
 import IncomingCallModal from "./IncomingCallModal";
 import MicPermissionPrompt from "./MicPermissionPrompt";
+import ReelsModal from "./ReelsModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -44,6 +45,9 @@ const HomePage = () => {
         {/* WebRTC Audio and Video Call Modals */}
         <CallModal />
         <IncomingCallModal />
+
+        {/* Instagram/Snapchat Reels Modal */}
+        <ReelsModal />
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setAuthUser, setSelectedUser } from "../redux/userSlice";
+import { setIsReelsOpen } from "../redux/reelSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
 import { BASE_URL } from "../config/api";
@@ -190,6 +191,16 @@ const Sidebar = () => {
             )}
           </button>
 
+          {/* Watch Reels Button */}
+          <button
+            onClick={() => dispatch(setIsReelsOpen(true))}
+            className="px-2.5 py-1 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 hover:opacity-90 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs transition active:scale-95 cursor-pointer shrink-0"
+            title="Watch Reels 🎬"
+          >
+            <span className="text-xs">🎬</span>
+            <span className="font-semibold hidden sm:inline">Reels</span>
+          </button>
+
           {/* Meta AI Quick Button */}
           <button
             onClick={openMetaAi}
@@ -294,6 +305,34 @@ const Sidebar = () => {
 
       {/* Chat List */}
       <div className="flex-1 min-h-0 overflow-y-auto bg-white">
+        {/* Quick Reels Banner */}
+        {!search && (
+          <div
+            onClick={() => dispatch(setIsReelsOpen(true))}
+            className="mx-3 my-2.5 p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-amber-500/10 border border-purple-200/70 hover:border-purple-300 flex items-center justify-between cursor-pointer transition-all hover:scale-[1.01] active:scale-98 shadow-xs select-none"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white text-base shadow-sm shrink-0">
+                🎬
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  Trending Reels
+                  <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold tracking-wider">
+                    NEW
+                  </span>
+                </h4>
+                <p className="text-[11px] text-gray-500 truncate">
+                  Watch & share short videos with friends
+                </p>
+              </div>
+            </div>
+            <span className="text-xs text-purple-600 font-semibold px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 transition shrink-0 ml-1">
+              Watch →
+            </span>
+          </div>
+        )}
+
         {/* Pinned Meta AI Contact */}
         {(!search || "meta ai".includes(search.toLowerCase())) && (
           <div

@@ -59,6 +59,7 @@ const Sidebar = () => {
     (store) => store.user
   );
   const { allStatuses, isUploadOpen } = useSelector((store) => store.status);
+  const { isReelsOpen } = useSelector((store) => store.reel);
   const unreadCounts = useSelector((store) => store.message?.unreadCounts || {});
   const totalUnreadCount = Object.values(unreadCounts).reduce(
     (acc, count) => acc + (count || 0),
@@ -567,6 +568,41 @@ const Sidebar = () => {
             }`}
           >
             Updates
+          </span>
+        </button>
+
+        {/* Dedicated Reels Tab (Click to watch ONLY Reels!) */}
+        <button
+          onClick={() => {
+            dispatch(setIsReelsOpen(true));
+          }}
+          className="flex flex-col items-center gap-1 group cursor-pointer transition active:scale-95 relative"
+        >
+          <div
+            className={`px-4 py-1 rounded-full flex items-center justify-center transition-all relative ${
+              isReelsOpen
+                ? "bg-gradient-to-r from-pink-600/30 to-purple-600/30 text-pink-400"
+                : "text-[#8696a0] hover:text-[#e9edef]"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="currentColor"
+              className="transition-transform group-hover:scale-110"
+            >
+              <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4zM9 16.5l5.5-3.5L9 9.5v7z" />
+            </svg>
+          </div>
+          <span
+            className={`text-xs ${
+              isReelsOpen
+                ? "font-bold text-pink-400"
+                : "font-normal text-[#8696a0]"
+            }`}
+          >
+            Reels
           </span>
         </button>
 

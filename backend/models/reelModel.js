@@ -19,6 +19,10 @@ const reelSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    audioUrl: {
+      type: String,
+      default: "",
+    },
     caption: {
       type: String,
       default: "",

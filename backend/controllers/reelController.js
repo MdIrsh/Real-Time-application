@@ -6,7 +6,8 @@ const INITIAL_DEMO_REELS = [
   {
     creatorName: "Alex Rivera",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=AlexRivera",
-    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-vertical-portrait-of-a-woman-smiling-at-the-camera-41235-large.mp4",
+    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
     caption: "Golden hour glow ✨ Loving this serene evening vibe! #reels #sunset #vibes",
     musicTitle: "Golden Hour - Acoustic Sunset 🎸",
     likes: [],
@@ -29,7 +30,8 @@ const INITIAL_DEMO_REELS = [
   {
     creatorName: "Maya Sharma",
     creatorAvatar: "https://api.dicebear.com/10.x/lorelei/svg?seed=MayaSharma",
-    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-curly-hair-posing-in-a-studio-41236-large.mp4",
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
     caption: "Confidence is your superpower 💫 Stay positive always! #trending #lifestyle",
     musicTitle: "Feel Good - Indie Pop Beats 🎶",
     likes: [],
@@ -46,7 +48,8 @@ const INITIAL_DEMO_REELS = [
   {
     creatorName: "Cyberpunk Vibes",
     creatorAvatar: "https://api.dicebear.com/10.x/personas/svg?seed=CyberVibes",
-    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-neon-lights-in-a-futuristic-tunnel-41551-large.mp4",
+    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
     caption: "Future is now ⚡ Neon city lights & synthwave aesthetic. #cyberpunk #neon #synth",
     musicTitle: "Synthwave Dreams - Retro Electro ⚡",
     likes: [],
@@ -74,6 +77,18 @@ export const getAllReels = async (req, res) => {
     if (!reels || reels.length === 0) {
       const seeded = await Reel.insertMany(INITIAL_DEMO_REELS);
       reels = seeded;
+    } else {
+      // Update any existing demo reels in DB with valid video & audio URLs
+      for (const reel of reels) {
+        if (!reel.author) {
+          const match = INITIAL_DEMO_REELS.find((d) => d.creatorName === reel.creatorName);
+          if (match && (!reel.audioUrl || reel.videoUrl.includes("mixkit"))) {
+            reel.audioUrl = match.audioUrl;
+            reel.videoUrl = match.videoUrl;
+            await reel.save();
+          }
+        }
+      }
     }
 
     return res.status(200).json({

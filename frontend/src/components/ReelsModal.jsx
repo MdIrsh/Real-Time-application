@@ -36,6 +36,7 @@ const ReelCard = ({
   currentUserId,
 }) => {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [isLikedLocally, setIsLikedLocally] = useState(() => {
@@ -58,28 +59,55 @@ const ReelCard = ({
     setLikesCount(reel.likes?.length || 0);
   }, [reel.likes, currentUserId]);
 
-  // Auto-play when active, pause when inactive
+  // Auto-play when active, pause when inactive (with Audio synchronization)
   useEffect(() => {
-    if (videoRef.current) {
-      if (isActive) {
+    if (isActive) {
+      if (videoRef.current) {
         videoRef.current.currentTime = 0;
+        videoRef.current.muted = isMuted;
+        videoRef.current.volume = isMuted ? 0 : 1;
         videoRef.current
           .play()
           .then(() => setIsPlaying(true))
-          .catch(() => setIsPlaying(false));
-      } else {
+          .catch(() => {
+            // If browser blocks unmuted playback, fallback to muted playback
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            }
+          });
+      }
+      if (audioRef.current && reel.audioUrl) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.muted = isMuted;
+        audioRef.current.volume = isMuted ? 0 : 1;
+        audioRef.current.play().catch(() => {});
+      }
+    } else {
+      if (videoRef.current) {
         videoRef.current.pause();
         setIsPlaying(false);
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
     }
-  }, [isActive]);
+  }, [isActive, isMuted, reel.audioUrl]);
 
   // Handle Mute state change
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = isMuted;
+      videoRef.current.volume = isMuted ? 0 : 1;
     }
-  }, [isMuted]);
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+      audioRef.current.volume = isMuted ? 0 : 1;
+      if (!isMuted && isActive) {
+        audioRef.current.play().catch(() => {});
+      }
+    }
+  }, [isMuted, isActive]);
 
   // Toggle Like API
   const handleToggleLike = async () => {
@@ -125,9 +153,15 @@ const ReelCard = ({
       if (videoRef.current) {
         if (videoRef.current.paused) {
           videoRef.current.play();
+          if (audioRef.current && reel.audioUrl) {
+            audioRef.current.play().catch(() => {});
+          }
           setIsPlaying(true);
         } else {
           videoRef.current.pause();
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
           setIsPlaying(false);
         }
       }
@@ -157,6 +191,30 @@ const ReelCard = ({
         muted={isMuted}
         onClick={handleVideoTap}
       />
+
+      {/* Background Audio Track if provided (Synced with Reel) */}
+      {reel.audioUrl && (
+        <audio
+          ref={audioRef}
+          src={reel.audioUrl}
+          loop
+          preload="auto"
+        />
+      )}
+
+      {/* Tap to Unmute Banner if audio is muted */}
+      {isMuted && isActive && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMute();
+          }}
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-black/80 hover:bg-black/95 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-2xl border border-white/20 animate-pulse transition active:scale-95"
+        >
+          <IoVolumeMute size={17} className="text-amber-400" />
+          <span>Tap to Unmute 🔊</span>
+        </div>
+      )}
 
       {/* Play/Pause overlay indicator */}
       {!isPlaying && (
@@ -336,6 +394,16 @@ const ReelsModal = () => {
     }
   };
 
+  const handleToggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (!nextMuted) {
+      toast.success("🔊 Sound Unmuted!", { id: "sound-toast", duration: 1500 });
+    } else {
+      toast("🔇 Sound Muted", { id: "sound-toast", duration: 1500 });
+    }
+  };
+
   if (!isReelsOpen) return null;
 
   return (
@@ -402,7 +470,7 @@ const ReelsModal = () => {
               reel={reel}
               isActive={index === activeIndex}
               isMuted={isMuted}
-              onToggleMute={() => setIsMuted(!isMuted)}
+              onToggleMute={handleToggleMute}
               onOpenComments={(r) => setSelectedCommentsReel(r)}
               onOpenShare={(r) => setSelectedShareReel(r)}
               currentUserId={authUser?._id}

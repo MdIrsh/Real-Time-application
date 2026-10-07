@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { IoClose, IoSend, IoCheckmarkCircle } from "react-icons/io5";
 import { useSelector, useDispatch } from "react-redux";
 import { incrementReelShares } from "../redux/reelSlice";
+import { setMessages, setLastMessage } from "../redux/messageSlice";
 import { BASE_URL } from "../config/api";
 import axios from "axios";
 import toast from "react-hot-toast";
 
 const ShareReelModal = ({ reel, isOpen, onClose }) => {
-  const { otherUsers } = useSelector((store) => store.user);
+  const { otherUsers, selectedUser } = useSelector((store) => store.user);
+  const { messages } = useSelector((store) => store.message);
   const [sentUsers, setSentUsers] = useState({});
   const [sendingId, setSendingId] = useState(null);
   const dispatch = useDispatch();
@@ -17,20 +19,58 @@ const ShareReelModal = ({ reel, isOpen, onClose }) => {
   const handleSendToFriend = async (friend) => {
     try {
       setSendingId(friend._id);
-      const messageContent = `🎬 Watch this Reel by ${reel.creatorName || "Creator"}:\n"${reel.caption || "Trending video"}"\n\n${reel.videoUrl}`;
+      const reelPayload = {
+        reelId: reel._id,
+        videoUrl: reel.videoUrl,
+        audioUrl: reel.audioUrl || "",
+        musicTitle: reel.musicTitle || "Original Audio 🎵",
+        creatorName:
+          reel.creatorName ||
+          reel.author?.fullName ||
+          reel.author?.username ||
+          "Creator",
+        creatorAvatar:
+          reel.creatorAvatar || reel.author?.profilePhoto || "",
+        caption: reel.caption || "",
+        likes: reel.likes || [],
+        sharesCount: (reel.sharesCount || 0) + 1,
+      };
 
-      await axios.post(
+      const messageContent = `[REEL_SHARE:${JSON.stringify(
+        reelPayload
+      )}]\n🎬 Watch this Reel by @${reelPayload.creatorName}:\n"${
+        reelPayload.caption || "Trending video"
+      }"\n\n${reel.videoUrl}`;
+
+      const res = await axios.post(
         `${BASE_URL}/api/v1/message/send/${friend._id}`,
         { message: messageContent },
         { withCredentials: true }
       );
 
-      // Increment shares on backend
-      await axios.put(
-        `${BASE_URL}/api/v1/reel/share/${reel._id}`,
-        {},
-        { withCredentials: true }
+      // If active chat is this friend, update Redux messages state immediately
+      if (res.data?.newMessage && selectedUser?._id === friend._id) {
+        dispatch(setMessages([...(messages || []), res.data.newMessage]));
+      }
+
+      dispatch(
+        setLastMessage({
+          userId: friend._id,
+          text: `🎬 Reel by @${reelPayload.creatorName}`,
+          time: new Date().toISOString(),
+          isMe: true,
+          delivered: true,
+        })
       );
+
+      // Increment shares on backend (silently catch if mock id)
+      try {
+        await axios.put(
+          `${BASE_URL}/api/v1/reel/share/${reel._id}`,
+          {},
+          { withCredentials: true }
+        );
+      } catch (e) {}
 
       dispatch(incrementReelShares({ reelId: reel._id }));
       setSentUsers((prev) => ({ ...prev, [friend._id]: true }));

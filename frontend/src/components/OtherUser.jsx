@@ -5,6 +5,25 @@ import { clearUnreadCount } from "../redux/messageSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
 
+// Clean preview text for sidebar
+const formatPreviewText = (text) => {
+  if (!text) return "";
+  if (text.includes("[REEL_SHARE:")) {
+    const m = text.match(/\[REEL_SHARE:(\{.*?\})\]/);
+    if (m) {
+      try {
+        const p = JSON.parse(m[1]);
+        return `🎬 Reel by @${p.creatorName || "Creator"}`;
+      } catch (e) {}
+    }
+    return "🎬 Shared a Reel";
+  }
+  if (text.includes("🎬 Watch this Reel")) return "🎬 Shared a Reel";
+  if (text.includes("[STATUS_REPLY:")) return "💬 Replied to status";
+  if (text.includes("[STATUS_REACT:")) return "❤️ Reacted to status";
+  return text;
+};
+
 const OtherUser = ({ user }) => {
   const dispatch = useDispatch();
   const { selectedUser, onlineUsers, typingUsers } = useSelector((store) => store.user);
@@ -106,7 +125,7 @@ const OtherUser = ({ user }) => {
                     <IoCheckmarkSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Sent" />
                   )
                 )}
-                <span className="truncate">{lastMsg.text}</span>
+                <span className="truncate">{formatPreviewText(lastMsg.text)}</span>
               </>
             ) : (
               <span>@{user?.username}</span>

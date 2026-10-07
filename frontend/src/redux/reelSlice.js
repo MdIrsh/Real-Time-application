@@ -6,6 +6,7 @@ const reelSlice = createSlice({
     reels: [],
     isReelsOpen: false,
     activeReelIndex: 0,
+    targetReel: null,
     loading: false,
   },
   reducers: {
@@ -14,6 +15,17 @@ const reelSlice = createSlice({
     },
     setIsReelsOpen: (state, action) => {
       state.isReelsOpen = action.payload;
+      if (!action.payload) {
+        state.targetReel = null;
+      }
+    },
+    openSpecificReel: (state, action) => {
+      state.isReelsOpen = true;
+      state.targetReel = action.payload;
+      state.activeReelIndex = 0;
+    },
+    clearTargetReel: (state) => {
+      state.targetReel = null;
     },
     setActiveReelIndex: (state, action) => {
       state.activeReelIndex = action.payload;
@@ -54,6 +66,8 @@ const reelSlice = createSlice({
 export const {
   setReels,
   setIsReelsOpen,
+  openSpecificReel,
+  clearTargetReel,
   setActiveReelIndex,
   setReelsLoading,
   addReel,

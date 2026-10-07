@@ -22,6 +22,7 @@ import {
   setReels,
   updateReelLikes,
   setReelsLoading,
+  clearTargetReel,
 } from "../redux/reelSlice";
 import { BASE_URL } from "../config/api";
 import axios from "axios";
@@ -564,7 +565,9 @@ const generateBatchOfReels = (count = 15, startIndex = 0) => {
 
 // Main Reels View (Instagram Style)
 const ReelsModal = () => {
-  const { isReelsOpen, reels, loading } = useSelector((store) => store.reel);
+  const { isReelsOpen, reels, loading, targetReel } = useSelector(
+    (store) => store.reel
+  );
   const { authUser } = useSelector((store) => store.user);
   const dispatch = useDispatch();
 
@@ -590,14 +593,57 @@ const ReelsModal = () => {
   }, []);
 
   // Builder for initial endless feed: user reels + demo reels + 25 dynamic reels
+  // If a targetReel was shared/clicked, prioritize it at the top (index 0)
   const buildInitialFeed = useCallback(
     (sourceList = []) => {
       const baseList = sourceList.length > 0 ? shuffleArray(sourceList) : [];
-      const generatedBuffer = generateBatchOfReels(25, baseList.length);
-      return [...baseList, ...generatedBuffer];
+      let combined = baseList;
+      if (targetReel) {
+        const existingIdx = combined.findIndex(
+          (r) =>
+            String(r._id) === String(targetReel._id) ||
+            (targetReel.videoUrl && r.videoUrl === targetReel.videoUrl)
+        );
+        if (existingIdx !== -1) {
+          combined = [
+            combined[existingIdx],
+            ...combined.slice(0, existingIdx),
+            ...combined.slice(existingIdx + 1),
+          ];
+        } else {
+          combined = [targetReel, ...combined];
+        }
+      }
+      const generatedBuffer = generateBatchOfReels(25, combined.length);
+      return [...combined, ...generatedBuffer];
     },
-    [shuffleArray]
+    [shuffleArray, targetReel]
   );
+
+  // When a specific shared reel is clicked from chat, jump straight to it at index 0
+  useEffect(() => {
+    if (targetReel && isReelsOpen) {
+      setFeedReels((prev) => {
+        const existingIdx = prev.findIndex(
+          (r) =>
+            String(r._id) === String(targetReel._id) ||
+            (targetReel.videoUrl && r.videoUrl === targetReel.videoUrl)
+        );
+        if (existingIdx !== -1) {
+          return [
+            prev[existingIdx],
+            ...prev.slice(0, existingIdx),
+            ...prev.slice(existingIdx + 1),
+          ];
+        }
+        return [targetReel, ...prev];
+      });
+      setActiveIndex(0);
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  }, [targetReel, isReelsOpen]);
 
   // Seamless batch appender for infinite endless scrolling
   const appendFreshBatch = useCallback(() => {
@@ -727,6 +773,11 @@ const ReelsModal = () => {
     }
   };
 
+  const handleCloseReels = () => {
+    dispatch(setIsReelsOpen(false));
+    dispatch(clearTargetReel());
+  };
+
   // Keyboard navigation for Instagram desktop experience (Up/Down arrow, m, Escape)
   useEffect(() => {
     if (!isReelsOpen) return;
@@ -756,7 +807,7 @@ const ReelsModal = () => {
         e.preventDefault();
         handleToggleMute();
       } else if (e.key === "Escape") {
-        dispatch(setIsReelsOpen(false));
+        handleCloseReels();
       }
     };
 
@@ -773,7 +824,7 @@ const ReelsModal = () => {
       <div className="absolute top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/30 to-transparent">
         {/* Back Button */}
         <button
-          onClick={() => dispatch(setIsReelsOpen(false))}
+          onClick={handleCloseReels}
           className="flex items-center gap-1.5 text-white bg-black/40 hover:bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold transition active:scale-95"
         >
           <IoArrowBack size={18} />

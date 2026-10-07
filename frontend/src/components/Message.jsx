@@ -1,11 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   IoCheckmarkDoneSharp,
   IoCheckmarkSharp,
   IoPlayCircleOutline,
+  IoPlay,
+  IoCheckmarkCircle,
+  IoMusicalNotes,
 } from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import { openSpecificReel } from "../redux/reelSlice";
+import toast from "react-hot-toast";
 
 // Helper to parse WhatsApp status reply and reaction messages
 const parseStatusReply = (rawText) => {
@@ -84,8 +89,102 @@ const parseStatusReply = (rawText) => {
   return null;
 };
 
+// Helper to parse shared Reel messages
+const parseReelMessage = (rawText) => {
+  if (!rawText || typeof rawText !== "string") return null;
+
+  // 1. JSON structured reel share: [REEL_SHARE:{...}]
+  const structuredMatch = rawText.match(/\[REEL_SHARE:(\{.*?\})\]/s);
+  if (structuredMatch) {
+    try {
+      const meta = JSON.parse(structuredMatch[1]);
+      return {
+        _id: meta.reelId || meta._id || `reel-shared-${Date.now()}`,
+        creatorName: meta.creatorName || "Instagram Creator",
+        creatorAvatar: meta.creatorAvatar || "",
+        videoUrl: meta.videoUrl,
+        audioUrl: meta.audioUrl || "",
+        musicTitle: meta.musicTitle || "Original Audio 🎵",
+        caption: meta.caption || "",
+        likes: meta.likes || [1, 2, 3],
+        sharesCount: meta.sharesCount || 1,
+        comments: meta.comments || [],
+      };
+    } catch (e) {}
+  }
+
+  // 2. Legacy format: "🎬 Watch this Reel by ... :\n"..."\n\nhttps://..."
+  if (rawText.includes("🎬 Watch this Reel")) {
+    const creatorMatch = rawText.match(/Watch this Reel by\s+@?([^:\n]+)/);
+    const captionMatch = rawText.match(/"([^"]+)"/);
+    const urlMatch = rawText.match(/(https?:\/\/[^\s]+)/);
+
+    if (urlMatch) {
+      return {
+        _id: `reel-shared-${Date.now()}`,
+        creatorName: creatorMatch ? creatorMatch[1].trim() : "Instagram Creator",
+        creatorAvatar: "",
+        videoUrl: urlMatch[1],
+        audioUrl: "",
+        musicTitle: "Original Audio • Trending Sound 🎵",
+        caption: captionMatch ? captionMatch[1] : "Trending Reel",
+        likes: [1, 2, 3],
+        sharesCount: 1,
+        comments: [],
+      };
+    }
+  }
+
+  // 3. Standalone video URL (.mp4 / .webm or Cloudinary video URL)
+  const standaloneUrlMatch = rawText.trim().match(
+    /^(https?:\/\/[^\s]+(?:\.mp4|\.webm|cloudinary\.com\/[^\s]+\/video\/upload[^\s]*))$/i
+  );
+  if (standaloneUrlMatch) {
+    return {
+      _id: `reel-shared-${Date.now()}`,
+      creatorName: "Video Reel",
+      creatorAvatar: "",
+      videoUrl: standaloneUrlMatch[1],
+      audioUrl: "",
+      musicTitle: "Original Audio 🎵",
+      caption: "Shared Video Reel",
+      likes: [1, 2],
+      sharesCount: 1,
+      comments: [],
+    };
+  }
+
+  return null;
+};
+
+// Render text with clickable links for any URLs
+const renderClickableText = (text) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-blue-600 dark:text-blue-400 underline hover:opacity-80 break-all cursor-pointer font-medium"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 const Message = ({ message }) => {
   const scroll = useRef();
+  const dispatch = useDispatch();
   const { authUser } = useSelector((store) => store.user);
 
   useEffect(() => {
@@ -104,6 +203,7 @@ const Message = ({ message }) => {
   const isMetaAi = message?.senderId === "meta-ai";
   const isTyping = message?.isTyping;
   const statusInfo = parseStatusReply(message?.message);
+  const reelInfo = parseReelMessage(message?.message);
 
   const formattedTime = message?.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -112,6 +212,16 @@ const Message = ({ message }) => {
         hour12: false,
       })
     : "19:49";
+
+  const handleOpenReel = (e) => {
+    if (e) e.stopPropagation();
+    if (!reelInfo) return;
+    dispatch(openSpecificReel(reelInfo));
+    toast.success(`Opening Reel by @${reelInfo.creatorName}! 🎬`, {
+      id: "open-reel-toast",
+      duration: 1800,
+    });
+  };
 
   return (
     <div
@@ -238,11 +348,90 @@ const Message = ({ message }) => {
               {statusInfo.text}
             </div>
           )
+        ) : reelInfo ? (
+          <div className="flex flex-col gap-2">
+            {/* Interactive Shared Reel Card */}
+            <div className="w-64 sm:w-72 rounded-2xl overflow-hidden bg-[#18181b] border border-pink-500/30 shadow-2xl transition hover:border-pink-500/60 select-none">
+              {/* Top Reel Banner */}
+              <div className="px-3 py-2 bg-gradient-to-r from-pink-600/25 via-purple-600/20 to-transparent flex items-center justify-between border-b border-white/10">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs">🎬</span>
+                  <span className="text-xs font-bold text-pink-300 truncate">
+                    @{reelInfo.creatorName}
+                  </span>
+                  <IoCheckmarkCircle size={13} className="text-blue-400 shrink-0" />
+                </div>
+                <span className="text-[10px] font-semibold bg-pink-500/30 text-pink-200 px-2 py-0.5 rounded-full border border-pink-500/40">
+                  Reel
+                </span>
+              </div>
+
+              {/* Clickable Video Preview Thumbnail */}
+              <div
+                onClick={handleOpenReel}
+                className="relative h-64 sm:h-72 w-full bg-black cursor-pointer group overflow-hidden"
+                title="Click to Watch Reel"
+              >
+                <video
+                  src={reelInfo.videoUrl}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  preload="metadata"
+                  muted
+                  playsInline
+                />
+
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
+
+                {/* Glowing Play Button */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-14 h-14 rounded-full bg-pink-600/90 text-white flex items-center justify-center shadow-xl shadow-pink-600/50 border-2 border-white/90 group-hover:scale-110 group-hover:bg-pink-500 transition-all duration-200">
+                    <IoPlay size={26} className="ml-0.5 text-white" />
+                  </div>
+                </div>
+
+                {/* Caption & Music Bar inside preview */}
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white pointer-events-none">
+                  {reelInfo.caption && (
+                    <p className="text-xs font-medium line-clamp-2 drop-shadow-md mb-1.5 text-gray-100">
+                      {reelInfo.caption}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1.5 text-[10.5px] text-pink-200 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full w-fit max-w-full border border-white/10">
+                    <IoMusicalNotes size={12} className="text-pink-400 shrink-0" />
+                    <span className="truncate">{reelInfo.musicTitle || "Original Audio 🎵"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons: "Watch Reel in App" + Direct Video Link */}
+              <div className="p-2.5 bg-[#202024] flex flex-col gap-1.5 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={handleOpenReel}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:opacity-95 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-pink-600/25 transition cursor-pointer"
+                >
+                  <IoPlay size={15} />
+                  <span>Watch Reel in App ▶️</span>
+                </button>
+
+                <a
+                  href={reelInfo.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 hover:underline flex items-center justify-center gap-1 text-center py-0.5 transition cursor-pointer"
+                >
+                  <span>🔗 Click to open direct link</span>
+                </a>
+              </div>
+            </div>
+          </div>
         ) : (
           message?.message &&
           message.message !== "🎤 Voice message" && (
             <div className="text-[14.5px] leading-relaxed break-words font-normal select-text pr-14 inline-block whitespace-pre-wrap">
-              {message?.message}
+              {renderClickableText(message?.message)}
             </div>
           )
         )}

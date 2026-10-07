@@ -97,8 +97,9 @@ export const login = async (req, res) => {
     const tokenData = {
       userId: user._id,
     };
+    // 365 days (1 Year) persistent login like WhatsApp - user never needs to re-login every few hours/days
     const token = await jwt.sign(tokenData, process.env.JWT_SECRET_KEY, {
-      expiresIn: "1d",
+      expiresIn: "365d",
     });
     let profilePhoto = user.profilePhoto;
     if (!profilePhoto || profilePhoto.includes("avatar.iran.liara.run")) {
@@ -112,7 +113,7 @@ export const login = async (req, res) => {
     return res
       .status(200)
       .cookie("token", token, {
-        maxAge: 1 * 24 * 60 * 60 * 1000,
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days persistent session
         httpOnly: true,
         sameSite: isProduction ? "none" : "lax",
         secure: isProduction,

@@ -17,7 +17,6 @@ import {
   IoTrashOutline,
   IoCloseCircleOutline,
 } from "react-icons/io5";
-import { BsChatSquareDots } from "react-icons/bs";
 import toast from "react-hot-toast";
 
 const MessageContainer = () => {
@@ -225,12 +224,37 @@ const MessageContainer = () => {
       ) : (
         /* Empty State / WhatsApp Web Splash in Dark Mode */
         <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#111b21] border-b-[6px] border-[#00a884] p-8 text-center select-none text-[#e9edef]">
-          <div className="w-24 h-24 rounded-full bg-[#103629] flex items-center justify-center text-[#25d366] mb-6 shadow-md border border-[#202c33]">
-            <BsChatSquareDots className="text-5xl" />
+          <div className="relative mb-6">
+            <div className="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-[#00a884] via-[#25d366] to-[#00f2fe] shadow-[0_0_25px_rgba(0,242,254,0.5)]">
+              <img
+                src="/irshad_avatar.png"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/irshad.jpg";
+                }}
+                alt="Irshad"
+                className="w-full h-full rounded-full object-cover object-top"
+              />
+            </div>
+            <span className="absolute bottom-1 right-1 w-5 h-5 bg-[#25d366] border-2 border-[#111b21] rounded-full shadow-md"></span>
           </div>
-          <h2 className="text-3xl font-light text-[#e9edef] mb-3 tracking-tight">
-            WhatsApp Web
+          <h2 className="text-3xl font-extrabold text-[#e9edef] mb-1 tracking-tight flex items-center justify-center gap-2">
+            <span
+              className="text-[#00f2fe]"
+              style={{
+                textShadow: "0 0 15px rgba(0, 242, 254, 0.75)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              IRSHAD
+            </span>
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#1d9bf0] text-white text-xs font-black shadow-[0_0_10px_rgba(29,155,240,0.6)]">
+              ✓
+            </span>
           </h2>
+          <p className="text-xs font-bold text-[#8696a0] tracking-[0.2em] uppercase mb-4">
+            MESSAGING APP
+          </p>
           <p className="text-sm text-[#8696a0] max-w-md leading-relaxed mb-8">
             Send and receive messages privately. Watch Reels & Status, and chat with <strong>Meta AI</strong> anytime for instant help.
           </p>

@@ -140,57 +140,24 @@ const Sidebar = () => {
     <div className="flex flex-col h-full bg-[#0b141a] text-[#e9edef] select-none overflow-hidden relative font-sans">
       {/* 1. WhatsApp Mobile Dark Header */}
       <div className="bg-[#0b141a] px-4 py-3 flex items-center justify-between shrink-0 border-b border-[#202c33]/40 z-20">
-        {/* IRSHAD Brand Modern Identity */}
+        {/* IRSHAD Royal Executive Cursive Signature #1 (No Avatar Photo) */}
         <div
           onClick={() => setIsProfileModalOpen(true)}
-          className="flex items-center gap-2.5 cursor-pointer group select-none py-0.5"
-          title="IRSHAD • Tap to view profile"
+          className="flex items-center gap-2 cursor-pointer group select-none py-0.5"
+          title="Irshad • Tap to view profile"
         >
-          {/* Circular Avatar with Glowing Ring */}
-          <div className="relative shrink-0">
-            <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-[#00a884] via-[#25d366] to-[#00f2fe] shadow-[0_0_14px_rgba(0,242,254,0.5)] group-hover:shadow-[0_0_20px_rgba(0,242,254,0.8)] transition-all duration-300 group-hover:scale-105">
-              <img
-                src="/irshad_avatar.png"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/irshad.jpg";
-                }}
-                alt="Irshad"
-                className="w-full h-full rounded-full object-cover object-top"
-              />
-            </div>
-            {/* Active Green Dot */}
-            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#25d366] border-2 border-[#0b141a] rounded-full shadow-sm"></span>
-          </div>
-
-          {/* IRSHAD Brand Logo & Subtitle */}
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="text-[20px] font-black tracking-wider text-[#00f2fe] font-sans"
-                style={{
-                  textShadow:
-                    "0 0 10px rgba(0, 242, 254, 0.75), 0 0 20px rgba(0, 242, 254, 0.45)",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                IRSHAD
-              </span>
-              {/* Verified Blue Rosette Badge */}
-              <span
-                className="inline-flex items-center justify-center w-[17px] h-[17px] rounded-full bg-[#1d9bf0] text-white text-[9px] font-black shadow-[0_0_8px_rgba(29,155,240,0.6)]"
-                title="Verified Official"
-              >
-                ✓
-              </span>
-            </div>
-            <span
-              className="text-[9px] font-bold text-[#e9edef] tracking-[0.16em] uppercase -mt-0.5 opacity-90 group-hover:text-[#00f2fe] transition-colors"
-              style={{ letterSpacing: "0.15em" }}
-            >
-              MESSAGING APP
-            </span>
-          </div>
+          <img
+            src="/irshad_signature.png"
+            alt="Irshad Signature"
+            className="h-9 sm:h-10 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.4)] transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.7)]"
+          />
+          {/* Verified Rosette Badge */}
+          <span
+            className="inline-flex items-center justify-center w-[16px] h-[16px] rounded-full bg-[#1d9bf0] text-white text-[9px] font-black shadow-[0_0_8px_rgba(29,155,240,0.6)] shrink-0 self-center"
+            title="Verified Official"
+          >
+            ✓
+          </span>
         </div>
 
         {/* Top Right Action Icons: ₹, 📷, ⋮ */}

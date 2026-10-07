@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import Message from "./Message";
 import useGetMessages from "../hooks/useGetMessages";
+import useGetGroupMessages from "../hooks/useGetGroupMessages";
 import { useSelector, useDispatch } from "react-redux";
 import { setMessages } from "../redux/messageSlice";
 import { IoLockClosed } from "react-icons/io5";
@@ -16,17 +17,20 @@ const SUGGESTED_PROMPTS = [
 
 const Messages = () => {
   useGetMessages();
+  useGetGroupMessages();
   const dispatch = useDispatch();
   const { messages } = useSelector((store) => store.message);
+  const { selectedGroup, groupMessages } = useSelector((store) => store.group);
   const { selectedUser, authUser, typingUsers } = useSelector((store) => store.user);
   const scrollRef = useRef(null);
 
+  const activeMessages = selectedGroup ? groupMessages : messages;
   const isMetaAi = selectedUser?._id === "meta-ai";
   const isTyping = Boolean(selectedUser?._id && typingUsers?.[selectedUser._id]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [activeMessages, isTyping]);
 
   const handlePromptClick = async (promptText) => {
     const cleanPrompt = promptText.replace(/^[^\w\s]+/, "").trim();
@@ -113,14 +117,16 @@ const Messages = () => {
       )}
 
       {/* Messages */}
-      {messages && messages.length > 0 ? (
-        messages.map((message) => (
+      {activeMessages && activeMessages.length > 0 ? (
+        activeMessages.map((message) => (
           <Message key={message._id} message={message} />
         ))
       ) : (
         <div className="flex flex-col items-center justify-center h-48 text-[#667781] text-sm">
           <p className="bg-white/80 px-4 py-2 rounded-xl shadow-sm">
-            Say hello to start the conversation! 👋
+            {selectedGroup
+              ? "No messages yet in this group. Say hello! 👋"
+              : "Say hello to start the conversation! 👋"}
           </p>
         </div>
       )}

@@ -4,6 +4,7 @@ import { BsPlusLg, BsCamera, BsMicFill, BsEmojiSmile, BsTrash } from "react-icon
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, setLastMessage, markMessageDelivered } from "../redux/messageSlice";
+import { addGroupMessage } from "../redux/groupSlice";
 import { generateAiReply } from "../utils/metaAi";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl } from "../utils/avatar";
@@ -31,6 +32,7 @@ const SendInput = () => {
 
   const dispatch = useDispatch();
   const { selectedUser, authUser } = useSelector((store) => store.user);
+  const { selectedGroup } = useSelector((store) => store.group);
   const { socket } = useSelector((store) => store.socket);
   const { messages } = useSelector((store) => store.message);
 
@@ -87,7 +89,7 @@ const SendInput = () => {
   ) => {
     const currentText = (textToSend !== undefined ? textToSend : message).trim();
     if (!currentText && !imageUrl && !audioUrl) return;
-    if (!selectedUser?._id) return;
+    if (!selectedUser?._id && !selectedGroup?._id) return;
 
     setMessage("");
     setShowEmojiPicker(false);
@@ -108,8 +110,31 @@ const SendInput = () => {
         ? "📷 Shared an image"
         : "");
 
+    // Special handling for Group Chat
+    if (selectedGroup?._id) {
+      try {
+        const res = await axios.post(
+          `${BASE_URL}/api/v1/group/send/${selectedGroup._id}`,
+          {
+            message: displayMsg,
+            image: imageUrl || null,
+            audio: audioUrl || null,
+            audioDuration: audioDuration || 0,
+          },
+          { withCredentials: true }
+        );
+        if (res.data?.success && res.data.message) {
+          dispatch(addGroupMessage(res.data.message));
+        }
+      } catch (err) {
+        console.error("sendGroupMessage error:", err);
+        toast.error("Failed to send message to group");
+      }
+      return;
+    }
+
     // Special handling for Meta AI
-    if (selectedUser._id === "meta-ai") {
+    if (selectedUser?._id === "meta-ai") {
       const userMsg = {
         _id: `user-msg-${Date.now()}`,
         senderId: authUser?._id,

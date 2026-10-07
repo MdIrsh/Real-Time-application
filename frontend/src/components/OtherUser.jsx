@@ -1,6 +1,7 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../redux/userSlice";
+import { setSelectedGroup } from "../redux/groupSlice";
 import { clearUnreadCount } from "../redux/messageSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
@@ -38,6 +39,7 @@ const OtherUser = ({ user }) => {
 
   const selectedUserHandler = () => {
     dispatch(setSelectedUser(user));
+    dispatch(setSelectedGroup(null));
     if (unreadCount > 0) {
       dispatch(clearUnreadCount(user?._id));
     }

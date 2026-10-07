@@ -237,6 +237,13 @@ const Message = ({ message }) => {
             : "bg-white text-[#111b21] rounded-tl-xs"
         }`}
       >
+        {/* Group Chat Sender Name Tag */}
+        {!isSentByMe && !isMetaAi && message?.senderId?.fullName && (
+          <div className="text-[12px] font-bold text-[#00a884] dark:text-[#25d366] pb-0.5 select-none leading-none">
+            {message.senderId.fullName}
+          </div>
+        )}
+
         {/* Meta AI Tag */}
         {isMetaAi && !isTyping && (
           <div className="flex items-center gap-1.5 mb-1 pb-1 border-b border-gray-100">

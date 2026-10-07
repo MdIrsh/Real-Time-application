@@ -116,6 +116,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  // --- Group Chat Messaging Rooms ---
+  socket.on("joinGroupChat", ({ groupId }) => {
+    if (groupId) {
+      socket.join(`group-chat-${groupId}`);
+    }
+  });
+
+  socket.on("leaveGroupChat", ({ groupId }) => {
+    if (groupId) {
+      socket.leave(`group-chat-${groupId}`);
+    }
+  });
+
   // --- Group Call WebRTC Signaling Events ---
   socket.on("joinGroupCall", ({ roomId, user, isMuted = false, isVideoOff = false }) => {
     try {

@@ -21,6 +21,7 @@ import CallsModal from "./CallsModal";
 import UpdatesTab from "./UpdatesTab";
 import UploadStatusModal from "./UploadStatusModal";
 import StatusViewerModal from "./StatusViewerModal";
+import CreateGroupModal from "./CreateGroupModal";
 import { IoPencil, IoCamera } from "react-icons/io5";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -29,6 +30,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { setIsReelsOpen } from "../redux/reelSlice";
 import { setIsUploadOpen } from "../redux/statusSlice";
+import { setIsCreateGroupOpen, setSelectedGroup } from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { META_AI_USER, MetaAiRing } from "../utils/metaAi";
 import { BASE_URL } from "../config/api";
@@ -132,6 +134,7 @@ const Sidebar = () => {
 
   const openMetaAi = () => {
     dispatch(setSelectedUser(META_AI_USER));
+    dispatch(setSelectedGroup(null));
   };
 
   const isMetaAiSelected = selectedUser?._id === "meta-ai";
@@ -233,6 +236,17 @@ const Sidebar = () => {
                 >
                   <IoPersonAddOutline size={16} className="text-[#25d366]" />
                   <span>Add New Friend</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowMenuDropdown(false);
+                    dispatch(setIsCreateGroupOpen(true));
+                  }}
+                  className="w-full px-4 py-2.5 flex items-center gap-2.5 hover:bg-[#111b21] transition text-left"
+                >
+                  <IoPeople size={16} className="text-[#25d366]" />
+                  <span>New Group</span>
                 </button>
 
                 <button
@@ -693,6 +707,9 @@ const Sidebar = () => {
       />
 
       <StatusViewerModal statuses={allStatuses} />
+
+      {/* WhatsApp Create Group Modal */}
+      <CreateGroupModal />
     </div>
   );
 };

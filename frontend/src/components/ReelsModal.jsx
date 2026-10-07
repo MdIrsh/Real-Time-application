@@ -334,9 +334,9 @@ const ReelCard = ({
         )}
 
         {/* Music Sound Title */}
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-300 bg-black/30 backdrop-blur-xs px-2.5 py-1 rounded-full w-fit max-w-[240px]">
-          <IoMusicalNotes size={13} className="text-blue-400 shrink-0" />
-          <span className="truncate">{reel.musicTitle || "Original Audio"}</span>
+        <div className="flex items-center gap-1.5 text-[11px] text-white bg-black/40 backdrop-blur-md px-3 py-1 rounded-full w-fit max-w-[280px] border border-white/10 shadow-md">
+          <IoMusicalNotes size={13} className="text-pink-400 shrink-0 animate-pulse" />
+          <span className="truncate font-medium">{reel.musicTitle || "Original Audio"}</span>
         </div>
       </div>
     </div>

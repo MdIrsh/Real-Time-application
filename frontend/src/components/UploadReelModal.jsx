@@ -8,12 +8,14 @@ import toast from "react-hot-toast";
 
 const TRENDING_SONGS = [
   { name: "Original Video Sound (No Background Music)", url: "" },
-  { name: "Golden Hour - Acoustic Sunset 🎸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-  { name: "Feel Good - Indie Pop Beats 🎶", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-  { name: "Synthwave Dreams - Retro Electro ⚡", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-  { name: "Summer Club Anthem - Dance Beat 🔥", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
-  { name: "Midnight Chill - Lo-Fi Beats 🌸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
-  { name: "Urban Groove - Hip Hop Bass 🎧", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
+  { name: "Kesariya - Arijit Singh (Brahmāstra) 🧡", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+  { name: "Apna Bana Le - Arijit Singh (Bhediya) 🌸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { name: "Tauba Tauba - Karan Aujla (Bad Newz) 🔥", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+  { name: "Chaleya - Arijit Singh & Anirudh (Jawan) ✨", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+  { name: "Heeriye - Arijit Singh & Jasleen Royal ❤️", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+  { name: "Raataan Lambiyan - Jubin Nautiyal (Shershaah) 🌙", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
+  { name: "Tum Hi Ho - Arijit Singh (Aashiqui 2) 🎶", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+  { name: "Lut Gaye - Jubin Nautiyal & Emraan Hashmi 🌹", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
 ];
 
 const UploadReelModal = ({ isOpen, onClose }) => {

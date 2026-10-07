@@ -383,17 +383,20 @@ const ReelsModal = () => {
 
   const [feedReels, setFeedReels] = useState([]);
 
-  // Initialize and append feedReels for endless infinite scroll
+  // Helper to shuffle items for fresh variety on scroll
+  const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
+
+  // Initialize feedReels
   useEffect(() => {
     if (reels && reels.length > 0) {
       setFeedReels([...reels]);
     }
   }, [reels]);
 
-  // Infinite Scroll: automatically append more reels when user scrolls near the end!
+  // Infinite Scroll: automatically append shuffled batch so user gets fresh variety!
   useEffect(() => {
     if (reels && reels.length > 0 && feedReels.length > 0 && activeIndex >= feedReels.length - 2) {
-      setFeedReels((prev) => [...prev, ...reels]);
+      setFeedReels((prev) => [...prev, ...shuffleArray(reels)]);
     }
   }, [activeIndex, feedReels.length, reels]);
 

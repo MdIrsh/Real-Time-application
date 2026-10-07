@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   IoArrowBack,
   IoHeart,
@@ -450,6 +450,168 @@ const ReelCard = ({
   );
 };
 
+// Dynamic Creators, Videos, Captions, and Songs for Truly Unlimited Endless Reels
+const DYNAMIC_CREATORS = [
+  { name: "ayush_travels_india", seed: "AyushTravels" },
+  { name: "priya_choreography", seed: "PriyaDance" },
+  { name: "rohit_mumbai_vlogs", seed: "RohitMumbai" },
+  { name: "kashi_banaras_diaries", seed: "BanarasKashi" },
+  { name: "dj_gurpreet_singh", seed: "GurpreetSingh" },
+  { name: "delhi_foodie_junction", seed: "DelhiFoodie" },
+  { name: "kashmir_paradise_vlogs", seed: "AanyaKashmir" },
+  { name: "speed_drives_india", seed: "IndiaDrives" },
+  { name: "college_ke_din", seed: "CollegeKeDin" },
+  { name: "jaipur_royals_heritage", seed: "JaipurRoyals" },
+  { name: "desi_akhada_fitness", seed: "PahalwanFitness" },
+  { name: "kerala_gods_own_country", seed: "KeralaTravel" },
+  { name: "kolkata_city_of_joy", seed: "KolkataCity" },
+  { name: "chai_aur_baarish", seed: "ChaiLover" },
+  { name: "goa_vibes_unlimited", seed: "GoaBeaches" },
+  { name: "himachal_wanderlust", seed: "HimachalHills" },
+  { name: "sharma_ji_comedy", seed: "SharmaJiComedy" },
+  { name: "ananya_lifestyle_vlogs", seed: "AnanyaLife" },
+  { name: "desi_fitness_club", seed: "DesiFitness" },
+  { name: "bollywood_mashups_dj", seed: "BollyDj" },
+  { name: "punjabi_swag_beats", seed: "PunjabiSwag" },
+  { name: "royal_udaipur_diaries", seed: "UdaipurPalace" },
+  { name: "street_dance_crew_in", seed: "StreetDanceCrew" },
+  { name: "nature_cinematics_in", seed: "NatureCinematics" },
+];
+
+const DYNAMIC_VIDEOS = [
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/sea_turtle.mp4",
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/people-detection.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/snow_horses.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/driver-action-recognition.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/classroom.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/head-pose-face-detection-female-and-male.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4",
+  "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/elephants.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/car-detection.mp4",
+  "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/bottle-detection.mp4",
+];
+
+const DYNAMIC_CAPTIONS = [
+  "Mumbai ki shaam aur Marine Drive par cutting chai ☕🌅 Yeh sukoon kahin aur nahi! #mumbai #kesariya #sukoon #bollywood",
+  "Subah-e-Banaras aur Dashashwamedh Ghat ki pavitra aarti 🕉️✨ Har Har Mahadev! #varanasi #kashi #gangaaarti #apnabanale",
+  "Desi shaadi me Bhangra aur Punjabi Dhol ka swag alag hi hota hai! 🕺🥁 #taubatauba #punjabi #bhangra #viral",
+  "Chandni Chowk ke spicy chole bhature aur garam rabdi jalebi 🍛😋 #delhifood #streetfood #chaleya #jawan",
+  "Gar firdaus bar roo-e zameen ast... Kashmir sach me jannat hai! ❄️🏔️ #kashmir #gulmarg #heeriye #travel",
+  "Mumbai-Pune expressway par late night drive aur Shershaah gaane 🚗💨 #raataanlambiyan #nightdrive #longdrive",
+  "College ke woh befikre din aur backbench ki dosti! 🎓❤️ Tag your best friends. #collegelife #dosti #tumhiho",
+  "Padharo Mhare Desh! 🏰🦚 Pink City Jaipur ka shahi andaaz aur Hawa Mahal. #jaipur #rajasthan #lutgaye",
+  "Desi akhada, mitti aur sachhi mehnat! Haar mat maano 💪🇮🇳 #fitness #hardwork #jaihind #zinda",
+  "God's Own Country Kerala 🐘🌴 Munnar ke haseen pahad aur backwaters boat ride. #kerala #munnar #ilahi",
+  "Howrah bridge ki shaam aur yellow taxi ka suhana safar 🚕💛 #kolkata #cityofjoy #howrah #kabira",
+  "Baarish ka mausam aur garam kulhad wali adrak chai ☕🌧️ Isse better sukoon kuch nahi! #chai #baarish #desivibes",
+  "Goa ke sun-kissed beaches aur sunset acoustic vibes 🏖️🌊 Life is good! #goa #beachlife #sunsetvibes",
+  "Himachal ke snowy peaks aur Pahadi chai 🏔️❄️ Tag someone who loves mountains! #himachal #manali #travelgram",
+  "Late night car drives with Bollywood classics hits different 🚗🌌 #nightvibes #bollywoodsongs #nostalgia",
+  "Wedding season hook steps! Desi dance energy on fire 🔥💃 #desidance #shaadivibes #bollywooddance",
+  "Rooftop acoustic jam session with friends 🎸✨ Music is peace! #acoustic #bollywoodcovers #weekendvibes",
+  "Morning trek in the Western Ghats 🌿⛰️ Foggy mornings and cold air! #trekking #naturelover #exploreindia",
+];
+
+const DYNAMIC_SONGS = [
+  {
+    title: "Kesariya • Arijit Singh & Pritam (Brahmāstra) 🧡",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910141580615.mp3",
+    cover: "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
+  },
+  {
+    title: "Apna Bana Le • Arijit Singh & Sachin-Jigar (Bhediya) 🌸",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910441686043.mp3",
+    cover: "https://c.saavncdn.com/390/Bollywood-Top-Romantic-Hits-Hindi-2026-20260717151136-500x500.jpg",
+  },
+  {
+    title: "Tauba Tauba • Karan Aujla (Bad Newz) 🔥",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
+    cover: "https://c.saavncdn.com/992/Bad-Newz-Hindi-2024-20250730113701-500x500.jpg",
+  },
+  {
+    title: "Chaleya • Arijit Singh & Anirudh (Jawan) ✨",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910092002187.mp3",
+    cover: "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg",
+  },
+  {
+    title: "Heeriye • Jasleen Royal & Arijit Singh ❤️",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010912552003505.mp3",
+    cover: "https://c.saavncdn.com/022/Heeriye-feat-Arijit-Singh-Hindi-2023-20230928050405-500x500.jpg",
+  },
+  {
+    title: "Raataan Lambiyan • Jubin Nautiyal (Shershaah) 🌙",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910141318776.mp3",
+    cover: "https://c.saavncdn.com/238/Shershaah-Original-Motion-Picture-Soundtrack--Hindi-2021-20210815181610-500x500.jpg",
+  },
+  {
+    title: "Tum Hi Ho • Arijit Singh (Aashiqui 2) 🎶",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910092419390.mp3",
+    cover: "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg",
+  },
+  {
+    title: "Ilahi • Arijit Singh & Pritam (YJHD) 🏖️",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910090382254.mp3",
+    cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
+  },
+  {
+    title: "Kabira • Tochi Raina & Rekha Bhardwaj (YJHD) 💛",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910090382398.mp3",
+    cover: "https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg",
+  },
+  {
+    title: "Lut Gaye • Jubin Nautiyal & Emraan Hashmi 🌹",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910091194217.mp3",
+    cover: "https://c.saavncdn.com/106/Emraan-Hashmi-Hits-Hindi-2026-20260905191028-500x500.jpg",
+  },
+  {
+    title: "Zinda • Shankar-Ehsaan-Loy (Bhaag Milkha Bhaag) 🔥",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910140012874.mp3",
+    cover: "https://c.saavncdn.com/575/Bhaag-Milkha-Bhaag-Hindi-2013-20260120201340-500x500.jpg",
+  },
+  {
+    title: "Baarish • Ash King & Shashaa Tirupati (Half Girlfriend) 🌧️",
+    audio: "https://jiotunepreview.jio.com/content/Converted/010910440564900.mp3",
+    cover: "https://c.saavncdn.com/441/Half-Girlfriend-Hindi-2017-20180622-500x500.jpg",
+  },
+];
+
+// Generates dynamic reels on demand so scrolling is 100% infinite and never ends
+const generateBatchOfReels = (count = 15, startIndex = 0) => {
+  const batch = [];
+  for (let i = 0; i < count; i++) {
+    const idx = startIndex + i;
+    const video = DYNAMIC_VIDEOS[idx % DYNAMIC_VIDEOS.length];
+    const song = DYNAMIC_SONGS[(idx * 7 + 3) % DYNAMIC_SONGS.length];
+    const creator = DYNAMIC_CREATORS[(idx * 11 + 5) % DYNAMIC_CREATORS.length];
+    const caption = DYNAMIC_CAPTIONS[(idx * 13 + 7) % DYNAMIC_CAPTIONS.length];
+    const uniqueId = `reel-inf-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
+
+    batch.push({
+      _id: uniqueId,
+      creatorName: creator.name,
+      creatorAvatar: `https://api.dicebear.com/10.x/personas/svg?seed=${creator.seed}_${idx % 30}`,
+      videoUrl: video,
+      audioUrl: song.audio,
+      musicTitle: song.title,
+      musicCover: song.cover,
+      caption: caption,
+      likes: Array.from({ length: (idx * 317 + 1420) % 24000 + 800 }),
+      sharesCount: ((idx * 613 + 420) % 36000) + 400,
+      comments: [
+        {
+          userName: `user_${(idx * 17) % 89 + 10}`,
+          userAvatar: `https://api.dicebear.com/10.x/lorelei/svg?seed=Commenter${idx % 30}`,
+          text: "Pure Bollywood vibe! Loved this ❤️🔥",
+          createdAt: new Date(),
+        },
+      ],
+    });
+  }
+  return batch;
+};
+
 // Main Reels View (Instagram Style)
 const ReelsModal = () => {
   const { isReelsOpen, reels, loading } = useSelector((store) => store.reel);
@@ -465,18 +627,44 @@ const ReelsModal = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const containerRef = useRef(null);
+  const isAppendingRef = useRef(false);
 
   // Fisher-Yates array shuffle for true randomized fresh feed
-  const shuffleArray = (arr) => {
+  const shuffleArray = useCallback((arr) => {
     const array = [...arr];
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
-  };
+  }, []);
 
-  // Refresh handler to fetch and randomize fresh reels
+  // Builder for initial endless feed: user reels + demo reels + 25 dynamic reels
+  const buildInitialFeed = useCallback(
+    (sourceList = []) => {
+      const baseList = sourceList.length > 0 ? shuffleArray(sourceList) : [];
+      const generatedBuffer = generateBatchOfReels(25, baseList.length);
+      return [...baseList, ...generatedBuffer];
+    },
+    [shuffleArray]
+  );
+
+  // Seamless batch appender for infinite endless scrolling
+  const appendFreshBatch = useCallback(() => {
+    if (isAppendingRef.current) return;
+    isAppendingRef.current = true;
+
+    setFeedReels((prev) => {
+      const newItems = generateBatchOfReels(15, prev.length);
+      return [...prev, ...newItems];
+    });
+
+    setTimeout(() => {
+      isAppendingRef.current = false;
+    }, 300);
+  }, []);
+
+  // Refresh handler to fetch and rebuild fresh endless reels
   const handleRefreshReels = async () => {
     try {
       setIsRefreshing(true);
@@ -491,41 +679,37 @@ const ReelsModal = () => {
         freshList = reels;
       }
 
-      if (freshList.length > 0) {
-        const freshlyShuffled = shuffleArray(freshList);
-        dispatch(setReels(freshlyShuffled));
-        setFeedReels(freshlyShuffled);
-        setActiveIndex(0);
-        if (containerRef.current) {
-          containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-        }
-        toast.success("✨ New Reels Feed Loaded!", {
-          id: "reels-refresh-toast",
-          duration: 1800,
-          icon: "🎬",
-        });
+      const unlimitedFeed = buildInitialFeed(freshList);
+      dispatch(setReels(unlimitedFeed));
+      setFeedReels(unlimitedFeed);
+      setActiveIndex(0);
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
+      toast.success("✨ Unlimited Reels Feed Refreshed!", {
+        id: "reels-refresh-toast",
+        duration: 1800,
+        icon: "♾️",
+      });
     } catch (err) {
       console.error("Refresh reels error:", err);
-      if (reels && reels.length > 0) {
-        const freshlyShuffled = shuffleArray(reels);
-        setFeedReels(freshlyShuffled);
-        setActiveIndex(0);
-        if (containerRef.current) {
-          containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-        }
-        toast.success("✨ New Reels Shuffled!", {
-          id: "reels-refresh-toast",
-          duration: 1800,
-          icon: "🎬",
-        });
+      const unlimitedFeed = buildInitialFeed(reels || []);
+      setFeedReels(unlimitedFeed);
+      setActiveIndex(0);
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
+      toast.success("✨ Endless Reels Shuffled!", {
+        id: "reels-refresh-toast",
+        duration: 1800,
+        icon: "♾️",
+      });
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
-  // Fetch Reels on mount or when opening (randomized)
+  // Fetch Reels on mount or when opening (randomized + unlimited buffer)
   useEffect(() => {
     if (isReelsOpen) {
       const fetchReels = async () => {
@@ -535,14 +719,20 @@ const ReelsModal = () => {
             withCredentials: true,
           });
           if (res.data?.reels) {
-            const randomized = shuffleArray(res.data.reels);
-            dispatch(setReels(randomized));
-            setFeedReels(randomized);
+            const unlimitedFeed = buildInitialFeed(res.data.reels);
+            dispatch(setReels(unlimitedFeed));
+            setFeedReels(unlimitedFeed);
+            setActiveIndex(0);
+          } else {
+            const fallbackFeed = buildInitialFeed([]);
+            setFeedReels(fallbackFeed);
             setActiveIndex(0);
           }
         } catch (err) {
           console.error("Error fetching reels:", err);
-          toast.error("Could not load reels");
+          const fallbackFeed = buildInitialFeed([]);
+          setFeedReels(fallbackFeed);
+          setActiveIndex(0);
         } finally {
           dispatch(setReelsLoading(false));
         }
@@ -550,23 +740,16 @@ const ReelsModal = () => {
 
       fetchReels();
     }
-  }, [isReelsOpen, dispatch]);
+  }, [isReelsOpen, dispatch, buildInitialFeed]);
 
-  // Initialize and append feedReels for endless infinite scroll
+  // Infinite Scroll Trigger: automatically append batch when approaching bottom
   useEffect(() => {
-    if (reels && reels.length > 0) {
-      setFeedReels([...reels]);
+    if (feedReels.length > 0 && activeIndex >= feedReels.length - 3) {
+      appendFreshBatch();
     }
-  }, [reels]);
+  }, [activeIndex, feedReels.length, appendFreshBatch]);
 
-  // Infinite Scroll: automatically append shuffled batch when user scrolls near the end!
-  useEffect(() => {
-    if (reels && reels.length > 0 && feedReels.length > 0 && activeIndex >= feedReels.length - 2) {
-      setFeedReels((prev) => [...prev, ...shuffleArray(reels)]);
-    }
-  }, [activeIndex, feedReels.length, reels]);
-
-  // Track active reel on scroll
+  // Track active reel on scroll + trigger infinite append when near end
   const handleScroll = () => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -576,6 +759,11 @@ const ReelsModal = () => {
 
     if (newIndex !== activeIndex && newIndex >= 0 && newIndex < feedReels.length) {
       setActiveIndex(newIndex);
+    }
+
+    // Proactive infinite scroll: check if container scroll is within 2.5 screens of the bottom
+    if (container.scrollTop + height >= container.scrollHeight - height * 2.5) {
+      appendFreshBatch();
     }
   };
 
@@ -648,8 +836,11 @@ const ReelsModal = () => {
           onClick={handleRefreshReels}
           title="Tap to refresh reels feed"
         >
-          <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif group-hover:text-pink-400 transition">
-            Reels
+          <h2 className="text-white font-extrabold text-lg tracking-wide italic font-serif group-hover:text-pink-400 transition flex items-center gap-1.5">
+            <span>Reels</span>
+            <span className="text-[10px] not-italic font-sans bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-extrabold px-1.5 py-0.2 rounded-full shadow-xs tracking-normal">
+              ♾️ Unlimited
+            </span>
           </h2>
         </div>
 

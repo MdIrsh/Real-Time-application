@@ -226,9 +226,10 @@ const MessageContainer = () => {
         <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#111b21] border-b-[6px] border-[#00a884] p-8 text-center select-none text-[#e9edef]">
           <div className="relative mb-6">
             <img
-              src="/irshad_signature.png"
-              alt="Irshad Signature"
+              src="/irshad_3d_signature_transparent.png"
+              alt="Irshad 3D Signature"
               className="h-24 sm:h-28 w-auto object-contain filter drop-shadow-[0_0_25px_rgba(234,179,8,0.45)]"
+              style={{ mixBlendMode: "screen" }}
             />
           </div>
           <h2 className="text-2xl font-bold text-[#e9edef] mb-2 tracking-wide flex items-center justify-center gap-2">

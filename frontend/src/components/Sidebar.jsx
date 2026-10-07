@@ -140,16 +140,17 @@ const Sidebar = () => {
     <div className="flex flex-col h-full bg-[#0b141a] text-[#e9edef] select-none overflow-hidden relative font-sans">
       {/* 1. WhatsApp Mobile Dark Header */}
       <div className="bg-[#0b141a] px-4 py-3 flex items-center justify-between shrink-0 border-b border-[#202c33]/40 z-20">
-        {/* IRSHAD Royal Executive Cursive Signature #1 (No Avatar Photo) */}
+        {/* IRSHAD 3D Metallic Gold Signature (100% Transparent - Zero Black Box) */}
         <div
           onClick={() => setIsProfileModalOpen(true)}
           className="flex items-center gap-2 cursor-pointer group select-none py-0.5"
           title="Irshad • Tap to view profile"
         >
           <img
-            src="/irshad_signature.png"
-            alt="Irshad Signature"
-            className="h-9 sm:h-10 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.4)] transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.7)]"
+            src="/irshad_3d_signature_transparent.png"
+            alt="Irshad 3D Signature"
+            className="h-9 sm:h-10 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.45)] transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.75)]"
+            style={{ mixBlendMode: "screen" }}
           />
           {/* Verified Rosette Badge */}
           <span

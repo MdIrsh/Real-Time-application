@@ -29,6 +29,8 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { setIsReelsOpen } from "../redux/reelSlice";
+import { openCamera } from "../redux/cameraSlice";
+import { openPaymentModal } from "../redux/paymentSlice";
 import { setIsUploadOpen } from "../redux/statusSlice";
 import { setIsCreateGroupOpen, setSelectedGroup } from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
@@ -168,24 +170,18 @@ const Sidebar = () => {
         <div className="flex items-center gap-1 text-[#8696a0]" ref={menuRef}>
           {/* Rupee / Payments Button */}
           <button
-            onClick={() =>
-              toast("WhatsApp Payments & UPI 🇮🇳", {
-                icon: "💳",
-                id: "pay-toast",
-                duration: 1500,
-              })
-            }
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#202c33] hover:text-[#e9edef] transition active:scale-95"
-            title="Payments"
+            onClick={() => dispatch(openPaymentModal())}
+            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#202c33] hover:text-[#00a884] text-[#8696a0] transition active:scale-95"
+            title="WhatsApp Payments & UPI"
           >
             <FaRupeeSign size={17} />
           </button>
 
-          {/* Camera / Reels Button */}
+          {/* Camera Button */}
           <button
-            onClick={() => dispatch(setIsReelsOpen(true))}
+            onClick={() => dispatch(openCamera())}
             className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#202c33] hover:text-[#e9edef] transition active:scale-95"
-            title="Camera & Reels"
+            title="Camera"
           >
             <IoCameraOutline size={22} />
           </button>

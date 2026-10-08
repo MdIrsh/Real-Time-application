@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoSend } from "react-icons/io5";
 import { BsPlusLg, BsCamera, BsMicFill, BsEmojiSmile, BsTrash } from "react-icons/bs";
+import { FaRupeeSign } from "react-icons/fa";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, setLastMessage, markMessageDelivered } from "../redux/messageSlice";
 import { addGroupMessage } from "../redux/groupSlice";
+import { openCamera } from "../redux/cameraSlice";
+import { openPaymentModal } from "../redux/paymentSlice";
 import { generateAiReply } from "../utils/metaAi";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl } from "../utils/avatar";
@@ -607,14 +610,30 @@ const SendInput = () => {
               </button>
             </div>
 
-            {/* Camera button -> opens camera/image picker directly */}
+            {/* Camera button -> opens live camera directly */}
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => dispatch(openCamera("chat"))}
               className="w-9 h-9 rounded-full flex items-center justify-center text-[#54656f] hover:bg-gray-200 transition-colors"
-              title="Send Photo"
+              title="Camera"
             >
               <BsCamera className="w-5 h-5" />
+            </button>
+
+            {/* Rupee Payment Button -> opens UPI & Payment Modal */}
+            <button
+              type="button"
+              onClick={() =>
+                dispatch(
+                  openPaymentModal({
+                    targetUser: selectedUser,
+                  })
+                )
+              }
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#00a884] hover:bg-[#00a884]/20 hover:text-[#008f6f] transition-all active:scale-95"
+              title="WhatsApp Payment & UPI (₹)"
+            >
+              <FaRupeeSign className="w-4 h-4" />
             </button>
           </>
         )}

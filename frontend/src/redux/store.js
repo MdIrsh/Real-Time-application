@@ -6,6 +6,8 @@ import reelReducer from "./reelSlice.js";
 import statusReducer from "./statusSlice.js";
 import groupCallReducer from "./groupCallSlice.js";
 import groupReducer from "./groupSlice.js";
+import cameraReducer from "./cameraSlice.js";
+import paymentReducer from "./paymentSlice.js";
 
 const store = configureStore({
   reducer: {
@@ -16,6 +18,8 @@ const store = configureStore({
     status: statusReducer,
     groupCall: groupCallReducer,
     group: groupReducer,
+    camera: cameraReducer,
+    payment: paymentReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

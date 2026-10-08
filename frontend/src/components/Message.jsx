@@ -10,6 +10,8 @@ import {
 } from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import { openSpecificReel } from "../redux/reelSlice";
+import { openPaymentModal } from "../redux/paymentSlice";
+import { FaRupeeSign } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 // Helper to parse WhatsApp status reply and reaction messages
@@ -86,6 +88,28 @@ const parseStatusReply = (rawText) => {
     };
   }
 
+  return null;
+};
+
+// Helper to parse WhatsApp Pay payment messages
+const parsePaymentMessage = (rawText) => {
+  if (!rawText || typeof rawText !== "string") return null;
+  const paymentMatch = rawText.match(/\[PAYMENT:(\{.*?\})\]/s);
+  if (paymentMatch) {
+    try {
+      const meta = JSON.parse(paymentMatch[1]);
+      return {
+        amount: Number(meta.amount) || 0,
+        note: meta.note || "Payment",
+        recipientName: meta.recipientName || "Recipient",
+        recipientId: meta.recipientId || null,
+        upiId: meta.upiId || "",
+        status: meta.status || "completed",
+        txnId: meta.txnId || `UPI-${Date.now().toString().slice(-8)}`,
+        timestamp: meta.timestamp || new Date().toISOString(),
+      };
+    } catch (e) {}
+  }
   return null;
 };
 
@@ -204,6 +228,7 @@ const Message = ({ message }) => {
   const isTyping = message?.isTyping;
   const statusInfo = parseStatusReply(message?.message);
   const reelInfo = parseReelMessage(message?.message);
+  const paymentInfo = parsePaymentMessage(message?.message);
 
   const formattedTime = message?.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -355,6 +380,62 @@ const Message = ({ message }) => {
               {statusInfo.text}
             </div>
           )
+        ) : paymentInfo ? (
+          <div className="w-64 sm:w-72 rounded-2xl overflow-hidden bg-[#1f2c34] text-white border border-[#2a3942] shadow-2xl select-none animate-fade-in">
+            {/* Header: WhatsApp Pay brand banner */}
+            <div className="px-3.5 py-2.5 bg-gradient-to-r from-[#00a884]/30 via-[#103629]/40 to-transparent flex items-center justify-between border-b border-[#2a3942]">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#00a884] text-[#0b141a] flex items-center justify-center font-black text-xs shadow">
+                  <FaRupeeSign size={13} />
+                </div>
+                <span className="text-xs font-bold text-[#e9edef] tracking-wide">
+                  WhatsApp Pay
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-[#25d366] bg-[#25d366]/15 px-2 py-0.5 rounded-full border border-[#25d366]/30 flex items-center gap-1">
+                <span>✓</span> Paid
+              </span>
+            </div>
+
+            {/* Amount Section */}
+            <div className="p-4 text-center bg-[#111b21]/70">
+              <div className="flex items-center justify-center gap-1 text-2xl sm:text-3xl font-extrabold text-[#25d366] tracking-tight">
+                <span>₹</span>
+                <span>{paymentInfo.amount?.toLocaleString("en-IN")}</span>
+              </div>
+              {paymentInfo.note && (
+                <p className="text-xs text-[#d1d7db] mt-1.5 font-medium italic">
+                  "{paymentInfo.note}"
+                </p>
+              )}
+              <div className="mt-2 text-[10px] text-[#8696a0] flex items-center justify-center gap-1.5 font-mono">
+                <span>Txn: {paymentInfo.txnId}</span>
+                <span>•</span>
+                <span>BHIM UPI 🇮🇳</span>
+              </div>
+            </div>
+
+            {/* Footer Action */}
+            <div className="px-3 py-2 bg-[#202c33]/90 border-t border-[#2a3942] flex items-center justify-between text-xs">
+              <span className="text-[10px] text-[#8696a0] truncate max-w-[150px]">
+                {isSentByMe ? `Paid to ${paymentInfo.recipientName}` : "Payment received"}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(
+                    openPaymentModal({
+                      amount: String(paymentInfo.amount),
+                      note: `Payment for ${paymentInfo.note || "WhatsApp Pay"}`,
+                    })
+                  )
+                }
+                className="text-[11px] font-bold text-[#00a884] hover:text-[#25d366] hover:underline flex items-center gap-1 shrink-0 ml-2"
+              >
+                <span>Pay Again</span>
+              </button>
+            </div>
+          </div>
         ) : reelInfo ? (
           <div className="flex flex-col gap-2">
             {/* Interactive Shared Reel Card */}

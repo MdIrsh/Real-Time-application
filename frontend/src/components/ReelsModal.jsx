@@ -232,10 +232,22 @@ const ReelCard = ({
       {reel.audioUrl && (
         <audio
           ref={audioRef}
-          src={reel.audioUrl}
+          src={
+            reel.audioUrl.includes("jio.com") ||
+            reel.audioUrl.includes("jiotune") ||
+            reel.audioUrl.includes("saavn")
+              ? `${BASE_URL}/api/v1/status/stream-audio?url=${encodeURIComponent(
+                  reel.audioUrl
+                )}`
+              : reel.audioUrl
+          }
           loop
           preload="auto"
-          onError={() => {
+          onError={(e) => {
+            if (e.target.src !== reel.audioUrl) {
+              e.target.src = reel.audioUrl;
+              return;
+            }
             if (videoRef.current) {
               videoRef.current.muted = isMuted;
               videoRef.current.volume = isMuted ? 0 : 1;

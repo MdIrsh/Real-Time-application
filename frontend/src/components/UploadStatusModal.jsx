@@ -9,7 +9,7 @@ import {
   IoPlay,
   IoPause,
 } from "react-icons/io5";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addMyStatus } from "../redux/statusSlice";
 import { BASE_URL } from "../config/api";
 import MusicPickerModal from "./MusicPickerModal";
@@ -40,6 +40,7 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
   const previewAudioRef = useRef(null);
   const fileInputRef = useRef(null);
   const dispatch = useDispatch();
+  const { authUser } = useSelector((store) => store.user);
 
   useEffect(() => {
     if (isOpen) {
@@ -148,13 +149,56 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
       return;
     }
 
+    const token = localStorage.getItem("token");
+    const isDemo = authUser?._id === "demo-user-me" || !token;
+
+    // Helper to add status in Redux
+    const addStatusLocally = (customId = null) => {
+      const mockStatus = {
+        _id: customId || `status_${Date.now()}`,
+        user: authUser || { _id: "me", fullName: "You", username: "you" },
+        userName: authUser?.fullName || authUser?.username || "You",
+        userAvatar: authUser?.profilePhoto || "",
+        mediaUrl: statusType === "image" ? finalMedia : "",
+        mediaType: statusType === "image" ? (finalMedia?.startsWith("data:video") || finalMedia?.includes(".mp4") ? "video" : "image") : "text",
+        caption: textCaption.trim(),
+        bgColor: selectedColor,
+        song: selectedSong
+          ? {
+              title: selectedSong.title,
+              artist: selectedSong.artist,
+              audioUrl: selectedSong.audioUrl,
+              coverUrl: selectedSong.coverUrl,
+            }
+          : null,
+        createdAt: new Date().toISOString(),
+        viewers: [],
+      };
+      dispatch(addMyStatus(mockStatus));
+      toast.success(
+        selectedSong
+          ? `Status with "${selectedSong.title}" posted! 🎵✨`
+          : "Status posted! Disappears in 24 hours 🕒✨"
+      );
+      onClose();
+      setTextCaption("");
+      setMediaPreview("");
+      setMediaData("");
+      setSelectedSong(null);
+    };
+
+    if (isDemo) {
+      addStatusLocally();
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const res = await axios.post(
         `${BASE_URL}/api/v1/status/create`,
         {
           mediaUrl: statusType === "image" ? finalMedia : "",
-          mediaType: statusType === "image" ? "image" : "text",
+          mediaType: statusType === "image" ? (finalMedia?.startsWith("data:video") || finalMedia?.includes(".mp4") ? "video" : "image") : "text",
           caption: textCaption.trim(),
           bgColor: selectedColor,
           song: selectedSong
@@ -166,7 +210,12 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
               }
             : null,
         },
-        { withCredentials: true }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        }
       );
 
       if (res.data?.status) {
@@ -184,7 +233,16 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
       }
     } catch (err) {
       console.error("Create status error:", err);
-      toast.error(err.response?.data?.message || "Failed to post status");
+      if (err.response?.status === 401) {
+        // Fallback: save status locally so user's work is never lost
+        addStatusLocally();
+        toast("Session expired: Saved locally! Please re-login to sync with contacts.", {
+          icon: "⚠️",
+          duration: 4000,
+        });
+      } else {
+        toast.error(err.response?.data?.message || "Failed to post status");
+      }
     } finally {
       setIsSubmitting(false);
     }

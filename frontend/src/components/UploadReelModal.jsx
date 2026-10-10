@@ -4,7 +4,6 @@ import {
   IoCloudUploadOutline,
   IoMusicalNotes,
   IoPlay,
-  IoPause,
   IoCheckmarkCircle,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
@@ -232,8 +231,17 @@ const UploadReelModal = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fade-in select-none">
-        <div className="relative w-full max-w-md bg-[#1a1a1a] text-white rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[92vh]">
+      <div
+        onClick={() => {
+          if (audioPreviewRef.current) audioPreviewRef.current.pause();
+          onClose();
+        }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fade-in select-none"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-md bg-[#1a1a1a] text-white rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[92vh]"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#222]">
             <h3 className="font-semibold text-base flex items-center gap-2">

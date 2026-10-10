@@ -272,14 +272,21 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fade-in select-none">
-        <div className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col max-h-[92vh]">
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fade-in select-none"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col max-h-[92vh]"
+        >
           {/* Header */}
           <div className="px-4 py-3 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
             <h3 className="font-bold text-sm text-[#e9edef]">Add to My Status</h3>
             <button
+              type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#8696a0] hover:text-white hover:bg-[#111b21] transition"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#8696a0] hover:text-white hover:bg-[#111b21] transition cursor-pointer"
             >
               <IoClose size={20} />
             </button>

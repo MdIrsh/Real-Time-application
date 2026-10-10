@@ -4,7 +4,6 @@ import {
   IoSearchOutline,
   IoMusicalNotes,
   IoPlay,
-  IoPause,
   IoCheckmarkCircle,
   IoSparkles,
   IoGlobeOutline,
@@ -184,9 +183,27 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
     ? [...localFiltered, ...filteredOnline]
     : localFiltered;
 
+  if (!isOpen) return null;
+
+  const handleClose = (e) => {
+    if (e) e.stopPropagation();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setPlayingSongId(null);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col h-[600px] max-h-[92vh]">
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 animate-fade-in select-none"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col h-[600px] max-h-[92vh]"
+      >
         {/* Header */}
         <div className="px-4 py-3.5 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
           <div className="flex items-center gap-2.5">
@@ -206,11 +223,10 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
             </div>
           </div>
           <button
-            onClick={() => {
-              if (audioRef.current) audioRef.current.pause();
-              onClose();
-            }}
+            type="button"
+            onClick={handleClose}
             className="w-8 h-8 rounded-full flex items-center justify-center text-[#8696a0] hover:text-white hover:bg-[#111b21] transition cursor-pointer"
+            aria-label="Close music picker"
           >
             <IoClose size={20} />
           </button>
@@ -414,11 +430,9 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
             Tap album art to preview audio
           </span>
           <button
-            onClick={() => {
-              if (audioRef.current) audioRef.current.pause();
-              onClose();
-            }}
-            className="text-[#25d366] font-semibold hover:underline cursor-pointer"
+            type="button"
+            onClick={handleClose}
+            className="px-4 py-1.5 rounded-lg bg-[#25d366] text-[#0b141a] font-semibold hover:bg-[#20bd5a] transition cursor-pointer shadow-sm active:scale-95"
           >
             Done
           </button>

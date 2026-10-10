@@ -86,11 +86,14 @@ const ReelCard = ({
 
   // Auto-play when active, pause when inactive (with Audio synchronization)
   useEffect(() => {
+    const hasCustomAudio = Boolean(reel.audioUrl);
+
     if (isActive) {
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
-        videoRef.current.muted = isMuted;
-        videoRef.current.volume = isMuted ? 0 : 1;
+        // If background song is present, mute video so only song audio plays cleanly
+        videoRef.current.muted = hasCustomAudio ? true : isMuted;
+        videoRef.current.volume = hasCustomAudio || isMuted ? 0 : 1;
         videoRef.current
           .play()
           .then(() => setIsPlaying(true))
@@ -121,9 +124,10 @@ const ReelCard = ({
 
   // Handle Mute state change
   useEffect(() => {
+    const hasCustomAudio = Boolean(reel.audioUrl);
     if (videoRef.current) {
-      videoRef.current.muted = isMuted;
-      videoRef.current.volume = isMuted ? 0 : 1;
+      videoRef.current.muted = hasCustomAudio ? true : isMuted;
+      videoRef.current.volume = hasCustomAudio || isMuted ? 0 : 1;
     }
     if (audioRef.current) {
       audioRef.current.muted = isMuted;
@@ -132,7 +136,7 @@ const ReelCard = ({
         audioRef.current.play().catch(() => {});
       }
     }
-  }, [isMuted, isActive]);
+  }, [isMuted, isActive, reel.audioUrl]);
 
   // Toggle Like API
   const handleToggleLike = async () => {
@@ -231,6 +235,12 @@ const ReelCard = ({
           src={reel.audioUrl}
           loop
           preload="auto"
+          onError={() => {
+            if (videoRef.current) {
+              videoRef.current.muted = isMuted;
+              videoRef.current.volume = isMuted ? 0 : 1;
+            }
+          }}
         />
       )}
 

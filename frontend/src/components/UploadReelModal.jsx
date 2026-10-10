@@ -67,6 +67,14 @@ const UploadReelModal = ({ isOpen, onClose }) => {
     reader.readAsDataURL(file);
   };
 
+  const getAudioUrl = (url) => {
+    if (!url) return "";
+    if (url.includes("jio.com") || url.includes("jiotune") || url.includes("saavn")) {
+      return `${BASE_URL}/api/v1/status/stream-audio?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   const toggleAudioPreview = (e) => {
     e?.stopPropagation();
     if (!selectedAudioUrl) return;
@@ -80,10 +88,19 @@ const UploadReelModal = ({ isOpen, onClose }) => {
       if (audioPreviewRef.current) {
         audioPreviewRef.current.pause();
       }
-      const audio = new Audio(selectedAudioUrl);
+      const primaryUrl = getAudioUrl(selectedAudioUrl);
+      const audio = new Audio(primaryUrl);
       audio.volume = 0.8;
       audio.onended = () => setIsPlayingPreview(false);
       audio.onerror = () => {
+        if (primaryUrl !== selectedAudioUrl) {
+          const direct = new Audio(selectedAudioUrl);
+          direct.volume = 0.8;
+          direct.onended = () => setIsPlayingPreview(false);
+          direct.play().catch(() => setIsPlayingPreview(false));
+          audioPreviewRef.current = direct;
+          return;
+        }
         toast.error("Preview not available for this track");
         setIsPlayingPreview(false);
       };

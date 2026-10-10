@@ -307,3 +307,42 @@ export const searchSongs = async (req, res) => {
   }
 };
 
+// Reliable Audio Streaming Proxy:
+// Solves ISP blocks, ad-blocker domain filters, and browser CORS issues for JioTune MP3 previews
+export const streamAudio = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).send("No audio URL provided");
+    }
+
+    const audioRes = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+
+    if (!audioRes.ok) {
+      return res.status(audioRes.status).send("Failed to fetch audio stream");
+    }
+
+    res.setHeader(
+      "Content-Type",
+      audioRes.headers.get("content-type") || "audio/mpeg"
+    );
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    if (audioRes.headers.get("content-length")) {
+      res.setHeader("Content-Length", audioRes.headers.get("content-length"));
+    }
+
+    const arrayBuffer = await audioRes.arrayBuffer();
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    console.error("streamAudio error:", error);
+    return res.status(500).send("Error streaming audio");
+  }
+};
+
+

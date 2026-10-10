@@ -120,10 +120,30 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       audioPlayerRef.current = null;
     }
 
-    const audio = new Audio(currentSongUrl);
+    const getAudioSrc = (url) => {
+      if (!url) return "";
+      if (url.includes("jio.com") || url.includes("jiotune") || url.includes("saavn")) {
+        return `${BASE_URL}/api/v1/status/stream-audio?url=${encodeURIComponent(url)}`;
+      }
+      return url;
+    };
+
+    const primaryUrl = getAudioSrc(currentSongUrl);
+    const audio = new Audio(primaryUrl);
     audio.volume = 0.85;
     audio.muted = isMuted;
     audio.loop = true;
+    audio.onerror = () => {
+      // Fallback to direct URL if proxy fails
+      if (primaryUrl !== currentSongUrl) {
+        const directAudio = new Audio(currentSongUrl);
+        directAudio.volume = 0.85;
+        directAudio.muted = isMuted;
+        directAudio.loop = true;
+        directAudio.play().catch(() => {});
+        audioPlayerRef.current = directAudio;
+      }
+    };
     audio
       .play()
       .then(() => {

@@ -77,7 +77,13 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
     return () => clearTimeout(timer);
   }, [search, isOpen]);
 
-  if (!isOpen) return null;
+  const getAudioUrl = (url) => {
+    if (!url) return "";
+    if (url.includes("jio.com") || url.includes("jiotune") || url.includes("saavn")) {
+      return `${BASE_URL}/api/v1/status/stream-audio?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
 
   const handleTogglePlay = (e, song) => {
     e.stopPropagation();
@@ -85,34 +91,55 @@ const MusicPickerModal = ({ isOpen, onClose, onSelectSong, currentSong }) => {
     if (playingSongId === song.id) {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current = null;
       }
       setPlayingSongId(null);
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current = null;
       }
-      try {
-        const audio = new Audio(song.audioUrl);
-        audio.volume = 0.8;
-        audio.onerror = () => {
-          toast.error("Audio preview not available for this song", {
-            id: "audio-error-toast",
+
+      // Try proxy stream first (bypasses ISP blocks, ad-blockers & browser CORS)
+      const primaryUrl = getAudioUrl(song.audioUrl);
+      const audio = new Audio(primaryUrl);
+      audio.volume = 0.8;
+
+      let fallbackTried = false;
+      const tryFallback = () => {
+        if (!fallbackTried && primaryUrl !== song.audioUrl) {
+          fallbackTried = true;
+          const directAudio = new Audio(song.audioUrl);
+          directAudio.volume = 0.8;
+          directAudio.onended = () => setPlayingSongId(null);
+          directAudio.onerror = () => {
+            toast.error("Audio preview not available for this song", {
+              id: "audio-preview-toast",
+            });
+            setPlayingSongId(null);
+          };
+          directAudio.play().catch(() => {
+            setPlayingSongId(null);
           });
-          setPlayingSongId(null);
-        };
-        audio.onended = () => setPlayingSongId(null);
-        audio.play().catch(() => {
-          toast.error("Could not play audio preview", {
-            id: "audio-play-toast",
-          });
-          setPlayingSongId(null);
+          audioRef.current = directAudio;
+          return;
+        }
+        toast.error("Audio preview not available for this song", {
+          id: "audio-preview-toast",
         });
-        audioRef.current = audio;
-        setPlayingSongId(song.id);
-      } catch (err) {
-        console.error("Audio play error:", err);
         setPlayingSongId(null);
-      }
+      };
+
+      audio.onerror = tryFallback;
+      audio.onended = () => setPlayingSongId(null);
+      audio.play().catch((err) => {
+        if (err.name !== "AbortError") {
+          tryFallback();
+        }
+      });
+
+      audioRef.current = audio;
+      setPlayingSongId(song.id);
     }
   };
 

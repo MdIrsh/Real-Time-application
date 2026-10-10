@@ -54,19 +54,41 @@ const UploadStatusModal = ({ isOpen, onClose, initialType = "image" }) => {
     };
   }, [isOpen, initialType]);
 
+  const getAudioUrl = (url) => {
+    if (!url) return "";
+    if (url.includes("jio.com") || url.includes("jiotune") || url.includes("saavn")) {
+      return `${BASE_URL}/api/v1/status/stream-audio?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   const togglePreviewAudio = () => {
     if (!selectedSong) return;
     if (isPreviewPlaying) {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
+        previewAudioRef.current = null;
       }
       setIsPreviewPlaying(false);
     } else {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
+        previewAudioRef.current = null;
       }
-      const audio = new Audio(selectedSong.audioUrl);
+      const primaryUrl = getAudioUrl(selectedSong.audioUrl);
+      const audio = new Audio(primaryUrl);
       audio.volume = 0.8;
+      audio.onerror = () => {
+        if (primaryUrl !== selectedSong.audioUrl) {
+          const directAudio = new Audio(selectedSong.audioUrl);
+          directAudio.volume = 0.8;
+          directAudio.onended = () => setIsPreviewPlaying(false);
+          directAudio.play().catch(() => setIsPreviewPlaying(false));
+          previewAudioRef.current = directAudio;
+          return;
+        }
+        setIsPreviewPlaying(false);
+      };
       audio.play().catch(() => {});
       audio.onended = () => setIsPreviewPlaying(false);
       previewAudioRef.current = audio;

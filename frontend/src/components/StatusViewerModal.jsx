@@ -217,15 +217,19 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
           })
         );
       }
+      const token = localStorage.getItem("token");
       axios
         .put(
           `${BASE_URL}/api/v1/status/view/${activeStatus._id}`,
           {},
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }
         )
         .catch(() => {});
     }
-  }, [currentIndex, isViewerOpen, activeStatus, isMyStatus, authUser, dispatch]);
+  }, [currentIndex, isViewerOpen, activeStatus?._id, isMyStatus, authUser?._id, dispatch]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < effectiveStatuses.length - 1) {
@@ -417,8 +421,22 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       displayName
     )}`;
 
-  const hasSong = !!activeStatus.song?.title;
-  const viewersList = activeStatus.viewers || [];
+  // Deduplicate viewers so 1 person viewing multiple times is always strictly 1 view
+  const viewersList = useMemo(() => {
+    if (!activeStatus?.viewers) return [];
+    const seen = new Set();
+    const unique = [];
+    for (const v of activeStatus.viewers) {
+      const uId = String(v.user?._id || v.user || v._id || "");
+      if (uId && !seen.has(uId)) {
+        seen.add(uId);
+        unique.push(v);
+      } else if (!uId) {
+        unique.push(v);
+      }
+    }
+    return unique;
+  }, [activeStatus?.viewers]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none animate-fade-in">

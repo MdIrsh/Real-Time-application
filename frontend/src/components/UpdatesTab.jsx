@@ -109,6 +109,16 @@ const UpdatesTab = ({ onOpenUpload }) => {
   const hasMyStatus = myStatuses.length > 0;
   const latestMyStatus = hasMyStatus ? myStatuses[0] : null;
 
+  const getUniqueViewCount = (status) => {
+    if (!status?.viewers) return 0;
+    const seen = new Set();
+    for (const v of status.viewers) {
+      const uId = String(v.user?._id || v.user || v._id || "");
+      if (uId) seen.add(uId);
+    }
+    return seen.size || status.viewers.length;
+  };
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b141a] text-[#e9edef] select-none p-3.5 flex flex-col gap-5">
       {/* 1. Status Section Header */}
@@ -170,7 +180,7 @@ const UpdatesTab = ({ onOpenUpload }) => {
                       {formatStatusTime(latestMyStatus.createdAt)}
                     </span>
                     <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-1.5 py-0.2 rounded-full shrink-0">
-                      👁️ {latestMyStatus.viewers?.length || 0} views
+                      👁️ {getUniqueViewCount(latestMyStatus)} views
                     </span>
                     {latestMyStatus.song?.title && (
                       <span className="text-[10px] text-[#25d366] font-medium truncate max-w-[110px] shrink-0">

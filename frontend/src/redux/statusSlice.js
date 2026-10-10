@@ -47,16 +47,24 @@ const statusSlice = createSlice({
       const updateViewer = (item) => {
         if (!item) return;
         if (!item.viewers) item.viewers = [];
-        const viewerId = viewer?.user?._id || viewer?.user || viewer;
-        const exists = item.viewers.some(
-          (v) => String(v.user?._id || v.user) === String(viewerId)
+        const viewerId = viewer?.user?._id || viewer?.user || viewer?._id || viewer;
+        if (!viewerId) return;
+
+        const existingIdx = item.viewers.findIndex(
+          (v) => String(v.user?._id || v.user || v._id || "") === String(viewerId)
         );
-        if (!exists) {
+        if (existingIdx === -1) {
+          // 1 person = 1 unique view
           item.viewers.push(
             typeof viewer === "object"
               ? viewer
               : { user: viewer, viewedAt: new Date().toISOString() }
           );
+        } else {
+          // Update timestamp only; do not increase view count
+          if (item.viewers[existingIdx]) {
+            item.viewers[existingIdx].viewedAt = new Date().toISOString();
+          }
         }
       };
 

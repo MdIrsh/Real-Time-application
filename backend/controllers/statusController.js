@@ -36,12 +36,34 @@ export const getAllStatuses = async (req, res) => {
       .populate("viewers.user", "fullName username profilePhoto")
       .sort({ createdAt: -1 });
 
+    // Deduplicate viewers on each status so every viewer appears at most once (WhatsApp standard)
+    const deduplicateStatusViewers = (statusList) => {
+      return statusList.map((status) => {
+        const statusObj = status.toObject ? status.toObject() : { ...status };
+        if (statusObj.viewers && statusObj.viewers.length > 1) {
+          const seen = new Set();
+          const cleanViewers = [];
+          for (const v of statusObj.viewers) {
+            const uId = String(v.user?._id || v.user || "");
+            if (uId && !seen.has(uId)) {
+              seen.add(uId);
+              cleanViewers.push(v);
+            }
+          }
+          statusObj.viewers = cleanViewers;
+        }
+        return statusObj;
+      });
+    };
+
+    const cleanAllStatuses = deduplicateStatusViewers(allStatuses);
+
     // Separate My Statuses from Contact Statuses
-    const myStatuses = allStatuses.filter(
+    const myStatuses = cleanAllStatuses.filter(
       (s) => s.user && String(s.user._id || s.user) === String(currentUserId)
     );
 
-    const otherStatuses = allStatuses.filter(
+    const otherStatuses = cleanAllStatuses.filter(
       (s) => s.user && String(s.user._id || s.user) !== String(currentUserId)
     );
 
@@ -49,7 +71,7 @@ export const getAllStatuses = async (req, res) => {
       success: true,
       myStatuses,
       otherStatuses,
-      allStatuses,
+      allStatuses: cleanAllStatuses,
     });
   } catch (error) {
     console.error("getAllStatuses error:", error);
@@ -115,19 +137,22 @@ export const viewStatus = async (req, res) => {
       return res.status(404).json({ message: "Status not found" });
     }
 
-    const alreadyViewed = status.viewers?.some(
-      (v) => String(v.user?._id || v.user) === String(userId)
-    );
+    // Find existing view by this user
+    const existingIndex = status.viewers?.findIndex((v) => {
+      const uId = String(v.user?._id || v.user || "");
+      return uId && uId === String(userId);
+    });
 
     const viewerUser = await User.findById(userId).select(
       "fullName username profilePhoto"
     );
 
-    if (!alreadyViewed) {
+    if (existingIndex === -1) {
+      // First time this user views the status: add 1 unique view
       status.viewers.push({ user: userId, viewedAt: new Date() });
       await status.save();
 
-      // Emit real-time statusViewed event so the status author sees who viewed instantly!
+      // Emit real-time statusViewed event so the author sees the view instantly
       try {
         io.emit("statusViewed", {
           statusId,
@@ -139,6 +164,10 @@ export const viewStatus = async (req, res) => {
       } catch (e) {
         console.error("Socket emit statusViewed error:", e);
       }
+    } else {
+      // Repeat view by the same user: update viewedAt timestamp, do NOT increment view count!
+      status.viewers[existingIndex].viewedAt = new Date();
+      await status.save();
     }
 
     const updatedStatus = await Status.findById(statusId).populate(
@@ -146,10 +175,21 @@ export const viewStatus = async (req, res) => {
       "fullName username profilePhoto"
     );
 
+    // Filter to strictly unique viewers
+    const uniqueViewers = [];
+    const seenUserIds = new Set();
+    for (const v of updatedStatus?.viewers || []) {
+      const uId = String(v.user?._id || v.user || "");
+      if (uId && !seenUserIds.has(uId)) {
+        seenUserIds.add(uId);
+        uniqueViewers.push(v);
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      viewersCount: updatedStatus?.viewers?.length || 0,
-      viewers: updatedStatus?.viewers || [],
+      viewersCount: uniqueViewers.length,
+      viewers: uniqueViewers,
     });
   } catch (error) {
     console.error("viewStatus error:", error);

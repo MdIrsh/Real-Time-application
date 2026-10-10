@@ -7,11 +7,11 @@ import {
   IoPlay,
   IoCheckmarkCircle,
   IoMusicalNotes,
+  IoLogoInstagram,
+  IoOpenOutline,
 } from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import { openSpecificReel } from "../redux/reelSlice";
-import { openPaymentModal } from "../redux/paymentSlice";
-import { FaRupeeSign } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 // Helper to parse WhatsApp status reply and reaction messages
@@ -91,28 +91,6 @@ const parseStatusReply = (rawText) => {
   return null;
 };
 
-// Helper to parse WhatsApp Pay payment messages
-const parsePaymentMessage = (rawText) => {
-  if (!rawText || typeof rawText !== "string") return null;
-  const paymentMatch = rawText.match(/\[PAYMENT:(\{.*?\})\]/s);
-  if (paymentMatch) {
-    try {
-      const meta = JSON.parse(paymentMatch[1]);
-      return {
-        amount: Number(meta.amount) || 0,
-        note: meta.note || "Payment",
-        recipientName: meta.recipientName || "Recipient",
-        recipientId: meta.recipientId || null,
-        upiId: meta.upiId || "",
-        status: meta.status || "completed",
-        txnId: meta.txnId || `UPI-${Date.now().toString().slice(-8)}`,
-        timestamp: meta.timestamp || new Date().toISOString(),
-      };
-    } catch (e) {}
-  }
-  return null;
-};
-
 // Helper to parse shared Reel messages
 const parseReelMessage = (rawText) => {
   if (!rawText || typeof rawText !== "string") return null;
@@ -124,6 +102,7 @@ const parseReelMessage = (rawText) => {
       const meta = JSON.parse(structuredMatch[1]);
       return {
         _id: meta.reelId || meta._id || `reel-shared-${Date.now()}`,
+        shortcode: meta.shortcode || "",
         creatorName: meta.creatorName || "Instagram Creator",
         creatorAvatar: meta.creatorAvatar || "",
         videoUrl: meta.videoUrl,
@@ -137,15 +116,37 @@ const parseReelMessage = (rawText) => {
     } catch (e) {}
   }
 
-  // 2. Legacy format: "🎬 Watch this Reel by ... :\n"..."\n\nhttps://..."
+  // 2. Standalone Instagram Reel link (e.g. https://www.instagram.com/reel/C-U1J5qPZ8B/)
+  const igMatch = rawText.trim().match(
+    /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i
+  );
+  if (igMatch) {
+    return {
+      _id: `reel-ig-${igMatch[1]}`,
+      shortcode: igMatch[1],
+      creatorName: "Instagram Creator",
+      creatorAvatar: "",
+      videoUrl: `https://www.instagram.com/reel/${igMatch[1]}/`,
+      audioUrl: "",
+      musicTitle: "Instagram Trending Audio 🎵",
+      caption: "Instagram Reel",
+      likes: [1, 2, 3],
+      sharesCount: 1,
+      comments: [],
+    };
+  }
+
+  // 3. Legacy format: "🎬 Watch this Reel by ... :\n"..."\n\nhttps://..."
   if (rawText.includes("🎬 Watch this Reel")) {
     const creatorMatch = rawText.match(/Watch this Reel by\s+@?([^:\n]+)/);
     const captionMatch = rawText.match(/"([^"]+)"/);
     const urlMatch = rawText.match(/(https?:\/\/[^\s]+)/);
 
     if (urlMatch) {
+      const shortcodeMatch = urlMatch[1].match(/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i);
       return {
         _id: `reel-shared-${Date.now()}`,
+        shortcode: shortcodeMatch ? shortcodeMatch[1] : "",
         creatorName: creatorMatch ? creatorMatch[1].trim() : "Instagram Creator",
         creatorAvatar: "",
         videoUrl: urlMatch[1],
@@ -159,7 +160,7 @@ const parseReelMessage = (rawText) => {
     }
   }
 
-  // 3. Standalone video URL (.mp4 / .webm or Cloudinary video URL)
+  // 4. Standalone video URL (.mp4 / .webm or Cloudinary video URL)
   const standaloneUrlMatch = rawText.trim().match(
     /^(https?:\/\/[^\s]+(?:\.mp4|\.webm|cloudinary\.com\/[^\s]+\/video\/upload[^\s]*))$/i
   );
@@ -228,7 +229,6 @@ const Message = ({ message }) => {
   const isTyping = message?.isTyping;
   const statusInfo = parseStatusReply(message?.message);
   const reelInfo = parseReelMessage(message?.message);
-  const paymentInfo = parsePaymentMessage(message?.message);
 
   const formattedTime = message?.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -380,62 +380,6 @@ const Message = ({ message }) => {
               {statusInfo.text}
             </div>
           )
-        ) : paymentInfo ? (
-          <div className="w-64 sm:w-72 rounded-2xl overflow-hidden bg-[#1f2c34] text-white border border-[#2a3942] shadow-2xl select-none animate-fade-in">
-            {/* Header: WhatsApp Pay brand banner */}
-            <div className="px-3.5 py-2.5 bg-gradient-to-r from-[#00a884]/30 via-[#103629]/40 to-transparent flex items-center justify-between border-b border-[#2a3942]">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#00a884] text-[#0b141a] flex items-center justify-center font-black text-xs shadow">
-                  <FaRupeeSign size={13} />
-                </div>
-                <span className="text-xs font-bold text-[#e9edef] tracking-wide">
-                  WhatsApp Pay
-                </span>
-              </div>
-              <span className="text-[10px] font-bold text-[#25d366] bg-[#25d366]/15 px-2 py-0.5 rounded-full border border-[#25d366]/30 flex items-center gap-1">
-                <span>✓</span> Paid
-              </span>
-            </div>
-
-            {/* Amount Section */}
-            <div className="p-4 text-center bg-[#111b21]/70">
-              <div className="flex items-center justify-center gap-1 text-2xl sm:text-3xl font-extrabold text-[#25d366] tracking-tight">
-                <span>₹</span>
-                <span>{paymentInfo.amount?.toLocaleString("en-IN")}</span>
-              </div>
-              {paymentInfo.note && (
-                <p className="text-xs text-[#d1d7db] mt-1.5 font-medium italic">
-                  "{paymentInfo.note}"
-                </p>
-              )}
-              <div className="mt-2 text-[10px] text-[#8696a0] flex items-center justify-center gap-1.5 font-mono">
-                <span>Txn: {paymentInfo.txnId}</span>
-                <span>•</span>
-                <span>BHIM UPI 🇮🇳</span>
-              </div>
-            </div>
-
-            {/* Footer Action */}
-            <div className="px-3 py-2 bg-[#202c33]/90 border-t border-[#2a3942] flex items-center justify-between text-xs">
-              <span className="text-[10px] text-[#8696a0] truncate max-w-[150px]">
-                {isSentByMe ? `Paid to ${paymentInfo.recipientName}` : "Payment received"}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  dispatch(
-                    openPaymentModal({
-                      amount: String(paymentInfo.amount),
-                      note: `Payment for ${paymentInfo.note || "WhatsApp Pay"}`,
-                    })
-                  )
-                }
-                className="text-[11px] font-bold text-[#00a884] hover:text-[#25d366] hover:underline flex items-center gap-1 shrink-0 ml-2"
-              >
-                <span>Pay Again</span>
-              </button>
-            </div>
-          </div>
         ) : reelInfo ? (
           <div className="flex flex-col gap-2">
             {/* Interactive Shared Reel Card */}
@@ -454,43 +398,58 @@ const Message = ({ message }) => {
                 </span>
               </div>
 
-              {/* Clickable Video Preview Thumbnail */}
-              <div
-                onClick={handleOpenReel}
-                className="relative h-64 sm:h-72 w-full bg-black cursor-pointer group overflow-hidden"
-                title="Click to Watch Reel"
-              >
-                <video
-                  src={reelInfo.videoUrl}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  preload="metadata"
-                  muted
-                  playsInline
-                />
-
-                {/* Dark gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
-
-                {/* Glowing Play Button */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-14 h-14 rounded-full bg-pink-600/90 text-white flex items-center justify-center shadow-xl shadow-pink-600/50 border-2 border-white/90 group-hover:scale-110 group-hover:bg-pink-500 transition-all duration-200">
-                    <IoPlay size={26} className="ml-0.5 text-white" />
+              {/* Preview Body */}
+              {reelInfo.shortcode || reelInfo.videoUrl?.includes("instagram.com") ? (
+                /* Instagram Reel Preview Card */
+                <div
+                  onClick={handleOpenReel}
+                  className="p-4 bg-gradient-to-b from-[#18181b] to-[#121214] flex flex-col items-center justify-center text-center cursor-pointer group"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-pink-600/30 group-hover:scale-110 transition-transform mb-2">
+                    <IoLogoInstagram size={30} />
+                  </div>
+                  <h4 className="text-xs font-bold text-white tracking-wide">
+                    Instagram Reel
+                  </h4>
+                  {reelInfo.caption && (
+                    <p className="text-[11px] text-gray-300 mt-1.5 line-clamp-2 italic px-2">
+                      "{reelInfo.caption}"
+                    </p>
+                  )}
+                  <div className="mt-2 text-[10px] text-pink-300 flex items-center gap-1 font-mono">
+                    <IoMusicalNotes size={11} />
+                    <span className="truncate max-w-[180px]">
+                      {reelInfo.musicTitle || "Original Audio • Instagram"}
+                    </span>
                   </div>
                 </div>
-
-                {/* Caption & Music Bar inside preview */}
-                <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white pointer-events-none">
+              ) : (
+                /* Video File Preview */
+                <div
+                  onClick={handleOpenReel}
+                  className="relative h-60 w-full bg-black cursor-pointer group overflow-hidden"
+                  title="Click to Watch Reel"
+                >
+                  <video
+                    src={reelInfo.videoUrl}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    preload="metadata"
+                    muted
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-12 h-12 rounded-full bg-pink-600/90 text-white flex items-center justify-center shadow-xl border-2 border-white/90 group-hover:scale-110 transition">
+                      <IoPlay size={22} className="ml-0.5 text-white" />
+                    </div>
+                  </div>
                   {reelInfo.caption && (
-                    <p className="text-xs font-medium line-clamp-2 drop-shadow-md mb-1.5 text-gray-100">
+                    <p className="absolute bottom-2.5 left-2.5 right-2.5 text-xs text-white line-clamp-2 drop-shadow-md">
                       {reelInfo.caption}
                     </p>
                   )}
-                  <div className="flex items-center gap-1.5 text-[10.5px] text-pink-200 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full w-fit max-w-full border border-white/10">
-                    <IoMusicalNotes size={12} className="text-pink-400 shrink-0" />
-                    <span className="truncate">{reelInfo.musicTitle || "Original Audio 🎵"}</span>
-                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Action Buttons: "Watch Reel in App" + Direct Video Link */}
               <div className="p-2.5 bg-[#202024] flex flex-col gap-1.5 border-t border-white/5">
@@ -508,9 +467,10 @@ const Message = ({ message }) => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-[11px] text-blue-400 hover:text-blue-300 hover:underline flex items-center justify-center gap-1 text-center py-0.5 transition cursor-pointer"
+                  className="text-[11px] text-pink-400 hover:text-pink-300 hover:underline flex items-center justify-center gap-1 text-center py-0.5 transition cursor-pointer"
                 >
-                  <span>🔗 Click to open direct link</span>
+                  <span>Open on Instagram</span>
+                  <IoOpenOutline size={12} />
                 </a>
               </div>
             </div>

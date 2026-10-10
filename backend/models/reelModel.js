@@ -35,6 +35,14 @@ const reelSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    shortcode: {
+      type: String,
+      default: "",
+    },
+    category: {
+      type: String,
+      default: "trending",
+    },
     likes: [
       {
         type: mongoose.Schema.Types.ObjectId,

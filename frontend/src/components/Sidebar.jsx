@@ -11,8 +11,8 @@ import {
   IoShieldCheckmark,
   IoNotificationsOutline,
   IoLogOutOutline,
+  IoLogoInstagram,
 } from "react-icons/io5";
-import { FaRupeeSign } from "react-icons/fa";
 import OtherUsers from "./OtherUsers";
 import FriendRequestsModal from "./FriendRequestsModal";
 import AddFriendModal from "./AddFriendModal";
@@ -30,7 +30,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { setAuthUser, setSelectedUser } from "../redux/userSlice";
 import { setIsReelsOpen } from "../redux/reelSlice";
 import { openCamera } from "../redux/cameraSlice";
-import { openPaymentModal } from "../redux/paymentSlice";
 import { setIsUploadOpen } from "../redux/statusSlice";
 import { setIsCreateGroupOpen, setSelectedGroup } from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
@@ -166,16 +165,8 @@ const Sidebar = () => {
           </span>
         </div>
 
-        {/* Top Right Action Icons: ₹, 📷, ⋮ */}
+        {/* Top Right Action Icons: 📷, ⋮ */}
         <div className="flex items-center gap-1 text-[#8696a0]" ref={menuRef}>
-          {/* Rupee / Payments Button */}
-          <button
-            onClick={() => dispatch(openPaymentModal())}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#202c33] hover:text-[#00a884] text-[#8696a0] transition active:scale-95"
-            title="WhatsApp Payments & UPI"
-          >
-            <FaRupeeSign size={17} />
-          </button>
 
           {/* Camera Button */}
           <button
@@ -570,12 +561,13 @@ const Sidebar = () => {
           </span>
         </button>
 
-        {/* Dedicated Reels Tab (Click to watch ONLY Reels!) */}
+        {/* Dedicated Reels Tab (Click to watch ONLY Real Instagram Reels!) */}
         <button
           onClick={() => {
             dispatch(setIsReelsOpen(true));
           }}
           className="flex flex-col items-center gap-1 group cursor-pointer transition active:scale-95 relative"
+          title="Watch Real Instagram Reels"
         >
           <div
             className={`px-4 py-1 rounded-full flex items-center justify-center transition-all relative ${
@@ -584,15 +576,7 @@ const Sidebar = () => {
                 : "text-[#8696a0] hover:text-[#e9edef]"
             }`}
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="currentColor"
-              className="transition-transform group-hover:scale-110"
-            >
-              <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4zM9 16.5l5.5-3.5L9 9.5v7z" />
-            </svg>
+            <IoLogoInstagram size={20} className="transition-transform group-hover:scale-110" />
           </div>
           <span
             className={`text-xs ${

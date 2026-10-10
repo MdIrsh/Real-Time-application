@@ -31,6 +31,7 @@ const ShareReelModal = ({ reel, isOpen, onClose }) => {
           "Creator",
         creatorAvatar:
           reel.creatorAvatar || reel.author?.profilePhoto || "",
+        shortcode: reel.shortcode || "",
         caption: reel.caption || "",
         likes: reel.likes || [],
         sharesCount: (reel.sharesCount || 0) + 1,

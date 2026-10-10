@@ -6,7 +6,6 @@ import IncomingCallModal from "./IncomingCallModal";
 import MicPermissionPrompt from "./MicPermissionPrompt";
 import ReelsModal from "./ReelsModal";
 import CameraModal from "./CameraModal";
-import PaymentModal from "./PaymentModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -56,9 +55,6 @@ const HomePage = () => {
 
         {/* Live Camera Viewfinder & Photo Capture Modal */}
         <CameraModal />
-
-        {/* WhatsApp Payments & UPI Modal */}
-        <PaymentModal />
       </div>
     </div>
   );

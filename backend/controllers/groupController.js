@@ -140,7 +140,7 @@ export const sendGroupMessage = async (req, res) => {
   try {
     const senderId = req.id;
     const { groupId } = req.params;
-    const { message, image, audio, audioDuration } = req.body;
+    const { message, image, audio, audioDuration, replyTo } = req.body;
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -168,6 +168,7 @@ export const sendGroupMessage = async (req, res) => {
       audioDuration: audioDuration || 0,
       delivered: true,
       seen: false,
+      replyTo: replyTo || null,
     });
 
     // Populate sender details on message

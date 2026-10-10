@@ -40,6 +40,25 @@ const messageModel = new mongoose.Schema({
   seen: {
     type: Boolean,
     default: false
+  },
+  replyTo: {
+    messageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null,
+    },
+    senderName: {
+      type: String,
+      default: "",
+    },
+    message: {
+      type: String,
+      default: "",
+    },
+    image: {
+      type: String,
+      default: null,
+    },
   }
 }, { timestamps: true });
 

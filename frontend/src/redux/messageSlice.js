@@ -6,8 +6,15 @@ const messageSlice = createSlice({
     messages: null,
     unreadCounts: {}, // { [userId]: number }
     lastMessages: {}, // { [userId]: { text: string, time: string, isMe?: boolean, seen?: boolean, delivered?: boolean } }
+    replyingMessage: null, // { messageId, senderName, message, image }
   },
   reducers: {
+    setReplyingMessage: (state, action) => {
+      state.replyingMessage = action.payload;
+    },
+    clearReplyingMessage: (state) => {
+      state.replyingMessage = null;
+    },
     setMessages: (state, action) => {
       state.messages = action.payload;
     },
@@ -76,6 +83,8 @@ const messageSlice = createSlice({
 export const {
   setMessages,
   addMessage,
+  setReplyingMessage,
+  clearReplyingMessage,
   incrementUnreadCount,
   clearUnreadCount,
   setLastMessage,

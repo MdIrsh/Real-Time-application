@@ -229,6 +229,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
         )
         .catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, isViewerOpen, activeStatus?._id, isMyStatus, authUser?._id, dispatch]);
 
   const handleNext = useCallback(() => {
@@ -421,8 +422,10 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       displayName
     )}`;
 
+  const hasSong = !!activeStatus.song?.title;
+
   // Deduplicate viewers so 1 person viewing multiple times is always strictly 1 view
-  const viewersList = useMemo(() => {
+  const viewersList = (() => {
     if (!activeStatus?.viewers) return [];
     const seen = new Set();
     const unique = [];
@@ -436,7 +439,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       }
     }
     return unique;
-  }, [activeStatus?.viewers]);
+  })();
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none animate-fade-in">

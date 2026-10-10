@@ -7,7 +7,7 @@ export const sendMessage = async (req, res) => {
   try {
     const senderId = req.id;
     const receiverId = req.params.id;
-    const { message, image, audio, audioDuration } = req.body;
+    const { message, image, audio, audioDuration, replyTo } = req.body;
 
     const sender = await User.findById(senderId).select("fullName username profilePhoto friends").lean();
     if (!sender) {
@@ -50,6 +50,7 @@ export const sendMessage = async (req, res) => {
         audioDuration: Number(audioDuration) || 0,
         delivered: isReceiverOnline, // delivered if receiver is online
         seen: false, // only marked true once receiver views the chat
+        replyTo: replyTo || null,
       }),
     ]);
 

@@ -9,9 +9,11 @@ import {
   IoMusicalNotes,
   IoLogoInstagram,
   IoOpenOutline,
+  IoArrowUndoOutline,
 } from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import { openSpecificReel } from "../redux/reelSlice";
+import { setReplyingMessage } from "../redux/messageSlice";
 import toast from "react-hot-toast";
 
 // Helper to parse WhatsApp status reply and reaction messages
@@ -248,20 +250,71 @@ const Message = ({ message }) => {
     });
   };
 
+  const handleReplyClick = (e) => {
+    if (e) e.stopPropagation();
+    const senderName = isSentByMe
+      ? "You"
+      : message?.senderId?.fullName || message?.senderId?.username || "Friend";
+    dispatch(
+      setReplyingMessage({
+        messageId: message?._id,
+        senderName,
+        message:
+          message?.message && message.message !== "🎤 Voice message"
+            ? message.message
+            : message?.image
+            ? "📷 Photo"
+            : message?.audio
+            ? "🎤 Voice message"
+            : "",
+        image: message?.image || null,
+      })
+    );
+  };
+
+  const scrollToQuotedMessage = (e) => {
+    if (e) e.stopPropagation();
+    if (!message?.replyTo?.messageId) return;
+    const targetEl = document.getElementById(`msg-${message.replyTo.messageId}`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetEl.classList.add("ring-2", "ring-[#25d366]", "transition-all");
+      setTimeout(() => {
+        targetEl.classList.remove("ring-2", "ring-[#25d366]");
+      }, 1400);
+    }
+  };
+
   return (
     <div
       ref={scroll}
-      className={`flex w-full my-1.5 px-2 ${
+      className={`group flex w-full my-1.5 px-2 ${
         isSentByMe ? "justify-end" : "justify-start"
       }`}
     >
       <div
+        id={`msg-${message?._id}`}
+        onDoubleClick={handleReplyClick}
         className={`relative max-w-[85%] sm:max-w-[72%] px-3.5 pt-2 pb-1.5 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] rounded-2xl ${
           isSentByMe
             ? "bg-[#d9fdd3] text-[#111b21] rounded-tr-xs"
             : "bg-white text-[#111b21] rounded-tl-xs"
         }`}
       >
+        {/* Quick Reply Button on Hover */}
+        {!isTyping && (
+          <button
+            type="button"
+            onClick={handleReplyClick}
+            className={`absolute top-1.5 ${
+              isSentByMe ? "-left-8" : "-right-8"
+            } opacity-0 group-hover:opacity-100 p-1.5 rounded-full bg-white dark:bg-[#202c33] shadow-md border border-gray-200 dark:border-gray-700 text-[#54656f] hover:text-[#00a884] dark:hover:text-[#25d366] hover:scale-110 active:scale-95 transition-all cursor-pointer z-10`}
+            title="Reply to message (or double click)"
+          >
+            <IoArrowUndoOutline size={14} />
+          </button>
+        )}
+
         {/* Group Chat Sender Name Tag */}
         {!isSentByMe && !isMetaAi && message?.senderId?.fullName && (
           <div className="text-[12px] font-bold text-[#00a884] dark:text-[#25d366] pb-0.5 select-none leading-none">
@@ -280,6 +333,40 @@ const Message = ({ message }) => {
             </span>
           </div>
         )}
+
+        {/* WhatsApp Quoted Reply Preview on TOP */}
+        {message?.replyTo &&
+          (message.replyTo.message ||
+            message.replyTo.image ||
+            message.replyTo.senderName) && (
+            <div
+              onClick={scrollToQuotedMessage}
+              className={`mb-2 p-2 rounded-xl border-l-[3.5px] text-xs transition-all cursor-pointer shadow-xs ${
+                isSentByMe
+                  ? "bg-[#025144]/15 border-[#00a884] hover:bg-[#025144]/25 text-[#111b21]"
+                  : "bg-black/5 dark:bg-white/5 border-[#00a884] dark:border-[#25d366] hover:bg-black/10 text-[#111b21]"
+              }`}
+              title="Click to view original message"
+            >
+              <div className="font-bold text-[11px] text-[#00a884] dark:text-[#25d366] flex items-center gap-1">
+                <IoArrowUndoOutline size={12} />
+                <span>{message.replyTo.senderName || "Message"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-0.5">
+                <p className="text-[12px] text-[#54656f] dark:text-[#8696a0] line-clamp-2 truncate flex-1 font-normal">
+                  {message.replyTo.message ||
+                    (message.replyTo.image ? "📷 Photo" : "🎤 Voice message")}
+                </p>
+                {message.replyTo.image && (
+                  <img
+                    src={message.replyTo.image}
+                    alt="Quoted media"
+                    className="w-8 h-8 rounded-md object-cover shrink-0 border border-black/10"
+                  />
+                )}
+              </div>
+            </div>
+          )}
 
         {/* WhatsApp Quoted Status Preview Card */}
         {statusInfo && (

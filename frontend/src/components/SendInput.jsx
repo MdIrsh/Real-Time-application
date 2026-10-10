@@ -3,7 +3,7 @@ import { IoSend } from "react-icons/io5";
 import { BsPlusLg, BsCamera, BsMicFill, BsEmojiSmile, BsTrash } from "react-icons/bs";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, setLastMessage, markMessageDelivered } from "../redux/messageSlice";
+import { setMessages, setLastMessage, markMessageDelivered, clearReplyingMessage } from "../redux/messageSlice";
 import { addGroupMessage } from "../redux/groupSlice";
 import { openCamera } from "../redux/cameraSlice";
 import { generateAiReply } from "../utils/metaAi";
@@ -35,7 +35,14 @@ const SendInput = () => {
   const { selectedUser, authUser } = useSelector((store) => store.user);
   const { selectedGroup } = useSelector((store) => store.group);
   const { socket } = useSelector((store) => store.socket);
-  const { messages } = useSelector((store) => store.message);
+  const { messages, replyingMessage } = useSelector((store) => store.message);
+
+  // Auto-focus input when replying to a message
+  useEffect(() => {
+    if (replyingMessage && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [replyingMessage]);
 
   // Clean up typing status and audio recorder when changing user or unmounting
   useEffect(() => {
@@ -95,6 +102,12 @@ const SendInput = () => {
     setMessage("");
     setShowEmojiPicker(false);
 
+    // Capture quoted reply snapshot if user is replying to a message
+    const replySnapshot = replyingMessage ? { ...replyingMessage } : null;
+    if (replyingMessage) {
+      dispatch(clearReplyingMessage());
+    }
+
     // Stop typing indicator on message send
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -114,6 +127,7 @@ const SendInput = () => {
     // Special handling for Group Chat
     if (selectedGroup?._id) {
       try {
+        const token = localStorage.getItem("token");
         const res = await axios.post(
           `${BASE_URL}/api/v1/group/send/${selectedGroup._id}`,
           {
@@ -121,8 +135,12 @@ const SendInput = () => {
             image: imageUrl || null,
             audio: audioUrl || null,
             audioDuration: audioDuration || 0,
+            replyTo: replySnapshot,
           },
-          { withCredentials: true }
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            withCredentials: true,
+          }
         );
         if (res.data?.success && res.data.message) {
           dispatch(addGroupMessage(res.data.message));
@@ -195,6 +213,7 @@ const SendInput = () => {
       audioDuration: audioDuration || 0,
       delivered: false, // Single gray tick initially
       seen: false, // Becomes blue tick once seen
+      replyTo: replySnapshot,
       createdAt: new Date().toISOString(),
     };
 
@@ -267,6 +286,7 @@ const SendInput = () => {
 
     // Real backend message if not demo contact
     try {
+      const token = localStorage.getItem("token");
       const res = await axios.post(
         `${BASE_URL}/api/v1/message/send/${selectedUser._id}`,
         {
@@ -274,10 +294,12 @@ const SendInput = () => {
           image: imageUrl || null,
           audio: audioUrl || null,
           audioDuration: audioDuration || 0,
+          replyTo: replySnapshot,
         },
         {
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           withCredentials: true,
         }
@@ -509,6 +531,36 @@ const SendInput = () => {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* WhatsApp Quoted Reply Preview Bar */}
+      {replyingMessage && (
+        <div className="mx-2 mb-1 p-2 bg-[#202c33] text-white rounded-xl flex items-center justify-between border-l-4 border-[#00a884] shadow-md animate-slide-up select-none">
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="text-[12px] font-bold text-[#25d366] flex items-center gap-1.5">
+              <span>Replying to {replyingMessage.senderName || "Message"}</span>
+            </div>
+            <p className="text-xs text-gray-300 truncate mt-0.5">
+              {replyingMessage.message ||
+                (replyingMessage.image ? "📷 Photo" : "🎤 Voice message")}
+            </p>
+          </div>
+          {replyingMessage.image && (
+            <img
+              src={replyingMessage.image}
+              alt="Quoted attachment"
+              className="w-9 h-9 object-cover rounded-lg mr-2 border border-white/10"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => dispatch(clearReplyingMessage())}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            title="Cancel reply"
+          >
+            ✕
+          </button>
         </div>
       )}
 

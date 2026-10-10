@@ -10,7 +10,7 @@ import isAuthenticated from "../middleware/isAuthenticated.js";
 
 const router = express.Router();
 
-router.route("/all").get(isAuthenticated, getAllReels);
+router.route("/all").get(getAllReels);
 router.route("/create").post(isAuthenticated, createReel);
 router.route("/like/:reelId").put(isAuthenticated, toggleLikeReel);
 router.route("/comment/:reelId").post(isAuthenticated, addComment);

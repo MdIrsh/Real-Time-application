@@ -177,6 +177,15 @@ const Sidebar = () => {
             <IoCameraOutline size={22} />
           </button>
 
+          {/* Instagram Reels Button */}
+          <button
+            onClick={() => dispatch(setIsReelsOpen(true))}
+            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#202c33] text-pink-400 hover:text-pink-300 transition active:scale-95"
+            title="Watch Instagram Reels"
+          >
+            <IoLogoInstagram size={21} className="transition-transform hover:scale-110" />
+          </button>
+
           {/* Three Dots Menu Button */}
           <div className="relative">
             <button

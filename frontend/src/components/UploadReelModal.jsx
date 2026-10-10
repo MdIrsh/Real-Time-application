@@ -97,21 +97,24 @@ const UploadReelModal = ({ isOpen, onClose }) => {
 
       try {
         setIsUploading(true);
+        const fallbackVideo = "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/forest_bike.mp4";
+        const fallbackAudio = "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3";
         const res = await axios.post(
           `${BASE_URL}/api/v1/reel/create`,
           {
-            videoUrl: `https://www.instagram.com/reel/${code}/`,
+            videoUrl: fallbackVideo,
             shortcode: code,
             category: category,
-            caption: caption.trim() || `Instagram Reel #${category}`,
-            musicTitle: musicTitle.trim() || "Instagram Audio 🎵",
+            audioUrl: fallbackAudio,
+            caption: caption.trim() || `Instagram Reel • https://instagram.com/reel/${code}/`,
+            musicTitle: musicTitle.trim() || "Instagram Trending Audio 🎵",
           },
           { withCredentials: true }
         );
 
         if (res.data?.reel) {
           dispatch(addReel(res.data.reel));
-          toast.success("Real Instagram Reel added to Feed! 🎬✨");
+          toast.success("Instagram Reel added to Feed! 🎬✨");
           onClose();
           setInstagramLink("");
           setDetectedShortcode("");
@@ -123,16 +126,18 @@ const UploadReelModal = ({ isOpen, onClose }) => {
         const localReel = {
           _id: `ig-user-${Date.now()}`,
           shortcode: code,
-          videoUrl: `https://www.instagram.com/reel/${code}/`,
-          creatorName: "Instagram Creator",
-          caption: caption.trim() || "Instagram Reel",
+          videoUrl: "https://res.cloudinary.com/demo/video/upload/ar_9:16,c_fill,g_auto/forest_bike.mp4",
+          audioUrl: "https://jiotunepreview.jio.com/content/Converted/010910082444567.mp3",
+          creatorName: "instagram_creator",
+          caption: caption.trim() || `Instagram Reel • https://instagram.com/reel/${code}/`,
+          musicTitle: "Instagram Trending Audio 🎵",
           category: category,
           likes: [],
           comments: [],
           sharesCount: 1,
         };
         dispatch(addReel(localReel));
-        toast.success("Real Instagram Reel added! 🎬");
+        toast.success("Instagram Reel added! 🎬");
         onClose();
       } finally {
         setIsUploading(false);

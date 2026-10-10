@@ -188,3 +188,122 @@ export const deleteStatus = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete status" });
   }
 };
+
+function cleanHtml(str) {
+  if (!str) return "";
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+// Live song search from music library & online catalog with genuine audio previews
+export const searchSongs = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || !query.trim()) {
+      return res.status(200).json({ success: true, songs: [] });
+    }
+
+    const q = query.trim();
+    const songs = [];
+    const seenUrls = new Set();
+    const seenTitles = new Set();
+
+    // 1. JioSaavn Autocomplete
+    try {
+      const autoUrl = `https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(q)}`;
+      const autoRes = await fetch(autoUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      });
+      if (autoRes.ok) {
+        const autoData = await autoRes.json();
+        if (autoData.songs && autoData.songs.data) {
+          for (const item of autoData.songs.data) {
+            const vlink = item.more_info?.vlink;
+            const title = cleanHtml(item.title);
+            const normTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+            if (vlink && !seenUrls.has(vlink) && !seenTitles.has(normTitle)) {
+              seenUrls.add(vlink);
+              seenTitles.add(normTitle);
+              const coverUrl = item.image
+                ? item.image.replace(/50x50\.jpg|150x150\.jpg/, "500x500.jpg")
+                : "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg";
+              const artist = cleanHtml(item.more_info?.primary_artists || item.description || "");
+              const movie = cleanHtml(item.album || "");
+
+              songs.push({
+                id: `online_${item.id}`,
+                title: `${title} • ${artist} ${movie ? `(${movie})` : ""}`.trim(),
+                artist: artist || "Bollywood Hits",
+                movie: movie || "Bollywood",
+                category: cleanHtml(item.more_info?.language || "Online Hit"),
+                audioUrl: vlink,
+                coverUrl,
+                isOnline: true,
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Autocomplete search error:", e.message);
+    }
+
+    // 2. JioSaavn Search Results (for additional songs)
+    if (songs.length < 15) {
+      try {
+        const searchUrl = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&includeMetaTags=1&p=1&n=25&q=${encodeURIComponent(q)}`;
+        const searchRes = await fetch(searchUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        });
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          if (searchData.results) {
+            for (const item of searchData.results) {
+              const vlink = item.vlink;
+              const title = cleanHtml(item.song);
+              const normTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+              if (vlink && !seenUrls.has(vlink) && !seenTitles.has(normTitle)) {
+                seenUrls.add(vlink);
+                seenTitles.add(normTitle);
+                const coverUrl = item.image
+                  ? item.image.replace(/50x50\.jpg|150x150\.jpg/, "500x500.jpg")
+                  : "https://c.saavncdn.com/179/World-Music-Day-Best-Of-Bollywood-Hits-Hindi-2026-20260622111029-500x500.jpg";
+                const artist = cleanHtml(item.primary_artists || item.singers || "");
+                const movie = cleanHtml(item.album || "");
+
+                songs.push({
+                  id: `online_${item.id}`,
+                  title: `${title} • ${artist} ${movie ? `(${movie})` : ""}`.trim(),
+                  artist: artist || "Bollywood Hits",
+                  movie: movie || "Bollywood",
+                  category: cleanHtml(item.language || "Online Hit"),
+                  audioUrl: vlink,
+                  coverUrl,
+                  isOnline: true,
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Search.getResults error:", e.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      songs,
+    });
+  } catch (error) {
+    console.error("searchSongs error:", error);
+    return res.status(500).json({ message: "Failed to search songs" });
+  }
+};
+

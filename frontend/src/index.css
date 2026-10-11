@@ -160,3 +160,27 @@ form input[type="password"]:focus {
     inset 0 1px 1px rgba(255, 255, 255, 0.8),
     inset 0 -2px 2px rgba(0, 0, 0, 0.4);
 }
+
+.text-3d-official {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #62ffd0 0%, #00e5a3 30%, #00a884 65%, #006650 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #004d3d)
+          drop-shadow(0 2px 0 #003328)
+          drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7))
+          drop-shadow(0 0 10px rgba(0, 213, 155, 0.6));
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.text-3d-official:hover {
+  transform: translateY(-1px) scale(1.02);
+  filter: drop-shadow(0 1px 0 #004d3d)
+          drop-shadow(0 2px 0 #003328)
+          drop-shadow(0 4px 4px rgba(0, 0, 0, 0.8))
+          drop-shadow(0 0 16px rgba(0, 213, 155, 0.85));
+}

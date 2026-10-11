@@ -447,15 +447,9 @@ const MessageContainer = () => {
               style={{ mixBlendMode: "screen" }}
             />
           </div>
-          {/* 3D IRSHAD • Official Messenger Main Brand Title */}
+          {/* 3D Official Messenger Main Brand Title */}
           <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 flex-wrap">
-            <span className="text-3d-gold text-2xl sm:text-3xl md:text-4xl font-black tracking-wider">
-              IRSHAD
-            </span>
-            <span className="text-3d-bullet text-xl sm:text-2xl font-black">
-              •
-            </span>
-            <span className="text-3d-silver text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-wide">
+            <span className="text-3d-official text-2xl sm:text-3xl md:text-4xl font-black tracking-wider">
               Official Messenger
             </span>
             <span

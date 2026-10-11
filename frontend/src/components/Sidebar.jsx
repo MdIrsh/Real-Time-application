@@ -155,20 +155,15 @@ const Sidebar = () => {
             className="h-8 sm:h-9 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.85)]"
             style={{ mixBlendMode: "screen" }}
           />
-          <div className="flex flex-col justify-center leading-none">
-            <div className="flex items-center gap-1.5">
-              <span className="text-3d-gold text-sm sm:text-[15px] font-black tracking-wider">
-                IRSHAD
-              </span>
-              <span
-                className="badge-3d-verified inline-flex items-center justify-center w-[15px] h-[15px] rounded-full text-white text-[8px] font-black shrink-0"
-                title="Verified Official"
-              >
-                ✓
-              </span>
-            </div>
-            <span className="text-3d-sub text-[8.5px] sm:text-[9.5px] font-bold tracking-widest uppercase mt-0.5 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 leading-none">
+            <span className="text-3d-official text-[11px] sm:text-xs font-black tracking-wider whitespace-nowrap">
               Official Messenger
+            </span>
+            <span
+              className="badge-3d-verified inline-flex items-center justify-center w-[14px] h-[14px] rounded-full text-white text-[8px] font-black shrink-0"
+              title="Verified Official"
+            >
+              ✓
             </span>
           </div>
         </div>

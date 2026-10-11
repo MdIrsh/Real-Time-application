@@ -64,12 +64,8 @@ const navigate=useNavigate();
             alt="Irshad 3D Signature"
             className="h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] mb-2"
           />
-          <div className="flex items-center justify-center gap-1.5 mb-1 flex-wrap">
-            <span className="text-3d-gold text-lg sm:text-xl font-black tracking-wider">
-              IRSHAD
-            </span>
-            <span className="text-3d-bullet text-base font-black">•</span>
-            <span className="text-base sm:text-lg font-extrabold text-[#111b21] tracking-wide">
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <span className="text-3d-official text-base sm:text-lg font-black tracking-wide">
               Official Messenger
             </span>
             <span className="badge-3d-verified inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[8px] font-black shrink-0">

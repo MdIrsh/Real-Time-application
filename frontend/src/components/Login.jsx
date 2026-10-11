@@ -59,11 +59,24 @@ const navigate=useNavigate();
     <div data-theme="light" className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
       <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 font-bold text-2xl">
-            💬
+          <img
+            src="/irshad_3d_signature_transparent.png"
+            alt="Irshad 3D Signature"
+            className="h-14 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] mb-2"
+          />
+          <div className="flex items-center justify-center gap-1.5 mb-1 flex-wrap">
+            <span className="text-3d-gold text-lg sm:text-xl font-black tracking-wider">
+              IRSHAD
+            </span>
+            <span className="text-3d-bullet text-base font-black">•</span>
+            <span className="text-base sm:text-lg font-extrabold text-[#111b21] tracking-wide">
+              Official Messenger
+            </span>
+            <span className="badge-3d-verified inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[8px] font-black shrink-0">
+              ✓
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-[#111b21]">Login to Chat</h1>
-          <p className="text-xs text-gray-500 mt-1">Connect and message your friends</p>
+          <p className="text-xs text-gray-500">Sign in to your private real-time messenger</p>
         </div>
         <form onSubmit={onSubmitHandler} className="space-y-4">
           <div>

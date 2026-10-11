@@ -96,11 +96,24 @@ const Signup = () => {
     <div data-theme="light" className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
       <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
         <div className="flex flex-col items-center mb-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-1 font-bold text-2xl">
-            💬
+          <img
+            src="/irshad_3d_signature_transparent.png"
+            alt="Irshad 3D Signature"
+            className="h-12 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] mb-1"
+          />
+          <div className="flex items-center justify-center gap-1.5 mb-0.5 flex-wrap">
+            <span className="text-3d-gold text-base sm:text-lg font-black tracking-wider">
+              IRSHAD
+            </span>
+            <span className="text-3d-bullet text-sm font-black">•</span>
+            <span className="text-base sm:text-lg font-extrabold text-[#111b21] tracking-wide">
+              Official Messenger
+            </span>
+            <span className="badge-3d-verified inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[8px] font-black shrink-0">
+              ✓
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-[#111b21]">Create an Account</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Join to start messaging your friends</p>
+          <p className="text-xs text-gray-500">Create an account to join the messenger</p>
 
           {/* Profile Photo Picker */}
           <div className="mt-3.5 flex flex-col items-center">

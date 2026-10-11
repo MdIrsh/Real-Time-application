@@ -84,3 +84,79 @@ form input[type="password"]:focus {
   color: #111b21 !important;
   border-color: #00a884 !important;
 }
+
+/* ========================================================
+   PREMIUM 3D BRAND TYPOGRAPHY: IRSHAD • OFFICIAL MESSENGER
+   ======================================================== */
+.text-3d-gold {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #fff7b2 0%, #ffd700 28%, #ff9f00 65%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #995c00)
+          drop-shadow(0 2px 0 #734500)
+          drop-shadow(0 3px 0 #4d2e00)
+          drop-shadow(0 5px 6px rgba(0, 0, 0, 0.7))
+          drop-shadow(0 0 14px rgba(255, 215, 0, 0.55));
+  text-transform: uppercase;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.text-3d-gold:hover {
+  transform: translateY(-1px) scale(1.02);
+  filter: drop-shadow(0 1px 0 #995c00)
+          drop-shadow(0 2px 0 #734500)
+          drop-shadow(0 4px 0 #4d2e00)
+          drop-shadow(0 6px 10px rgba(0, 0, 0, 0.8))
+          drop-shadow(0 0 20px rgba(255, 215, 0, 0.85));
+}
+
+.text-3d-silver {
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #ffffff 0%, #e9edef 40%, #aebac1 75%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #54656f)
+          drop-shadow(0 2px 0 #3b4a54)
+          drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6))
+          drop-shadow(0 0 12px rgba(0, 168, 132, 0.4));
+  transition: transform 0.25s ease;
+}
+
+.text-3d-silver:hover {
+  transform: translateY(-1px);
+}
+
+.text-3d-bullet {
+  display: inline-block;
+  background: linear-gradient(180deg, #00ffc4 0%, #00a884 50%, #00735a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #005240)
+          drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6))
+          drop-shadow(0 0 8px rgba(0, 168, 132, 0.8));
+}
+
+.text-3d-sub {
+  color: #00a884;
+  letter-spacing: 0.12em;
+  text-shadow:
+    0 1px 0 #005240,
+    0 2px 2px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(0, 168, 132, 0.5);
+}
+
+.badge-3d-verified {
+  background: radial-gradient(circle at 35% 30%, #53bdeb 0%, #1d9bf0 55%, #0c7abf 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 0 10px rgba(29, 155, 240, 0.7),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.4);
+}

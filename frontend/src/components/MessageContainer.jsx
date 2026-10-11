@@ -447,12 +447,24 @@ const MessageContainer = () => {
               style={{ mixBlendMode: "screen" }}
             />
           </div>
-          <h2 className="text-2xl font-bold text-[#e9edef] mb-2 tracking-wide flex items-center justify-center gap-2">
-            <span>Official Messenger</span>
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#1d9bf0] text-white text-[10px] font-black shadow-[0_0_8px_rgba(29,155,240,0.6)]">
+          {/* 3D IRSHAD • Official Messenger Main Brand Title */}
+          <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 flex-wrap">
+            <span className="text-3d-gold text-2xl sm:text-3xl md:text-4xl font-black tracking-wider">
+              IRSHAD
+            </span>
+            <span className="text-3d-bullet text-xl sm:text-2xl font-black">
+              •
+            </span>
+            <span className="text-3d-silver text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-wide">
+              Official Messenger
+            </span>
+            <span
+              className="badge-3d-verified inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-black shrink-0 transform hover:rotate-12 transition-transform cursor-pointer"
+              title="Verified Official Messenger"
+            >
               ✓
             </span>
-          </h2>
+          </div>
           <p className="text-sm text-[#8696a0] max-w-md leading-relaxed mb-8">
             Send and receive messages privately. Create Groups, start Audio/Video Group Calls, watch Reels & Status, and chat with <strong>Meta AI</strong> anytime.
           </p>

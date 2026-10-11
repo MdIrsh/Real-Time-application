@@ -143,25 +143,34 @@ const Sidebar = () => {
     <div className="flex flex-col h-full bg-[#0b141a] text-[#e9edef] select-none overflow-hidden relative font-sans">
       {/* 1. WhatsApp Mobile Dark Header */}
       <div className="bg-[#0b141a] px-4 py-3 flex items-center justify-between shrink-0 border-b border-[#202c33]/40 z-20">
-        {/* IRSHAD 3D Metallic Gold Signature (100% Transparent - Zero Black Box) */}
+        {/* IRSHAD • Official Messenger 3D Brand & Signature */}
         <div
           onClick={() => setIsProfileModalOpen(true)}
           className="flex items-center gap-2 cursor-pointer group select-none py-0.5"
-          title="Irshad • Tap to view profile"
+          title="IRSHAD • Official Messenger (Tap to view profile)"
         >
           <img
             src="/irshad_3d_signature_transparent.png"
             alt="Irshad 3D Signature"
-            className="h-9 sm:h-10 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.45)] transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.75)]"
+            className="h-8 sm:h-9 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_18px_rgba(234,179,8,0.85)]"
             style={{ mixBlendMode: "screen" }}
           />
-          {/* Verified Rosette Badge */}
-          <span
-            className="inline-flex items-center justify-center w-[16px] h-[16px] rounded-full bg-[#1d9bf0] text-white text-[9px] font-black shadow-[0_0_8px_rgba(29,155,240,0.6)] shrink-0 self-center"
-            title="Verified Official"
-          >
-            ✓
-          </span>
+          <div className="flex flex-col justify-center leading-none">
+            <div className="flex items-center gap-1.5">
+              <span className="text-3d-gold text-sm sm:text-[15px] font-black tracking-wider">
+                IRSHAD
+              </span>
+              <span
+                className="badge-3d-verified inline-flex items-center justify-center w-[15px] h-[15px] rounded-full text-white text-[8px] font-black shrink-0"
+                title="Verified Official"
+              >
+                ✓
+              </span>
+            </div>
+            <span className="text-3d-sub text-[8.5px] sm:text-[9.5px] font-bold tracking-widest uppercase mt-0.5 whitespace-nowrap">
+              Official Messenger
+            </span>
+          </div>
         </div>
 
         {/* Top Right Action Icons: 📷, ⋮ */}

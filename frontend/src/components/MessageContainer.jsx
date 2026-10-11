@@ -447,9 +447,9 @@ const MessageContainer = () => {
               style={{ mixBlendMode: "screen" }}
             />
           </div>
-          {/* 3D Official Messenger Main Brand Title */}
+          {/* 3D Cursive Official Messenger Main Brand Title */}
           <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 flex-wrap">
-            <span className="text-3d-official text-2xl sm:text-3xl md:text-4xl font-black tracking-wider">
+            <span className="text-3d-official text-3xl sm:text-4xl md:text-5xl font-bold tracking-wide">
               Official Messenger
             </span>
             <span

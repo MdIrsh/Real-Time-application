@@ -102,7 +102,7 @@ const Signup = () => {
             className="h-12 w-auto object-contain filter drop-shadow-[0_0_12px_rgba(234,179,8,0.5)] mb-1"
           />
           <div className="flex items-center justify-center gap-1.5 mb-0.5">
-            <span className="text-3d-official text-base sm:text-lg font-black tracking-wide">
+            <span className="text-3d-official text-xl sm:text-2xl font-bold tracking-wide">
               Official Messenger
             </span>
             <span className="badge-3d-verified inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[8px] font-black shrink-0">

@@ -156,7 +156,7 @@ const Sidebar = () => {
             style={{ mixBlendMode: "screen" }}
           />
           <div className="flex items-center gap-1.5 leading-none">
-            <span className="text-3d-official text-[11px] sm:text-xs font-black tracking-wider whitespace-nowrap">
+            <span className="text-3d-official text-[14px] sm:text-[16px] font-bold tracking-wide whitespace-nowrap">
               Official Messenger
             </span>
             <span

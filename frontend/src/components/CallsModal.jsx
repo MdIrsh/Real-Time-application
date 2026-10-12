@@ -154,7 +154,7 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
                         {isOnline ? (
                           <span className="text-[#25d366] font-medium">online</span>
                         ) : (
-                          `@${friend.username}`
+                          <span className="text-[#8696a0]">offline</span>
                         )}
                       </p>
                     </div>

@@ -104,43 +104,43 @@ const OtherUser = ({ user }) => {
           </span>
         </div>
 
-        <div className="flex items-center justify-between mt-0.5">
-          <p
-            className={`text-[13px] truncate pr-2 flex items-center gap-1 ${
-              unreadCount > 0
-                ? "text-[#e9edef] font-medium"
-                : "text-[#8696a0]"
-            }`}
-          >
-            {isUserTyping ? (
-              <span className="text-[#25d366] font-semibold italic text-xs animate-pulse">
-                typing...
-              </span>
-            ) : lastMsg ? (
-              <>
-                {lastMsg.isMe && (
-                  lastMsg.seen ? (
-                    <IoCheckmarkDoneSharp className="text-[#53bdeb] text-sm shrink-0 inline" title="Read" />
-                  ) : lastMsg.delivered ? (
-                    <IoCheckmarkDoneSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Delivered" />
-                  ) : (
-                    <IoCheckmarkSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Sent" />
-                  )
-                )}
-                <span className="truncate">{formatPreviewText(lastMsg.text)}</span>
-              </>
-            ) : (
-              <span>@{user?.username}</span>
-            )}
-          </p>
+        {(isUserTyping || lastMsg || unreadCount > 0) && (
+          <div className="flex items-center justify-between mt-0.5">
+            <p
+              className={`text-[13px] truncate pr-2 flex items-center gap-1 ${
+                unreadCount > 0
+                  ? "text-[#e9edef] font-medium"
+                  : "text-[#8696a0]"
+              }`}
+            >
+              {isUserTyping ? (
+                <span className="text-[#25d366] font-semibold italic text-xs animate-pulse">
+                  typing...
+                </span>
+              ) : lastMsg ? (
+                <>
+                  {lastMsg.isMe && (
+                    lastMsg.seen ? (
+                      <IoCheckmarkDoneSharp className="text-[#53bdeb] text-sm shrink-0 inline" title="Read" />
+                    ) : lastMsg.delivered ? (
+                      <IoCheckmarkDoneSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Delivered" />
+                    ) : (
+                      <IoCheckmarkSharp className="text-[#8696a0] text-sm shrink-0 inline" title="Sent" />
+                    )
+                  )}
+                  <span className="truncate">{formatPreviewText(lastMsg.text)}</span>
+                </>
+              ) : null}
+            </p>
 
-          {/* Unread Message Count Badge */}
-          {unreadCount > 0 && (
-            <span className="shrink-0 bg-[#25d366] text-[#0b141a] text-[11px] font-extrabold px-1.5 min-w-[20px] h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </div>
+            {/* Unread Message Count Badge */}
+            {unreadCount > 0 && (
+              <span className="shrink-0 bg-[#25d366] text-[#0b141a] text-[11px] font-extrabold px-1.5 min-w-[20px] h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

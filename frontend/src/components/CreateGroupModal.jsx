@@ -293,9 +293,6 @@ const CreateGroupModal = () => {
                         <p className="text-xs font-semibold text-gray-100 truncate">
                           {friend.fullName}
                         </p>
-                        <p className="text-[10px] text-[#8696a0] truncate">
-                          @{friend.username}
-                        </p>
                       </div>
                     </div>
 

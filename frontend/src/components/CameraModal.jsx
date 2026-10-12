@@ -779,9 +779,6 @@ const CameraModal = () => {
                           <p className="text-xs font-semibold text-white">
                             {user.fullName}
                           </p>
-                          <p className="text-[10px] text-[#8696a0]">
-                            @{user.username || "user"}
-                          </p>
                         </div>
                       </div>
                       <span className="text-xs text-[#00a884] font-bold px-2 py-1 rounded-lg group-hover:bg-[#00a884] group-hover:text-[#0b141a] transition">

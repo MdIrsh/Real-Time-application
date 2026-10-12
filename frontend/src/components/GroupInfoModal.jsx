@@ -372,9 +372,6 @@ const GroupInfoModal = ({ isOpen, onClose }) => {
                             </span>
                           )}
                         </p>
-                        <p className="text-[10px] text-[#8696a0] truncate">
-                          @{participant.username || "user"}
-                        </p>
                       </div>
                     </div>
 

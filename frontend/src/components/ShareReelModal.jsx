@@ -147,9 +147,6 @@ const ShareReelModal = ({ reel, isOpen, onClose }) => {
                       <p className="text-xs font-semibold text-gray-200 truncate">
                         {friend.fullName}
                       </p>
-                      <p className="text-[10px] text-gray-400 truncate">
-                        @{friend.username}
-                      </p>
                     </div>
                   </div>
 

@@ -11,10 +11,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { useCall } from "../context/CallContext";
 import { openGroupCall } from "../redux/groupCallSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
+import { getActiveUserStatus } from "../utils/statusHelper";
 
 const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
   const [search, setSearch] = useState("");
-  const { otherUsers, onlineUsers } = useSelector((store) => store.user);
+  const { otherUsers, onlineUsers, userStatuses } = useSelector((store) => store.user);
   const { startCall } = useCall();
   const dispatch = useDispatch();
 
@@ -128,7 +129,9 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
             </div>
           ) : (
             filteredFriends.map((friend) => {
-              const isOnline = onlineUsers?.includes(friend._id);
+              const activeStatus = getActiveUserStatus(friend, onlineUsers, userStatuses);
+              const isOnline = activeStatus === "Online";
+              const isAway = activeStatus === "Away";
               return (
                 <div
                   key={friend._id}
@@ -142,8 +145,12 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
                         className="w-11 h-11 rounded-full object-cover border border-[#202c33]"
                         onError={(e) => handleImageError(e, friend.fullName)}
                       />
-                      {isOnline && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] border-2 border-[#111b21] rounded-full" />
+                      {isOnline ? (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] border-2 border-[#111b21] rounded-full" title="Online" />
+                      ) : isAway ? (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-[#111b21] rounded-full" title="Away" />
+                      ) : (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 border-2 border-[#111b21] rounded-full" title="Offline" />
                       )}
                     </div>
                     <div className="min-w-0">
@@ -153,6 +160,8 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
                       <p className="text-xs text-[#8696a0] truncate">
                         {isOnline ? (
                           <span className="text-[#25d366] font-medium">online</span>
+                        ) : isAway ? (
+                          <span className="text-amber-400 font-medium">away</span>
                         ) : (
                           <span className="text-[#8696a0]">offline</span>
                         )}

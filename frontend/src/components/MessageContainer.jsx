@@ -4,12 +4,13 @@ import Messages from "./Messages";
 import GroupInfoModal from "./GroupInfoModal";
 import { useCall } from "../context/CallContext";
 import { useDispatch, useSelector } from "react-redux";
-import { setSelectedUser } from "../redux/userSlice";
+import { setSelectedUser, setUserStatus } from "../redux/userSlice";
 import { setMessages } from "../redux/messageSlice";
 import { setSelectedGroup, setGroupMessages } from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { MetaAiRing } from "../utils/metaAi";
 import { openGroupCall } from "../redux/groupCallSlice";
+import { getActiveUserStatus, STATUS_OPTIONS } from "../utils/statusHelper";
 import {
   IoChevronBack,
   IoCallOutline,
@@ -29,7 +30,7 @@ import axios from "axios";
 import { BASE_URL } from "../config/api";
 
 const MessageContainer = () => {
-  const { authUser, selectedUser, otherUsers, onlineUsers, typingUsers } =
+  const { authUser, selectedUser, otherUsers, onlineUsers, typingUsers, userStatuses } =
     useSelector((store) => store.user);
   const { selectedGroup } = useSelector((store) => store.group);
   const { socket } = useSelector((store) => store.socket);
@@ -38,6 +39,26 @@ const MessageContainer = () => {
 
   const [showMenu, setShowMenu] = useState(false);
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+
+  // Status change handler from chat screen menu
+  const handleMyStatusChange = async (newStatus) => {
+    if (!authUser?._id) return;
+    dispatch(setUserStatus({ userId: authUser._id, userStatus: newStatus }));
+    if (socket && socket.connected) {
+      socket.emit("changeUserStatus", { userStatus: newStatus });
+    }
+    try {
+      axios.defaults.withCredentials = true;
+      await axios.put(
+        `${BASE_URL}/api/v1/user/profile/status`,
+        { userStatus: newStatus },
+        { withCredentials: true }
+      );
+      toast.success(`Status updated to ${newStatus} ✨`);
+    } catch (e) {
+      console.error("Status update error:", e);
+    }
+  };
 
   const isMetaAi = selectedUser?._id === "meta-ai";
   // Accepted friend verification: must be Meta AI or in accepted friends list (otherUsers)
@@ -147,7 +168,9 @@ const MessageContainer = () => {
     }
   };
 
-  const isOnline = isMetaAi || onlineUsers?.includes(selectedUser?._id);
+  const activeStatus = getActiveUserStatus(selectedUser, onlineUsers, userStatuses);
+  const isOnline = activeStatus === "Online";
+  const isAway = activeStatus === "Away";
   const isTyping = Boolean(selectedUser?._id && typingUsers?.[selectedUser._id]);
 
   const hasActiveChat = Boolean(selectedUser || selectedGroup);
@@ -206,8 +229,13 @@ const MessageContainer = () => {
                         className="w-10 h-10 rounded-full object-cover border border-gray-200"
                         onError={(e) => handleImageError(e, selectedUser?.fullName)}
                       />
-                      {isOnline && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+                      {/* Exactly ONE active status badge dot */}
+                      {isOnline ? (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] border-2 border-white rounded-full" title="Online" />
+                      ) : isAway ? (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-white rounded-full" title="Away" />
+                      ) : (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 border-2 border-white rounded-full" title="Offline" />
                       )}
                     </>
                   )}
@@ -263,9 +291,20 @@ const MessageContainer = () => {
                         Connection pending
                       </span>
                     ) : isOnline ? (
-                      <span className="text-emerald-600 font-medium">online</span>
+                      <span className="text-emerald-600 font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#25d366] inline-block" />
+                        online
+                      </span>
+                    ) : isAway ? (
+                      <span className="text-amber-500 font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                        away
+                      </span>
                     ) : (
-                      "last seen recently"
+                      <span className="text-[#8696a0] flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                        offline
+                      </span>
                     )}
                   </span>
                 </div>
@@ -366,7 +405,42 @@ const MessageContainer = () => {
 
                 {/* Dropdown Menu */}
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-40 text-sm">
+                  <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-40 text-sm">
+                    {/* User's own status switcher from chat screen */}
+                    <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/90 select-none">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          My Status
+                        </span>
+                        <span className="text-[10px] font-bold text-[#00a884]">
+                          {userStatuses?.[authUser?._id] || authUser?.userStatus || "Online"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {STATUS_OPTIONS.map((opt) => {
+                          const isActive =
+                            (userStatuses?.[authUser?._id] || authUser?.userStatus || "Online") === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                handleMyStatusChange(opt.id);
+                                setShowMenu(false);
+                              }}
+                              className={`py-1 px-1 rounded-md text-[10px] font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
+                                isActive
+                                  ? "bg-[#00a884] text-white shadow-xs font-bold"
+                                  : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${opt.dotClass}`} />
+                              <span>{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                     {selectedGroup && (
                       <button
                         onClick={() => {

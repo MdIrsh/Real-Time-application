@@ -16,6 +16,7 @@ import {
 } from "react-icons/io5";
 import { closeGroupCall } from "../redux/groupCallSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
+import { getActiveUserStatus } from "../utils/statusHelper";
 import toast from "react-hot-toast";
 
 const ICE_SERVERS = {
@@ -106,7 +107,7 @@ const GroupCallModal = () => {
     (store) => store.groupCall
   );
   const { socket } = useSelector((store) => store.socket);
-  const { authUser, otherUsers, onlineUsers } = useSelector(
+  const { authUser, otherUsers, onlineUsers, userStatuses } = useSelector(
     (store) => store.user
   );
 
@@ -698,7 +699,9 @@ const GroupCallModal = () => {
               </p>
             ) : (
               otherUsers.map((friend) => {
-                const isOnline = onlineUsers?.includes(friend._id);
+                const activeStatus = getActiveUserStatus(friend, onlineUsers, userStatuses);
+                const isOnline = activeStatus === "Online";
+                const isAway = activeStatus === "Away";
                 return (
                   <div
                     key={friend._id}
@@ -712,8 +715,12 @@ const GroupCallModal = () => {
                           className="w-8 h-8 rounded-full object-cover"
                           onError={(e) => handleImageError(e, friend.fullName)}
                         />
-                        {isOnline && (
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#25d366] border-2 border-[#111b21] rounded-full" />
+                        {isOnline ? (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#25d366] border-2 border-[#111b21] rounded-full" title="Online" />
+                        ) : isAway ? (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-400 border-2 border-[#111b21] rounded-full" title="Away" />
+                        ) : (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-500 border-2 border-[#111b21] rounded-full" title="Offline" />
                         )}
                       </div>
                       <div className="min-w-0">
@@ -721,7 +728,7 @@ const GroupCallModal = () => {
                           {friend.fullName}
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          {isOnline ? "Online" : "Offline"}
+                          {isOnline ? "Online" : isAway ? "Away" : "Offline"}
                         </p>
                       </div>
                     </div>

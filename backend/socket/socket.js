@@ -16,6 +16,7 @@ const io=new Server(server,{
   },
 });
 const userSocketMap = {}; // { userId: socketId }
+const userStatusMap = {}; // { userId: "Online" | "Away" | "Offline" }
 const groupCallRooms = {}; // { roomId: { [socketId]: { user, socketId, isMuted, isVideoOff } } }
 
 export const getReceiverSocketId = (receiverId) => {
@@ -29,8 +30,36 @@ io.on('connection', (socket) => {
   const userId = socket.handshake.query.userId;
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
+    if (!userStatusMap[userId] || userStatusMap[userId] === "Offline") {
+      userStatusMap[userId] = "Online";
+    }
   }
   io.emit('getOnlineUsers', Object.keys(userSocketMap));
+  io.emit('getUserStatuses', userStatusMap);
+
+  // Real-time custom user presence status (Online, Away, Offline)
+  socket.on("changeUserStatus", async ({ userStatus }) => {
+    try {
+      const validStatuses = ["Online", "Away", "Offline"];
+      if (!userStatus || !validStatuses.includes(userStatus)) return;
+      const currentUserId = socket.handshake.query.userId;
+      if (currentUserId && currentUserId !== "undefined") {
+        userStatusMap[currentUserId] = userStatus;
+        try {
+          await User.findByIdAndUpdate(currentUserId, { userStatus });
+        } catch (dbErr) {
+          console.error("DB update status error:", dbErr);
+        }
+        io.emit("userStatusChanged", {
+          userId: currentUserId,
+          userStatus,
+        });
+        io.emit("getUserStatuses", userStatusMap);
+      }
+    } catch (err) {
+      console.error("changeUserStatus socket error:", err);
+    }
+  });
 
   // WebRTC Calling Signaling Events (Locked to Accepted Friends only!)
   socket.on("callUser", async ({ userToCall, signalData, from, callType }) => {
@@ -233,8 +262,14 @@ io.on('connection', (socket) => {
     console.log('user disconnected', socket.id);
     if (userId && userSocketMap[userId] === socket.id) {
       delete userSocketMap[userId];
+      userStatusMap[userId] = "Offline";
+      io.emit("userStatusChanged", {
+        userId,
+        userStatus: "Offline",
+      });
     }
     io.emit('getOnlineUsers', Object.keys(userSocketMap));
+    io.emit('getUserStatuses', userStatusMap);
 
     // Clean up any group call rooms this socket was in
     for (const roomId in groupCallRooms) {

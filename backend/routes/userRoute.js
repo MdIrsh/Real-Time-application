@@ -12,6 +12,7 @@ import {
   getFriendRequests,
   updateProfilePhoto,
   resetProfilePhoto,
+  updateUserStatus,
 } from "../controllers/userController.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 
@@ -25,6 +26,10 @@ router.route("/").get(isAuthenticated, getOtherUsers);
 // Profile photo management routes
 router.route("/profile/update-photo").put(isAuthenticated, updateProfilePhoto);
 router.route("/profile/reset-photo").put(isAuthenticated, resetProfilePhoto);
+
+// User presence status routes (Online, Away, Offline)
+router.route("/profile/status").put(isAuthenticated, updateUserStatus);
+router.route("/status").put(isAuthenticated, updateUserStatus);
 
 // Friend Request System Routes
 router.route("/search").get(isAuthenticated, searchUsers);

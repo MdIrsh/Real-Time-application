@@ -26,7 +26,9 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setAuthUser, setSelectedUser } from "../redux/userSlice";
+import { setAuthUser, setSelectedUser, setUserStatus } from "../redux/userSlice";
+import UserStatusDropdown from "./UserStatusDropdown";
+import { STATUS_OPTIONS } from "../utils/statusHelper";
 import { setIsReelsOpen } from "../redux/reelSlice";
 import { openCamera } from "../redux/cameraSlice";
 import { setIsUploadOpen } from "../redux/statusSlice";
@@ -57,9 +59,10 @@ const Sidebar = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCallsModalOpen, setIsCallsModalOpen] = useState(false);
 
-  const { authUser, selectedUser, friendRequests } = useSelector(
+  const { authUser, selectedUser, friendRequests, userStatuses } = useSelector(
     (store) => store.user
   );
+  const { socket } = useSelector((store) => store.socket);
   const { allStatuses, isUploadOpen } = useSelector((store) => store.status);
   const { isReelsOpen } = useSelector((store) => store.reel);
   const unreadCounts = useSelector((store) => store.message?.unreadCounts || {});
@@ -90,6 +93,25 @@ const Sidebar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleStatusChange = async (newStatus) => {
+    if (!authUser?._id) return;
+    dispatch(setUserStatus({ userId: authUser._id, userStatus: newStatus }));
+    if (socket && socket.connected) {
+      socket.emit("changeUserStatus", { userStatus: newStatus });
+    }
+    try {
+      axios.defaults.withCredentials = true;
+      await axios.put(
+        `${BASE_URL}/api/v1/user/profile/status`,
+        { userStatus: newStatus },
+        { withCredentials: true }
+      );
+      toast.success(`Status updated to ${newStatus} ✨`);
+    } catch (e) {
+      console.error("Status update error:", e);
+    }
+  };
 
   const logoutHandler = async () => {
     try {
@@ -168,8 +190,10 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* Top Right Action Icons: 📷, ⋮ */}
-        <div className="flex items-center gap-1 text-[#8696a0]" ref={menuRef}>
+        {/* Top Right Action Icons: Status Selector, 📷, ⋮ */}
+        <div className="flex items-center gap-1.5 text-[#8696a0]" ref={menuRef}>
+          {/* Active Presence Status Dropdown (Online, Away, Offline) */}
+          <UserStatusDropdown />
 
           {/* Camera Button */}
           <button
@@ -214,6 +238,42 @@ const Sidebar = () => {
                     <span className="text-[10px] text-[#25d366]">Change DP</span>
                   </div>
                 </button>
+
+                {/* Active Presence Status Section in 3-Dots Menu */}
+                <div className="px-3.5 py-2 border-y border-[#2a3942]/70 bg-[#111b21]/60">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#8696a0]">
+                      My Status
+                    </span>
+                    <span className="text-[10px] font-bold text-[#25d366]">
+                      {userStatuses?.[authUser?._id] || authUser?.userStatus || "Online"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {STATUS_OPTIONS.map((opt) => {
+                      const isActive =
+                        (userStatuses?.[authUser?._id] || authUser?.userStatus || "Online") === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            handleStatusChange(opt.id);
+                            setShowMenuDropdown(false);
+                          }}
+                          className={`py-1 px-1 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
+                            isActive
+                              ? "bg-[#25d366] text-[#0b141a] shadow-xs font-bold"
+                              : "bg-[#202c33] hover:bg-[#2a3942] text-[#d1d7db]"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${opt.dotClass}`} />
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <div className="h-[1px] bg-[#2a3942] my-1" />
 

@@ -6,6 +6,7 @@ import { BASE_URL } from "../config/api";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { compressImage } from "../utils/imageCompressor";
 import { updateUserProfilePhoto } from "../redux/userSlice";
+import UserStatusDropdown from "./UserStatusDropdown";
 import {
   IoClose,
   IoCamera,
@@ -281,6 +282,17 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 <span className="text-[10px] text-gray-400 uppercase tracking-wider font-sans">
                   Permanent
                 </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center justify-between">
+                <span>Presence Status</span>
+                <span className="text-[11px] text-gray-400 font-normal">Click to change</span>
+              </label>
+              <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-gray-300">
+                <span className="text-xs text-gray-500 font-medium">Active status:</span>
+                <UserStatusDropdown />
               </div>
             </div>
 

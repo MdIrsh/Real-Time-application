@@ -23,6 +23,11 @@ const userModel=new mongoose.Schema({
     enum:["male", "female"],
     required: true
   },
+  userStatus:{
+    type: String,
+    enum: ["Online", "Away", "Offline"],
+    default: "Online"
+  },
   friends:[{
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import io from "socket.io-client";
 import { setSocket } from './redux/socketSlice';
-import { setOnlineUsers } from './redux/userSlice';
+import { setOnlineUsers, setUserStatus, setUserStatuses } from './redux/userSlice';
 import { BASE_URL } from './config/api';
 import useGetRealTimeMessage from './hooks/useGetRealTimeMessage';
 import { CallProvider } from './context/CallContext';
@@ -55,6 +55,14 @@ function App() {
 
       socket.on("getOnlineUsers", (onlineUsers) => {
         dispatch(setOnlineUsers(onlineUsers));
+      });
+
+      socket.on("getUserStatuses", (statuses) => {
+        dispatch(setUserStatuses(statuses));
+      });
+
+      socket.on("userStatusChanged", ({ userId, userStatus }) => {
+        dispatch(setUserStatus({ userId, userStatus }));
       });
 
       // Mobile phone screen wake / tab switch auto-reconnect

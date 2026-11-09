@@ -5,6 +5,7 @@ import { setSelectedGroup } from "../redux/groupSlice";
 import { clearUnreadCount } from "../redux/messageSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { IoCheckmarkDoneSharp, IoCheckmarkSharp } from "react-icons/io5";
+import { getActiveUserStatus } from "../utils/statusHelper";
 
 // Clean preview text for sidebar
 const formatPreviewText = (text) => {
@@ -27,11 +28,13 @@ const formatPreviewText = (text) => {
 
 const OtherUser = ({ user }) => {
   const dispatch = useDispatch();
-  const { selectedUser, onlineUsers, typingUsers } = useSelector((store) => store.user);
+  const { selectedUser, onlineUsers, typingUsers, userStatuses } = useSelector((store) => store.user);
   const { unreadCounts, lastMessages } = useSelector((store) => store.message);
 
   const isSelected = selectedUser?._id === user?._id;
-  const isOnline = onlineUsers?.includes(user?._id);
+  const activeStatus = getActiveUserStatus(user, onlineUsers, userStatuses);
+  const isOnline = activeStatus === "Online";
+  const isAway = activeStatus === "Away";
   const isUserTyping = Boolean(typingUsers?.[user?._id]);
 
   const unreadCount = unreadCounts?.[user?._id] || 0;
@@ -45,15 +48,14 @@ const OtherUser = ({ user }) => {
     }
   };
 
+  const statusLabel = isOnline ? "online" : isAway ? "away" : "offline";
   const formattedTime = lastMsg?.time
     ? new Date(lastMsg.time).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       })
-    : isOnline
-    ? "online"
-    : "";
+    : statusLabel;
 
   return (
     <div
@@ -66,7 +68,7 @@ const OtherUser = ({ user }) => {
           : "hover:bg-[#202c33]/60 bg-[#0b141a]"
       }`}
     >
-      {/* Avatar with status */}
+      {/* Avatar with single active status badge */}
       <div className="relative shrink-0">
         <img
           src={getAvatarUrl(user)}
@@ -74,8 +76,13 @@ const OtherUser = ({ user }) => {
           className="w-12 h-12 rounded-full object-cover border border-[#202c33]"
           onError={(e) => handleImageError(e, user?.fullName)}
         />
-        {isOnline && (
-          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#25d366] border-2 border-[#0b141a] rounded-full"></span>
+        {/* Strictly ONE active status badge */}
+        {isOnline ? (
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#25d366] border-2 border-[#0b141a] rounded-full" title="Online" />
+        ) : isAway ? (
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-400 border-2 border-[#0b141a] rounded-full" title="Away" />
+        ) : (
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-gray-500 border-2 border-[#0b141a] rounded-full" title="Offline" />
         )}
       </div>
 
@@ -97,6 +104,8 @@ const OtherUser = ({ user }) => {
                 ? "text-[#25d366] font-semibold"
                 : isOnline
                 ? "text-[#25d366] font-medium"
+                : isAway
+                ? "text-amber-400 font-medium"
                 : "text-[#8696a0]"
             }`}
           >

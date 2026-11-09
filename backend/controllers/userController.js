@@ -16,6 +16,7 @@ const sanitizeUser = (u) => {
         : `https://api.dicebear.com/10.x/personas/svg?seed=${seed}`;
   }
   userObj.profilePhoto = photo;
+  userObj.userStatus = userObj.userStatus || "Online";
   delete userObj.password;
   return userObj;
 };
@@ -124,6 +125,7 @@ export const login = async (req, res) => {
         fullName: user.fullName,
         profilePhoto: profilePhoto,
         gender: user.gender,
+        userStatus: user.userStatus || "Online",
         token: token,
       });
   } catch (error) {
@@ -586,4 +588,52 @@ export const resetProfilePhoto = async (req, res) => {
     return res.status(500).json({ message: "Failed to reset profile photo." });
   }
 };
+
+// Update user active presence status: "Online" | "Away" | "Offline"
+export const updateUserStatus = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { userStatus } = req.body;
+
+    const validStatuses = ["Online", "Away", "Offline"];
+    if (!userStatus || !validStatuses.includes(userStatus)) {
+      return res.status(400).json({
+        message: "Invalid status. Must be Online, Away, or Offline.",
+        success: false,
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { userStatus } },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found.", success: false });
+    }
+
+    const sanitized = sanitizeUser(updatedUser);
+
+    // Broadcast status change via Socket.IO so all connected clients update real-time
+    io.emit("userStatusChanged", {
+      userId: sanitized._id,
+      userStatus: sanitized.userStatus,
+    });
+
+    return res.status(200).json({
+      message: `Status updated to ${userStatus}`,
+      success: true,
+      userStatus: sanitized.userStatus,
+      user: sanitized,
+    });
+  } catch (error) {
+    console.error("updateUserStatus error:", error);
+    return res.status(500).json({
+      message: error?.message || "Failed to update status.",
+      success: false,
+    });
+  }
+};
+
 

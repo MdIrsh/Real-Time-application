@@ -16,6 +16,7 @@ const userSlice = createSlice({
     otherUsers: null, // Accepted friends list
     selectedUser: null,
     onlineUsers: null,
+    userStatuses: {}, // { [userId]: "Online" | "Away" | "Offline" }
     typingUsers: {}, // { [userId]: boolean }
     friendRequests: {
       received: [],
@@ -47,6 +48,53 @@ const userSlice = createSlice({
     },
     setOnlineUsers: (state, action) => {
       state.onlineUsers = action.payload;
+    },
+    setUserStatus: (state, action) => {
+      const { userId, userStatus } = action.payload || {};
+      if (!userId || !userStatus) return;
+
+      if (!state.userStatuses) state.userStatuses = {};
+      state.userStatuses[userId] = userStatus;
+
+      const currentAuthId = state.authUser?._id || state.authUser?.id;
+      if (currentAuthId && String(currentAuthId) === String(userId)) {
+        state.authUser = {
+          ...state.authUser,
+          userStatus,
+        };
+        try {
+          localStorage.setItem("chat-user", JSON.stringify(state.authUser));
+        } catch (e) {}
+      }
+
+      if (state.selectedUser) {
+        const selId = state.selectedUser?._id || state.selectedUser?.id;
+        if (selId && String(selId) === String(userId)) {
+          state.selectedUser = {
+            ...state.selectedUser,
+            userStatus,
+          };
+        }
+      }
+
+      if (Array.isArray(state.otherUsers)) {
+        state.otherUsers = state.otherUsers.map((u) => {
+          const uId = u._id || u.id;
+          if (uId && String(uId) === String(userId)) {
+            return {
+              ...u,
+              userStatus,
+            };
+          }
+          return u;
+        });
+      }
+    },
+    setUserStatuses: (state, action) => {
+      state.userStatuses = {
+        ...(state.userStatuses || {}),
+        ...(action.payload || {}),
+      };
     },
     setUserTyping: (state, action) => {
       const { userId, isTyping } = action.payload;
@@ -158,6 +206,8 @@ export const {
   removeSentRequest,
   addFriend,
   updateUserProfilePhoto,
+  setUserStatus,
+  setUserStatuses,
 } = userSlice.actions;
 
 export default userSlice.reducer;

@@ -96,3 +96,4 @@ export const getActiveUserStatus = (user, onlineUsers = [], userStatuses = {}) =
   if (chosen === STATUS_TYPES.AWAY) return STATUS_TYPES.AWAY;
   return STATUS_TYPES.ONLINE;
 };
+

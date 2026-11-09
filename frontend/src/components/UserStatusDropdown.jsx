@@ -105,18 +105,18 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
         aria-haspopup="true"
         aria-expanded={isOpen}
         title={`Current Status: ${activeConfig.label} (Click to change)`}
-        className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all duration-200 select-none shadow-xs border ${
+        className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs font-semibold cursor-pointer transition-all duration-200 select-none shadow-xs border ${
           isUpdating ? "opacity-75 cursor-wait" : ""
         } ${
           isOpen
-            ? "bg-[#202c33] border-[#25d366]/60 text-white ring-2 ring-[#25d366]/20"
-            : "bg-[#111b21] hover:bg-[#202c33] border-[#2a3942] text-[#e9edef] hover:border-[#374248]"
+            ? "bg-[#111e3b] border-blue-500/80 text-white ring-2 ring-blue-500/30 shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+            : "bg-[#0d1629]/90 hover:bg-[#152244] border-[#1d2b4f] text-[#d1d7db] hover:border-blue-500/50 hover:text-white"
         }`}
       >
         {/* Single active status dot badge */}
         <span className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0">
           <span
-            className={`w-2 h-2 rounded-full ${activeConfig.dotClass} transition-colors`}
+            className={`w-2 h-2 rounded-full ${activeConfig.dotClass} transition-colors shadow-[0_0_6px_currentColor]`}
           />
         </span>
 
@@ -127,7 +127,7 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
         <IoChevronDown
           size={12}
           className={`text-[#8696a0] group-hover:text-white transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-[#25d366]" : ""
+            isOpen ? "rotate-180 text-blue-400" : ""
           }`}
         />
       </button>
@@ -137,15 +137,15 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#202c33] border border-[#2a3942] shadow-2xl py-2 z-50 text-xs text-[#e9edef] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 origin-top-left"
+          className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#0a1224]/98 border border-[#1d2b4f] shadow-2xl py-2 z-50 text-xs text-[#e9edef] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 origin-top-left"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-3.5 py-1.5 border-b border-[#2a3942]/60 mb-1 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#8696a0] uppercase tracking-wider">
+          <div className="px-3.5 py-1.5 border-b border-[#1d2b4f]/70 mb-1 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#8ea2c6] uppercase tracking-wider">
               Current Status ▼
             </span>
-            <span className="text-[10px] text-[#25d366] font-medium">
+            <span className="text-[10px] text-blue-400 font-semibold">
               {activeConfig.label}
             </span>
           </div>
@@ -162,18 +162,18 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
                   onClick={() => handleSelectStatus(opt.id)}
                   className={`w-full px-3 py-2 rounded-xl flex items-center justify-between transition-colors text-left cursor-pointer ${
                     isSelected
-                      ? "bg-[#111b21] text-white font-semibold shadow-inner"
-                      : "hover:bg-[#111b21]/70 text-[#d1d7db]"
+                      ? "bg-[#111e3b] text-white font-semibold shadow-inner border border-blue-500/30"
+                      : "hover:bg-[#131f3b] text-[#cbd5e1]"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     {/* Status Dot */}
                     <span
-                      className={`w-2.5 h-2.5 rounded-full ${opt.dotClass} shrink-0 ring-2 ring-black/20`}
+                      className={`w-2.5 h-2.5 rounded-full ${opt.dotClass} shrink-0 ring-2 ring-black/30 shadow-[0_0_6px_currentColor]`}
                     />
                     <div className="min-w-0">
                       <p className="text-xs font-medium leading-none">{opt.label}</p>
-                      <p className="text-[10px] text-[#8696a0] mt-0.5 leading-none">
+                      <p className="text-[10px] text-[#8ea2c6] mt-0.5 leading-none">
                         {opt.description}
                       </p>
                     </div>
@@ -181,7 +181,7 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
 
                   {/* Active checkmark */}
                   {isSelected && (
-                    <span className="text-[#25d366] ml-2 shrink-0 animate-in fade-in zoom-in duration-150">
+                    <span className="text-blue-400 ml-2 shrink-0 animate-in fade-in zoom-in duration-150">
                       <IoCheckmark size={15} />
                     </span>
                   )}
@@ -191,8 +191,8 @@ const UserStatusDropdown = ({ variant = "pill", className = "" }) => {
           </div>
 
           {/* Footer Hint */}
-          <div className="mt-1 pt-1.5 border-t border-[#2a3942]/60 px-3.5">
-            <p className="text-[10px] text-[#8696a0] italic">
+          <div className="mt-1 pt-1.5 border-t border-[#1d2b4f]/70 px-3.5">
+            <p className="text-[10px] text-[#8ea2c6] italic">
               Changes reflect instantly to all contacts.
             </p>
           </div>

@@ -90,6 +90,10 @@ form input[type="password"]:focus {
 /* ========================================================
    PREMIUM 3D BRAND TYPOGRAPHY: IRSHAD • OFFICIAL MESSENGER
    ======================================================== */
+.font-signature {
+  font-family: 'Great Vibes', 'Alex Brush', 'Dancing Script', cursive;
+}
+
 .text-3d-gold {
   display: inline-block;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Montserrat', sans-serif;

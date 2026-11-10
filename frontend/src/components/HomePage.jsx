@@ -6,21 +6,44 @@ import IncomingCallModal from "./IncomingCallModal";
 import MicPermissionPrompt from "./MicPermissionPrompt";
 import ReelsModal from "./ReelsModal";
 import CameraModal from "./CameraModal";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { openGroupCall } from "../redux/groupCallSlice";
 
 const HomePage = () => {
   const { selectedUser, authUser } = useSelector((store) => store.user);
   const { selectedGroup } = useSelector((store) => store.group);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const hasActiveChat = Boolean(selectedUser || selectedGroup);
 
   useEffect(() => {
     if (!authUser) {
       navigate("/login");
+      return;
     }
-  }, [authUser, navigate]);
+
+    // Auto-join Group Call room if user opened a shared ?groupCall=<roomId> invite link
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get("groupCall");
+      if (roomParam) {
+        dispatch(
+          openGroupCall({
+            roomId: roomParam,
+            callType: "video",
+            roomTitle: "Group Video Call",
+          })
+        );
+        params.delete("groupCall");
+        const cleanSearch = params.toString();
+        const nextUrl =
+          window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "");
+        window.history.replaceState({}, "", nextUrl);
+      }
+    } catch (e) {}
+  }, [authUser, navigate, dispatch]);
 
   return (
     <div className="w-full h-full flex flex-col bg-[#050814] overflow-hidden select-none relative font-sans">

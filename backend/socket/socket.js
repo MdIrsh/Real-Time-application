@@ -179,6 +179,24 @@ io.on('connection', (socket) => {
         groupCallRooms[roomId] = {};
       }
 
+      // Remove any stale socket entries for this same user in the room
+      const joiningUid = user?._id ? String(user._id) : null;
+      if (joiningUid) {
+        for (const existingSid of Object.keys(groupCallRooms[roomId])) {
+          const entry = groupCallRooms[roomId][existingSid];
+          if (
+            existingSid !== socket.id &&
+            entry?.user?._id &&
+            String(entry.user._id) === joiningUid
+          ) {
+            delete groupCallRooms[roomId][existingSid];
+            socket.to(`group-call-${roomId}`).emit("groupCallPeerLeft", {
+              socketId: existingSid,
+            });
+          }
+        }
+      }
+
       groupCallRooms[roomId][socket.id] = {
         user,
         socketId: socket.id,

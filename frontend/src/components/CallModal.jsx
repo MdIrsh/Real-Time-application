@@ -90,8 +90,10 @@ const CallModal = () => {
     dispatch(
       openGroupCall({
         roomId,
-        callType: callType || "audio",
+        callType: callType || "video",
         roomTitle: `Conference with ${callUser?.fullName}`,
+        invitedMembers: callUser ? [callUser] : [],
+        openDrawerOnStart: true,
       })
     );
     if (socket && callUser?._id && authUser?._id) {
@@ -99,7 +101,8 @@ const CallModal = () => {
         toUserId: callUser._id,
         roomId,
         fromUser: authUser,
-        callType: callType || "audio",
+        callType: callType || "video",
+        roomTitle: `Group Video Call (${authUser?.fullName || "Friend"})`,
       });
     }
     endCall();

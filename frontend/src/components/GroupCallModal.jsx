@@ -28,6 +28,8 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
     { urls: "stun:openrelay.metered.ca:80" },
     {
@@ -40,7 +42,13 @@ const ICE_SERVERS = {
       username: "openrelay",
       credential: "openrelay",
     },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelay",
+      credential: "openrelay",
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 // Video & Audio Tile for a Remote Peer
@@ -57,12 +65,12 @@ const RemotePeerTile = ({ peer }) => {
       audioRef.current.srcObject = peer.stream;
       audioRef.current.play().catch(() => {});
     }
-  }, [peer.stream]);
+  }, [peer.stream, peer.streamVer]);
 
   const user = peer.user || {};
 
   return (
-    <div className="relative w-full h-full min-h-[150px] sm:min-h-[160px] bg-[#1a1f24] rounded-2xl overflow-hidden border border-[#2a3942] flex items-center justify-center shadow-lg group select-none">
+    <div className="relative w-full h-full min-h-[145px] sm:min-h-[180px] bg-[#1a1f24] rounded-2xl overflow-hidden border border-[#2a3942] flex items-center justify-center shadow-lg group select-none">
       {/* Dedicated Audio Element ensures remote voice ALWAYS plays in Conference list & Camera-Off modes */}
       <audio
         ref={audioRef}
@@ -128,6 +136,7 @@ const GroupCallModal = () => {
     callType,
     roomTitle,
     invitedMembers,
+    openDrawerOnStart,
   } = useSelector((store) => store.groupCall);
   const { socket } = useSelector((store) => store.socket);
   const { authUser, otherUsers, onlineUsers, userStatuses } = useSelector(
@@ -139,11 +148,16 @@ const GroupCallModal = () => {
   const [isVideoOff, setIsVideoOff] = useState(callType === "audio");
   const [facingMode, setFacingMode] = useState("user");
   const [callTimer, setCallTimer] = useState(0);
-  const [peers, setPeers] = useState({}); // { [socketId]: { user, stream, isMuted, isVideoOff } }
+  const [peers, setPeers] = useState({}); // { [socketId]: { user, stream, streamVer, isMuted, isVideoOff } }
   const [showInviteDrawer, setShowInviteDrawer] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [viewMode, setViewMode] = useState(callType === "audio" ? "conference" : "grid");
   const [invitedFriends, setInvitedFriends] = useState([]);
+
+  const authUserRef = useRef(authUser);
+  useEffect(() => {
+    authUserRef.current = authUser;
+  }, [authUser]);
 
   useEffect(() => {
     if (isGroupCallOpen) {
@@ -152,14 +166,49 @@ const GroupCallModal = () => {
       setCallTimer(0);
       setViewMode(callType === "audio" ? "conference" : "grid");
       setInvitedFriends(Array.isArray(invitedMembers) ? invitedMembers : []);
+      setShowInviteDrawer(Boolean(openDrawerOnStart));
     }
-  }, [isGroupCallOpen, callType, invitedMembers]);
+  }, [isGroupCallOpen, callType, invitedMembers, openDrawerOnStart]);
 
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const peerConnectionsRef = useRef({}); // { [socketId]: RTCPeerConnection }
+  const peerStreamsRef = useRef({}); // { [socketId]: MediaStream }
   const iceQueuesRef = useRef({}); // { [socketId]: RTCIceCandidateInit[] }
   const timerIntervalRef = useRef(null);
+
+  // Dynamically adapt outgoing video bitrate based on active participant count so 3-12+ people stay smooth
+  const applyMultiPartyBitrate = useCallback((peerCount) => {
+    const maxBitrate =
+      peerCount <= 2
+        ? 550000
+        : peerCount <= 4
+        ? 350000
+        : peerCount <= 6
+        ? 220000
+        : 140000;
+    const scaleDown = peerCount >= 6 ? 1.5 : 1.0;
+
+    Object.values(peerConnectionsRef.current).forEach((pc) => {
+      try {
+        pc.getSenders().forEach((sender) => {
+          if (sender.track?.kind === "video") {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+              params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = maxBitrate;
+            params.encodings[0].scaleResolutionDownBy = scaleDown;
+            sender.setParameters(params).catch(() => {});
+          }
+        });
+      } catch (e) {}
+    });
+  }, []);
+
+  useEffect(() => {
+    applyMultiPartyBitrate(Object.keys(peers).length);
+  }, [peers, applyMultiPartyBitrate]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -188,6 +237,7 @@ const GroupCallModal = () => {
       } catch (e) {}
     });
     peerConnectionsRef.current = {};
+    peerStreamsRef.current = {};
     iceQueuesRef.current = {};
     setPeers({});
 
@@ -223,14 +273,31 @@ const GroupCallModal = () => {
         }
       };
 
-      // Handle receiving remote media stream
+      // Auto-recover ICE on transient multi-peer connection drops
+      pc.oniceconnectionstatechange = () => {
+        if (pc.iceConnectionState === "failed" && typeof pc.restartIce === "function") {
+          try {
+            pc.restartIce();
+          } catch (e) {}
+        }
+      };
+
+      // Accumulate incoming audio & video tracks reliably on a per-peer stream
       pc.ontrack = (event) => {
-        const [remoteMediaStream] = event.streams;
+        let stream = peerStreamsRef.current[targetSocketId];
+        if (!stream) {
+          stream = event.streams?.[0] || new MediaStream();
+          peerStreamsRef.current[targetSocketId] = stream;
+        }
+        if (event.track && !stream.getTracks().some((t) => t.id === event.track.id)) {
+          stream.addTrack(event.track);
+        }
         setPeers((prev) => ({
           ...prev,
           [targetSocketId]: {
             user: targetUser || prev[targetSocketId]?.user,
-            stream: remoteMediaStream,
+            stream,
+            streamVer: (prev[targetSocketId]?.streamVer || 0) + 1,
             isMuted: prev[targetSocketId]?.isMuted || false,
             isVideoOff: prev[targetSocketId]?.isVideoOff || false,
           },
@@ -249,7 +316,7 @@ const GroupCallModal = () => {
               socket.emit("groupCallSignal", {
                 toSocketId: targetSocketId,
                 signal: pc.localDescription,
-                fromUser: authUser,
+                fromUser: authUserRef.current,
                 isOffer: true,
               });
             }
@@ -259,7 +326,7 @@ const GroupCallModal = () => {
 
       return pc;
     },
-    [socket, authUser]
+    [socket]
   );
 
   // Initialize Local Media Stream on Room Open (with automatic audio/listen-only fallback)
@@ -275,20 +342,35 @@ const GroupCallModal = () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
-          video: callType === "video" ? { facingMode: "user" } : false,
+          video:
+            callType === "video"
+              ? {
+                  facingMode: "user",
+                  width: { ideal: 640, max: 640 },
+                  height: { ideal: 480, max: 480 },
+                  frameRate: { ideal: 24, max: 24 },
+                }
+              : false,
         });
       } catch (primaryErr) {
         if (callType === "video") {
           try {
             stream = await navigator.mediaDevices.getUserMedia({
               audio: true,
-              video: false,
+              video: true,
             });
-            effectiveVideoOff = true;
-            toast("Camera unavailable — joined with audio", { icon: "🎙️" });
-          } catch (audioErr) {
-            effectiveVideoOff = true;
-            toast.error("Mic/camera blocked — joined in listen mode");
+          } catch (relaxedErr) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false,
+              });
+              effectiveVideoOff = true;
+              toast("Camera unavailable — joined with audio", { icon: "🎙️" });
+            } catch (audioErr) {
+              effectiveVideoOff = true;
+              toast.error("Mic/camera blocked — joined in listen mode");
+            }
           }
         } else {
           effectiveVideoOff = true;
@@ -313,7 +395,7 @@ const GroupCallModal = () => {
       if (socket && activeRoomId) {
         socket.emit("joinGroupCall", {
           roomId: activeRoomId,
-          user: authUser,
+          user: authUserRef.current,
           isMuted: !stream,
           isVideoOff: effectiveVideoOff,
         });
@@ -331,7 +413,7 @@ const GroupCallModal = () => {
       isMounted = false;
       cleanupGroupCall();
     };
-  }, [isGroupCallOpen, activeRoomId, callType, socket, authUser, cleanupGroupCall]);
+  }, [isGroupCallOpen, activeRoomId, callType, socket, cleanupGroupCall]);
 
   // Socket Events Listener for Group WebRTC Signaling
   useEffect(() => {
@@ -371,12 +453,18 @@ const GroupCallModal = () => {
       });
     };
 
-    // 3. WebRTC Signal (Offer or Answer) received from a peer
+    // 3. WebRTC Signal (Offer or Answer) received from a peer with glare protection
     const handleSignal = async ({ fromSocketId, signal, fromUser, isOffer }) => {
       try {
         let pc = peerConnectionsRef.current[fromSocketId];
         if (!pc) {
           pc = createPeerConnection(fromSocketId, fromUser, false);
+        }
+
+        const offerCollision = isOffer && pc.signalingState !== "stable";
+        const isPolite = String(socket.id) < String(fromSocketId);
+        if (offerCollision && !isPolite) {
+          return;
         }
 
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
@@ -398,7 +486,7 @@ const GroupCallModal = () => {
           socket.emit("groupCallSignal", {
             toSocketId: fromSocketId,
             signal: pc.localDescription,
-            fromUser: authUser,
+            fromUser: authUserRef.current,
             isOffer: false,
           });
         }
@@ -446,6 +534,8 @@ const GroupCallModal = () => {
         peerConnectionsRef.current[socketId].close();
         delete peerConnectionsRef.current[socketId];
       }
+      delete peerStreamsRef.current[socketId];
+      delete iceQueuesRef.current[socketId];
       setPeers((prev) => {
         const updated = { ...prev };
         delete updated[socketId];
@@ -468,7 +558,7 @@ const GroupCallModal = () => {
       socket.off("groupCallPeerMediaChanged", handlePeerMediaChanged);
       socket.off("groupCallPeerLeft", handlePeerLeft);
     };
-  }, [socket, isGroupCallOpen, authUser, createPeerConnection]);
+  }, [socket, isGroupCallOpen, createPeerConnection]);
 
   // Toggle Microphone Mute
   const handleToggleMute = () => {
@@ -548,12 +638,14 @@ const GroupCallModal = () => {
 
   // Invite an online friend to this group call
   const handleInviteFriend = (friend) => {
-    if (!socket || !activeRoomId) return;
+    if (!socket || !activeRoomId || !friend?._id) return;
     socket.emit("inviteToGroupCall", {
       toUserId: friend._id,
+      groupId: activeGroupId || null,
       roomId: activeRoomId,
-      fromUser: authUser,
+      fromUser: authUserRef.current,
       callType: isVideoOff ? "audio" : "video",
+      roomTitle: roomTitle || "Group Video Call",
     });
     setInvitedFriends((prev) =>
       prev.some((f) => String(f._id) === String(friend._id)) ? prev : [...prev, friend]
@@ -561,6 +653,31 @@ const GroupCallModal = () => {
     toast.success(`Invite sent to ${friend.fullName}! 🚀`, {
       id: `invite-${friend._id}`,
     });
+  };
+
+  // Invite all available friends at once to join maximum people in video call
+  const handleInviteAllFriends = () => {
+    if (!socket || !activeRoomId || !otherUsers?.length) return;
+    const targetIds = otherUsers
+      .filter((f) => !peerList.some(([, p]) => String(p.user?._id) === String(f._id)))
+      .map((f) => f._id);
+    if (targetIds.length === 0) {
+      toast("Everyone is already in the call!", { icon: "👥" });
+      return;
+    }
+    socket.emit("inviteToGroupCall", {
+      toUserIds: targetIds,
+      groupId: activeGroupId || null,
+      roomId: activeRoomId,
+      fromUser: authUserRef.current,
+      callType: isVideoOff ? "audio" : "video",
+      roomTitle: roomTitle || "Group Video Call",
+    });
+    setInvitedFriends((prev) => {
+      const existingIds = new Set(prev.map((p) => String(p._id)));
+      return [...prev, ...otherUsers.filter((f) => !existingIds.has(String(f._id)))];
+    });
+    toast.success(`Ringing ${targetIds.length} friends to join Video Call! 👥🔥`);
   };
 
   // Copy Room Invite Link
@@ -597,12 +714,13 @@ const GroupCallModal = () => {
   const peerList = Object.entries(peers);
   const totalParticipants = peerList.length + 1; // Peers + You
 
-  // Dynamic grid column layout based on number of participants
+  // Dynamic scalable grid layout supporting maximum simultaneous participants (1 to 12+)
   const getGridClasses = () => {
     if (totalParticipants === 1) return "grid-cols-1 max-w-2xl";
     if (totalParticipants === 2) return "grid-cols-1 sm:grid-cols-2 max-w-4xl";
     if (totalParticipants <= 4) return "grid-cols-2 max-w-4xl";
-    return "grid-cols-2 sm:grid-cols-3 max-w-5xl";
+    if (totalParticipants <= 9) return "grid-cols-2 sm:grid-cols-3 max-w-5xl";
+    return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-6xl";
   };
 
   // Pending invited friends who haven't joined peerList yet
@@ -613,31 +731,41 @@ const GroupCallModal = () => {
   return (
     <div className="fixed inset-0 z-[120] h-[100dvh] bg-[#0e1c2f] flex flex-col items-center justify-between p-3 sm:p-6 select-none animate-fade-in text-white overflow-hidden">
       {/* Top Header Bar matching Screen 3 (< Conference) */}
-      <div className="w-full max-w-2xl flex items-center justify-between px-2 py-2 shrink-0">
+      <div className="w-full max-w-4xl flex items-center justify-between gap-2 px-1 sm:px-2 py-1.5 shrink-0">
         <button
           onClick={handleLeaveCall}
-          className="flex items-center gap-2 text-white hover:text-gray-300 transition cursor-pointer group"
+          className="flex items-center gap-1.5 sm:gap-2 text-white hover:text-gray-300 transition cursor-pointer group min-w-0"
           title="Back / Leave Conference"
         >
-          <IoChevronBack size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-          <div className="text-left">
-            <h3 className="font-semibold text-base sm:text-lg leading-tight">
+          <IoChevronBack size={20} className="group-hover:-translate-x-0.5 transition-transform shrink-0" />
+          <div className="text-left min-w-0">
+            <h3 className="font-semibold text-sm sm:text-lg leading-tight truncate">
               {roomTitle && !roomTitle.startsWith("Group Call") ? roomTitle : "Conference"}
             </h3>
             <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
-              <IoShieldCheckmark size={11} className="text-[#2ecc71]" />
-              <span>{totalParticipants} active</span>
+              <IoShieldCheckmark size={11} className="text-[#2ecc71] shrink-0" />
+              <span>{totalParticipants} live</span>
               <span>•</span>
               <span className="font-mono text-[#2ecc71]">{formatTimer(callTimer)}</span>
             </p>
           </div>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Always-visible Add Person button to invite 3rd, 4th, 5th+ participants */}
+          <button
+            onClick={() => setShowInviteDrawer((prev) => !prev)}
+            className="flex items-center gap-1 text-[11px] font-bold bg-[#2ecc71] hover:bg-[#27ae60] text-[#0b141a] px-2.5 sm:px-3 py-1.5 rounded-full transition active:scale-95 cursor-pointer shadow-md"
+            title="Add more people to Video Call"
+          >
+            <IoPersonAddOutline size={14} />
+            <span>Add</span>
+          </button>
+
           {/* Toggle between Conference List and Video Grid */}
           <button
             onClick={() => setViewMode((v) => (v === "conference" ? "grid" : "conference"))}
-            className="flex items-center gap-1.5 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-2.5 sm:px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
             title={viewMode === "conference" ? "Switch to Video Grid" : "Switch to Conference List"}
           >
             {viewMode === "conference" ? <IoGridOutline size={14} /> : <IoListOutline size={14} />}
@@ -649,7 +777,7 @@ const GroupCallModal = () => {
           {/* Copy Link Button */}
           <button
             onClick={handleCopyInviteLink}
-            className="flex items-center gap-1 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-2.5 sm:px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
             title="Copy Invite Link"
           >
             {copiedLink ? <IoCheckmark size={14} className="text-[#2ecc71]" /> : <IoCopy size={13} />}
@@ -778,9 +906,17 @@ const GroupCallModal = () => {
           </button>
         </div>
       ) : (
-        /* Multi-User Video Grid View */
-        <div className="flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className={`w-full grid gap-3 sm:gap-4 auto-rows-fr h-full max-h-[68vh] ${getGridClasses()}`}>
+        /* Multi-User Video Grid View (scales smoothly for 1 to 12+ participants) */
+        <div
+          className={`flex-1 min-h-0 w-full flex ${
+            totalParticipants > 4 ? "items-start" : "items-center"
+          } justify-center p-2 sm:p-4 overflow-y-auto`}
+        >
+          <div
+            className={`w-full grid gap-2.5 sm:gap-4 ${
+              totalParticipants <= 4 ? "auto-rows-fr h-full max-h-[68dvh]" : "auto-rows-[minmax(145px,1fr)]"
+            } ${getGridClasses()}`}
+          >
             {/* Local User Tile (You) */}
             <div className="relative w-full h-full min-h-[160px] bg-[#162840] rounded-2xl overflow-hidden border border-white/15 flex items-center justify-center shadow-xl group">
               <video
@@ -824,7 +960,7 @@ const GroupCallModal = () => {
             ))}
 
             {peerList.length === 0 && (
-              <div className="hidden sm:flex flex-col items-center justify-center bg-[#162840]/60 rounded-2xl border border-dashed border-white/20 p-6 text-center text-gray-400">
+              <div className="flex flex-col items-center justify-center bg-[#162840]/60 rounded-2xl border border-dashed border-white/20 p-4 sm:p-6 text-center text-gray-400">
                 <button
                   onClick={() => setShowInviteDrawer(true)}
                   className="w-12 h-12 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center mb-2 transition cursor-pointer"
@@ -835,7 +971,7 @@ const GroupCallModal = () => {
                   Waiting for friends to join...
                 </h4>
                 <p className="text-xs text-gray-400 mt-1 max-w-xs">
-                  Tap above to invite friends into this conference room!
+                  Tap &quot;+ Add&quot; above to ring more friends or invite everyone!
                 </p>
               </div>
             )}
@@ -846,7 +982,7 @@ const GroupCallModal = () => {
       {/* Bottom Controls + Wide Coral-Red "End Group Call" Button matching Screen 3 */}
       <div className="w-full max-w-md flex flex-col items-center gap-3 shrink-0 pb-2">
         {/* Compact Media Toggles */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-3 sm:gap-4">
           <button
             onClick={handleToggleMute}
             className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md ${
@@ -883,6 +1019,19 @@ const GroupCallModal = () => {
               <IoCameraReverseOutline />
             </button>
           )}
+
+          {/* Bottom Quick Invite More Button */}
+          <button
+            onClick={() => setShowInviteDrawer((prev) => !prev)}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md ${
+              showInviteDrawer
+                ? "bg-[#2ecc71] text-[#0b141a]"
+                : "bg-[#162840] hover:bg-[#1f3656] text-white border border-white/10"
+            }`}
+            title="Add More Participants"
+          >
+            <IoPersonAddOutline />
+          </button>
         </div>
 
         {/* Wide Coral-Red "End Group Call" Pill Button matching Screen 3 */}
@@ -900,15 +1049,28 @@ const GroupCallModal = () => {
           <div className="px-4 py-3 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
             <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
               <IoPersonAdd size={14} className="text-[#25d366]" />
-              <span>Invite Friends to Room</span>
+              <span>Add to Video Call ({totalParticipants} live)</span>
             </h4>
             <button
               onClick={() => setShowInviteDrawer(false)}
-              className="text-[#8696a0] hover:text-white"
+              className="text-[#8696a0] hover:text-white cursor-pointer"
             >
               <IoClose size={18} />
             </button>
           </div>
+
+          {otherUsers && otherUsers.length > 0 && (
+            <div className="px-3 pt-2.5 pb-1 shrink-0">
+              <button
+                type="button"
+                onClick={handleInviteAllFriends}
+                className="w-full py-2 rounded-xl bg-gradient-to-r from-[#2563eb] to-[#2ecc71] hover:brightness-110 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+              >
+                <IoPersonAdd size={14} />
+                <span>Invite All Friends ({otherUsers.length})</span>
+              </button>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 divide-y divide-[#202c33]/40">
             {!otherUsers || otherUsers.length === 0 ? (

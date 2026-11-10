@@ -80,6 +80,7 @@ const CallsModal = ({ isOpen, onClose, onOpenAddModal }) => {
                   roomId: `group-${Date.now().toString(36)}`,
                   callType: "video",
                   roomTitle: "Group Video Room",
+                  openDrawerOnStart: true,
                 })
               );
             }}

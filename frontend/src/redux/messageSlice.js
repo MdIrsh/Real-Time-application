@@ -77,6 +77,22 @@ const messageSlice = createSlice({
         if (found) found.delivered = true;
       }
     },
+    updateMessageReactions: (state, action) => {
+      const { messageId, reactions } = action.payload || {};
+      if (!messageId || !state.messages) return;
+      const found = state.messages.find((m) => String(m._id) === String(messageId));
+      if (found) {
+        found.reactions = reactions || [];
+      }
+    },
+    updateMessagePoll: (state, action) => {
+      const { messageId, poll } = action.payload || {};
+      if (!messageId || !poll || !state.messages) return;
+      const found = state.messages.find((m) => String(m._id) === String(messageId));
+      if (found) {
+        found.poll = poll;
+      }
+    },
   },
 });
 
@@ -90,6 +106,8 @@ export const {
   setLastMessage,
   markMessagesSeen,
   markMessageDelivered,
+  updateMessageReactions,
+  updateMessagePoll,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;

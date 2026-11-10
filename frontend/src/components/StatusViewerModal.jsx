@@ -6,17 +6,22 @@ import {
   IoVolumeMute,
   IoVolumeHigh,
   IoEyeOutline,
-  IoChevronUpOutline,
   IoTrashOutline,
   IoHappyOutline,
   IoHeart,
+  IoChevronBack,
+  IoThumbsUp,
+  IoPeople,
+  IoArrowUndo,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setIsViewerOpen,
   viewStatusLocally,
+  reactStatusLocally,
   removeStatus,
 } from "../redux/statusSlice";
+import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { setMessages } from "../redux/messageSlice";
 import { BASE_URL } from "../config/api";
 import axios from "axios";
@@ -60,7 +65,8 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
   const [isDeletingStatus, setIsDeletingStatus] = useState(false);
-  const [showEmojiRow, setShowEmojiRow] = useState(true);
+  const [showEmojiRow, setShowEmojiRow] = useState(false);
+  const [floatingHearts, setFloatingHearts] = useState([]);
 
   const audioPlayerRef = useRef(null);
 
@@ -190,15 +196,21 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       dispatch(viewStatusLocally({ statusId, viewer }));
     };
 
+    const handleStatusReacted = ({ statusId, reaction }) => {
+      dispatch(reactStatusLocally({ statusId, reaction }));
+    };
+
     const handleStatusDeleted = (statusId) => {
       dispatch(removeStatus(statusId));
     };
 
     socket.on("statusViewed", handleStatusViewed);
+    socket.on("statusReacted", handleStatusReacted);
     socket.on("statusDeleted", handleStatusDeleted);
 
     return () => {
       socket.off("statusViewed", handleStatusViewed);
+      socket.off("statusReacted", handleStatusReacted);
       socket.off("statusDeleted", handleStatusDeleted);
     };
   }, [socket, dispatch]);
@@ -341,18 +353,66 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     }
   };
 
-  // Quick 1-tap reaction (heart, laugh, fire, etc.)
+  // Quick 1-tap reaction (❤️, 😂, 👍, 🔥) with burst bubble float animation + live DB + Socket notification
   const handleSendQuickReaction = async (emoji) => {
     if (!activeStatus) return;
     const targetUserId = activeStatus.user?._id || activeStatus.user;
     const authorName =
       activeStatus.user?.fullName || activeStatus.userName || "Contact";
-    toast.success(`Reacted ${emoji} to status!`, {
+
+    // Spawn 12 multi-bubble floating emojis spread smoothly across the screen
+    const batchId = Date.now();
+    const burst = Array.from({ length: 12 }).map((_, idx) => ({
+      id: `${batchId}-${idx}`,
+      emoji,
+      leftPct: 12 + Math.random() * 76, // spread across 12%..88% of screen width
+      txMid: `${(Math.random() - 0.5) * 60}px`,
+      txEnd: `${(Math.random() - 0.5) * 110}px`,
+      rot: `${(Math.random() - 0.5) * 40}deg`,
+      dur: `${1.2 + Math.random() * 0.7}s`,
+      delay: `${idx * 45}ms`,
+      sizePx: 22 + Math.floor(Math.random() * 18),
+    }));
+
+    setFloatingHearts((prev) => [...prev.slice(-24), ...burst]);
+    setTimeout(() => {
+      setFloatingHearts((prev) =>
+        prev.filter((item) => !String(item.id).startsWith(String(batchId)))
+      );
+    }, 2200);
+
+    // Optimistic local state update for instant UI counter & "You reacted" pill
+    if (authUser?._id) {
+      dispatch(
+        reactStatusLocally({
+          statusId: activeStatus._id,
+          reaction: {
+            user: authUser,
+            emoji,
+            reactedAt: new Date().toISOString(),
+          },
+        })
+      );
+    }
+
+    toast.success(`Reacted ${emoji} to ${authorName}'s status!`, {
       id: "react-toast",
       duration: 1500,
     });
 
-    if (targetUserId) {
+    // Persist reaction to status document in DB
+    if (activeStatus._id) {
+      axios
+        .put(
+          `${BASE_URL}/api/v1/status/react/${activeStatus._id}`,
+          { emoji },
+          { withCredentials: true }
+        )
+        .catch(() => {});
+    }
+
+    // Send chat notification message if reacting to someone else's status
+    if (targetUserId && !isMyStatus) {
       try {
         const payload = {
           caption: activeStatus.caption || "",
@@ -441,9 +501,16 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     return unique;
   })();
 
+  const reactionsList = activeStatus?.reactions || [];
+  const myReaction = authUser?._id
+    ? reactionsList.find(
+        (r) => String(r.user?._id || r.user || "") === String(authUser._id)
+      )
+    : null;
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none animate-fade-in">
-      {/* 9:16 WhatsApp Mobile Story Player Container */}
+      {/* 9:16 Mobile Story Player Container matching screenshot */}
       <div
         className="relative w-full max-w-[440px] h-full flex flex-col justify-between overflow-hidden shadow-2xl"
         style={{
@@ -456,8 +523,8 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
         onTouchStart={() => !showViewersSheet && setIsPaused(true)}
         onTouchEnd={() => !showViewersSheet && setIsPaused(false)}
       >
-        {/* Top Header Overlay: Progress Bars + User Info + Music Badge + Close */}
-        <div className="absolute top-0 left-0 right-0 z-40 p-3 pt-4 bg-gradient-to-b from-black/85 via-black/45 to-transparent flex flex-col gap-2.5">
+        {/* Top Header Overlay: Progress Bars + Back + Avatar + Name + Music Badge */}
+        <div className="absolute top-0 left-0 right-0 z-40 p-3 pt-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex flex-col gap-2.5">
           {/* Segmented Story Progress Bar */}
           <div className="flex items-center gap-1.5 w-full">
             {effectiveStatuses.map((_, i) => (
@@ -482,28 +549,40 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
 
           {/* User Row + Action Buttons */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {/* Avatar with WhatsApp green status border */}
-              <div className="p-[2px] bg-[#25d366] rounded-full shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Back Chevron matching screenshot */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (audioPlayerRef.current) audioPlayerRef.current.pause();
+                  dispatch(setIsViewerOpen(false));
+                }}
+                className="w-8 h-8 rounded-full hover:bg-white/15 text-white flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                title="Back"
+              >
+                <IoChevronBack size={22} />
+              </button>
+
+              {/* Avatar */}
+              <div className="p-[1.5px] bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] rounded-full shrink-0">
                 <img
                   src={avatarUrl}
                   alt={displayName}
-                  className="w-9 h-9 rounded-full object-cover border border-black"
+                  className="w-9 h-9 rounded-full object-cover border border-white/60"
                 />
               </div>
 
               <div className="min-w-0 text-white">
-                <h4 className="font-bold text-xs truncate leading-tight drop-shadow flex items-center gap-1.5">
+                <h4 className="font-semibold text-sm truncate leading-tight drop-shadow flex items-center gap-1.5">
                   <span>{displayName}</span>
                   {isMyStatus && (
-                    <span className="text-[9px] bg-[#25d366] text-[#0b141a] font-extrabold px-1.5 py-0.2 rounded-full">
+                    <span className="text-[9px] bg-[#2563eb] text-white font-bold px-1.5 py-0.2 rounded-full">
                       YOU
                     </span>
                   )}
                 </h4>
                 <p className="text-[11px] text-gray-200 drop-shadow">
                   {formatStatusTime(activeStatus.createdAt)}
-                  {isMyStatus && ` • 👁️ ${viewersList.length} views`}
                 </p>
               </div>
             </div>
@@ -515,7 +594,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
                   type="button"
                   onClick={handleDeleteStatus}
                   disabled={isDeletingStatus}
-                  className="w-8 h-8 rounded-full bg-black/40 hover:bg-red-900/60 text-gray-300 hover:text-red-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-black/40 hover:bg-red-900/60 text-gray-200 hover:text-red-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
                   title="Delete this status"
                 >
                   <IoTrashOutline size={17} />
@@ -559,7 +638,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             </div>
           </div>
 
-          {/* Instagram / WhatsApp Music Badge Sticker */}
+          {/* Music Badge Sticker */}
           {hasSong && (
             <div className="mx-auto mt-0.5 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 text-white shadow-xl animate-fade-in max-w-[88%] select-none">
               <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/40">
@@ -585,12 +664,11 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
                 </p>
               </div>
 
-              {/* Animated Sound Equalizer Waves */}
               {!isMuted && !isPaused && !showViewersSheet && (
                 <div className="flex items-end gap-[2px] h-3 shrink-0 ml-1">
-                  <span className="w-[2px] h-2 bg-[#25d366] rounded-full animate-pulse" />
-                  <span className="w-[2px] h-3 bg-[#25d366] rounded-full animate-bounce" />
-                  <span className="w-[2px] h-1.5 bg-[#25d366] rounded-full animate-pulse" />
+                  <span className="w-[2px] h-2 bg-[#38bdf8] rounded-full animate-pulse" />
+                  <span className="w-[2px] h-3 bg-[#38bdf8] rounded-full animate-bounce" />
+                  <span className="w-[2px] h-1.5 bg-[#38bdf8] rounded-full animate-pulse" />
                 </div>
               )}
             </div>
@@ -605,7 +683,7 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               e.stopPropagation();
               handlePrev();
             }}
-            className="absolute left-0 top-16 bottom-20 w-1/3 z-20 cursor-pointer"
+            className="absolute left-0 top-16 bottom-44 w-1/3 z-20 cursor-pointer"
             title="Previous status"
           />
 
@@ -615,12 +693,12 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               e.stopPropagation();
               handleNext();
             }}
-            className="absolute right-0 top-16 bottom-20 w-1/3 z-20 cursor-pointer"
+            className="absolute right-0 top-16 bottom-44 w-1/3 z-20 cursor-pointer"
             title="Next status"
           />
 
           {isTextStatus ? (
-            /* WhatsApp Text Status */
+            /* Text Status */
             <div className="p-8 text-center max-w-sm flex flex-col items-center justify-center">
               <p className="text-white text-2xl md:text-3xl font-extrabold tracking-wide leading-relaxed drop-shadow-lg select-text">
                 {activeStatus.caption}
@@ -632,12 +710,12 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               <img
                 src={activeStatus.mediaUrl}
                 alt="Status Media"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover sm:object-contain"
               />
 
               {/* Caption Overlay */}
               {activeStatus.caption && (
-                <div className="absolute bottom-28 left-4 right-4 z-30 bg-black/65 backdrop-blur-md px-4 py-2.5 rounded-2xl text-center shadow-lg border border-white/10 pointer-events-none">
+                <div className="absolute top-24 left-4 right-4 z-30 bg-black/55 backdrop-blur-md px-4 py-2 rounded-2xl text-center shadow-lg border border-white/10 pointer-events-none">
                   <p className="text-white text-sm font-medium leading-snug drop-shadow">
                     {activeStatus.caption}
                   </p>
@@ -645,120 +723,239 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
               )}
             </div>
           )}
+
+          {/* Floating Animated Multi-Bubble Emojis Spread Across Screen */}
+          {floatingHearts.length > 0 && (
+            <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+              {floatingHearts.map((item) => (
+                <span
+                  key={item.id}
+                  className="absolute bottom-24 animate-status-bubble drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] select-none"
+                  style={{
+                    left: `${item.leftPct ?? 50}%`,
+                    fontSize: `${item.sizePx ?? 28}px`,
+                    "--tx-mid": item.txMid || "12px",
+                    "--tx-end": item.txEnd || "-18px",
+                    "--rot": item.rot || "10deg",
+                    "--dur": item.dur || "1.5s",
+                    animationDelay: item.delay || "0ms",
+                  }}
+                >
+                  {item.emoji}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Bottom Bar: Viewers Bar for My Status VS Perfect WhatsApp Chat/Reply Bar for Friends */}
-        {isMyStatus ? (
-          <div className="p-3 pb-5 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-40 flex flex-col items-center">
+        {/* Bottom Frosted Interaction Section matching screenshot */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+          className="p-3.5 pb-5 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-40 flex flex-col gap-2.5"
+        >
+          {/* "❤️ You reacted" pill if user reacted */}
+          {myReaction && !isMyStatus && (
+            <div className="flex justify-center">
+              <span className="bg-black/55 backdrop-blur-md border border-white/15 text-white text-xs font-medium px-3.5 py-1 rounded-full shadow-md flex items-center gap-1.5">
+                <span>{myReaction.emoji}</span>
+                <span>You reacted</span>
+              </span>
+            </div>
+          )}
+
+          {/* Stats Pill: 👁️ 12 Seen | ❤️ 3 matching screenshot */}
+          <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => {
                 setIsPaused(true);
                 setShowViewersSheet(true);
               }}
-              className="flex items-center gap-2 py-2 px-5 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/20 text-white shadow-2xl transition active:scale-95 cursor-pointer group"
+              className="bg-black/50 hover:bg-black/70 backdrop-blur-md border border-white/15 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full flex items-center gap-2.5 shadow-lg transition cursor-pointer"
             >
-              <IoEyeOutline size={17} className="text-[#25d366]" />
-              <span className="text-xs font-semibold">
-                {viewersList.length} {viewersList.length === 1 ? "view" : "views"}
+              <span className="flex items-center gap-1">
+                <IoEyeOutline size={15} />
+                <span>{viewersList.length} Seen</span>
               </span>
-              <IoChevronUpOutline
-                size={14}
-                className="text-gray-300 group-hover:-translate-y-0.5 transition-transform"
-              />
+              <span className="text-white/30">|</span>
+              <span className="flex items-center gap-1">
+                <IoHeart size={14} className="text-[#f43f5e]" />
+                <span>{reactionsList.length}</span>
+              </span>
             </button>
           </div>
-        ) : (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseUp={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-            className="p-3 pb-5 bg-gradient-to-t from-black via-black/90 to-transparent z-40 flex flex-col gap-2.5"
-          >
-            {/* Quick WhatsApp Story Reactions Bar */}
-            {showEmojiRow && (
-              <div className="flex items-center justify-between px-3 py-1.5 bg-black/70 backdrop-blur-xl rounded-2xl border border-white/15 shadow-xl animate-fade-in">
-                {QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSendQuickReaction(emoji);
-                    }}
-                    className="text-xl hover:scale-135 active:scale-90 transition-transform cursor-pointer p-1"
-                    title={`React ${emoji}`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            )}
 
-            {/* Perfect WhatsApp Reply Chat Box */}
-            <form
-              onSubmit={handleSendReply}
-              className="flex items-center gap-2 bg-[#202c33] rounded-full px-3.5 py-2 border border-white/20 focus-within:border-[#25d366] focus-within:ring-1 focus-within:ring-[#25d366]/40 shadow-2xl transition-all"
+          {/* Seen by Avatar Preview Strip matching screenshot */}
+          {viewersList.length > 0 && (
+            <div
+              onClick={() => {
+                setIsPaused(true);
+                setShowViewersSheet(true);
+              }}
+              className="bg-black/45 hover:bg-black/60 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 cursor-pointer transition shadow-lg"
             >
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white mb-2">
+                <IoPeople size={13} className="text-gray-200" />
+                <span>Seen by ({viewersList.length})</span>
+              </div>
+              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+                {viewersList.slice(0, 4).map((v, idx) => {
+                  const vUser = v.user || {};
+                  const vName = (vUser.fullName || vUser.username || "User").split(" ")[0];
+                  const vAvatar = getAvatarUrl(vUser);
+                  return (
+                    <div key={v._id || idx} className="flex flex-col items-center gap-0.5 shrink-0">
+                      <img
+                        src={vAvatar}
+                        alt={vName}
+                        className="w-9 h-9 rounded-full object-cover border border-white/40"
+                        onError={(e) => handleImageError(e, vName)}
+                      />
+                      <span className="text-[10px] text-gray-200 truncate max-w-[44px]">
+                        {vName}
+                      </span>
+                    </div>
+                  );
+                })}
+                {viewersList.length > 4 && (
+                  <div className="flex flex-col items-center gap-0.5 shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-white/15 border border-white/25 text-white text-xs font-bold flex items-center justify-center">
+                      +{viewersList.length - 4}
+                    </div>
+                    <span className="text-[10px] text-gray-300">More</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Floating Reaction Circles (👍, ❤️, 😂, 🔥) with bubble burst animation */}
+          {!isMyStatus && (
+            <div className="flex items-center justify-center gap-3.5 py-0.5">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowEmojiRow(!showEmojiRow);
+                  handleSendQuickReaction("👍");
                 }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
-                  showEmojiRow
-                    ? "text-[#25d366] bg-[#25d366]/10"
-                    : "text-[#8696a0] hover:text-[#e9edef]"
-                }`}
-                title="Toggle Reactions"
+                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-white flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
+                title="Thumbs Up"
               >
-                <IoHappyOutline size={21} />
+                <IoThumbsUp size={19} />
               </button>
 
-              <input
-                type="text"
-                placeholder={`Reply to ${displayName}...`}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onFocus={() => {
-                  setIsInputFocused(true);
-                  setIsPaused(true);
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendQuickReaction("❤️");
                 }}
-                onBlur={() => {
-                  setIsInputFocused(false);
-                  if (!replyText.trim()) setIsPaused(false);
-                }}
-                className="flex-1 bg-transparent text-sm text-[#e9edef] placeholder-[#8696a0] outline-hidden px-1"
-              />
+                className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#f43f5e] to-[#ec4899] text-white flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.6)] transition hover:scale-110 active:scale-90 cursor-pointer"
+                title="Send Heart Reaction"
+              >
+                <IoHeart size={22} />
+              </button>
 
-              {replyText.trim() ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendQuickReaction("😂");
+                }}
+                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-xl flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
+                title="Send Laugh Reaction"
+              >
+                😂
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendQuickReaction("🔥");
+                }}
+                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-xl flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
+                title="Send Fire Reaction"
+              >
+                🔥
+              </button>
+            </div>
+          )}
+
+          {/* Optional Quick Emoji Picker Row */}
+          {!isMyStatus && showEmojiRow && (
+            <div className="flex items-center justify-between px-3 py-1.5 bg-black/70 backdrop-blur-xl rounded-2xl border border-white/15 shadow-xl animate-fade-in">
+              {QUICK_REACTIONS.map((emoji) => (
                 <button
-                  type="submit"
-                  disabled={isSendingReply}
-                  className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02906f] text-[#0b141a] flex items-center justify-center transition active:scale-90 cursor-pointer font-bold shrink-0 shadow-md"
-                  title="Send Reply"
+                  key={emoji}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendQuickReaction(emoji);
+                    setShowEmojiRow(false);
+                  }}
+                  className="text-xl hover:scale-125 active:scale-90 transition-transform cursor-pointer p-1"
+                  title={`React ${emoji}`}
                 >
-                  <IoSend size={15} />
+                  {emoji}
                 </button>
-              ) : (
+              ))}
+            </div>
+          )}
+
+          {/* Bottom Reply Capsule matching screenshot */}
+          {!isMyStatus && (
+            <form
+              onSubmit={handleSendReply}
+              className="flex items-center gap-2"
+            >
+              <div className="flex-1 flex items-center gap-2 bg-black/55 backdrop-blur-xl rounded-full px-3.5 py-2 border border-white/20 focus-within:border-[#38bdf8] shadow-xl transition-all">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSendQuickReaction("❤️");
+                    setShowEmojiRow((prev) => !prev);
                   }}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:scale-125 active:scale-90 transition cursor-pointer shrink-0"
-                  title="Send Heart"
+                  className={`transition cursor-pointer shrink-0 ${
+                    showEmojiRow ? "text-[#38bdf8]" : "text-gray-300 hover:text-white"
+                  }`}
+                  title="Quick Emoji Reactions"
                 >
-                  <IoHeart size={22} />
+                  {showEmojiRow ? <IoHappyOutline size={18} /> : <IoArrowUndo size={16} />}
                 </button>
-              )}
+
+                <input
+                  type="text"
+                  placeholder="Reply..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onFocus={() => {
+                    setIsInputFocused(true);
+                    setIsPaused(true);
+                  }}
+                  onBlur={() => {
+                    setIsInputFocused(false);
+                    if (!replyText.trim()) setIsPaused(false);
+                  }}
+                  className="flex-1 bg-transparent text-sm text-white placeholder-gray-300 outline-none border-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSendingReply}
+                className="w-10 h-10 rounded-full bg-black/60 hover:bg-[#2563eb] border border-white/20 text-white flex items-center justify-center transition active:scale-90 cursor-pointer shrink-0 shadow-lg"
+                title="Send Reply"
+              >
+                <IoSend size={16} className="ml-0.5" />
+              </button>
             </form>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* WhatsApp Viewers ("Seen by") Bottom Sheet */}
         {showViewersSheet && (

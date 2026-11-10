@@ -33,6 +33,42 @@ const messageModel = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  file: {
+    url: { type: String, default: "" },
+    name: { type: String, default: "" },
+    size: { type: Number, default: 0 },
+    mimeType: { type: String, default: "" },
+  },
+  reactions: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      emoji: {
+        type: String,
+        default: "👍",
+      },
+    }
+  ],
+  poll: {
+    question: { type: String, default: "" },
+    options: [
+      {
+        text: { type: String, default: "" },
+        votes: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+          }
+        ],
+      }
+    ],
+  },
+  isSystem: {
+    type: Boolean,
+    default: false,
+  },
   delivered: {
     type: Boolean,
     default: false

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import OtherUser from "./OtherUser";
 import GroupItem from "./GroupItem";
 import useGetOtherUsers from "../hooks/useGetOtherUsers";
@@ -20,6 +20,7 @@ const OtherUsers = ({ search = "", onOpenAddModal, activeFilter = "all" }) => {
   const dispatch = useDispatch();
   const { otherUsers, authUser, onlineUsers } = useSelector((store) => store.user);
   const { groups } = useSelector((store) => store.group);
+  const [groupCategory, setGroupCategory] = useState("All");
   const { unreadCounts } = useSelector((store) => store.message);
 
   if (otherUsers === null) {
@@ -31,8 +32,21 @@ const OtherUsers = ({ search = "", onOpenAddModal, activeFilter = "all" }) => {
     );
   }
 
-  // Filter groups
-  const filteredGroups = (groups || []).filter((group) => {
+  const groupList = groups || [];
+  const groupCategoryCounts = {
+    All: groupList.length,
+    Work: groupList.filter((g) => (g.category || "General") === "Work").length,
+    Team: groupList.filter((g) => (g.category || "General") === "Team").length,
+    General: groupList.filter((g) => (g.category || "General") === "General").length,
+  };
+
+  // Filter groups by search & active category tab
+  const filteredGroups = groupList.filter((group) => {
+    const matchesCategory =
+      activeFilter !== "groups" ||
+      groupCategory === "All" ||
+      (group.category || "General") === groupCategory;
+    if (!matchesCategory) return false;
     if (!search.trim()) return true;
     return (
       group.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,6 +81,49 @@ const OtherUsers = ({ search = "", onOpenAddModal, activeFilter = "all" }) => {
   if (activeFilter === "groups") {
     return (
       <div className="flex flex-col bg-transparent">
+        {/* Groups Header + Add Button */}
+        <div className="flex items-center justify-between px-4 pt-2 pb-1.5">
+          <h3 className="text-[17px] font-bold text-[#f1f5f9] tracking-tight">Groups</h3>
+          <button
+            type="button"
+            onClick={() => dispatch(setIsCreateGroupOpen(true))}
+            title="Create New Group"
+            className="w-8 h-8 rounded-full bg-[#131e38] hover:bg-[#1e3a8a] border border-[#253966] text-[#93c5fd] hover:text-white flex items-center justify-center text-lg font-bold transition-all active:scale-95 shadow-xs"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Category Filter Tabs (All, Work, Team, General) */}
+        <div className="flex items-center gap-1.5 px-3 pb-2 overflow-x-auto no-scrollbar">
+          {["All", "Work", "Team", "General"].map((cat) => {
+            const isActive = groupCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setGroupCategory(cat)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all border ${
+                  isActive
+                    ? "bg-[#2563eb] text-white border-[#3b82f6] shadow-xs"
+                    : "bg-[#0c1325]/90 text-[#94a3b8] border-[#182442] hover:text-[#e2e8f0] hover:border-[#253966]"
+                }`}
+              >
+                <span>{cat}</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isActive
+                      ? "bg-white/25 text-white"
+                      : "bg-[#162240] text-[#cbd5e1]"
+                  }`}
+                >
+                  {groupCategoryCounts[cat] || 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Create Group Quick Button */}
         <div
           onClick={() => dispatch(setIsCreateGroupOpen(true))}

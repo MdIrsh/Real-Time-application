@@ -78,6 +78,35 @@ const statusSlice = createSlice({
         updateViewer(state.selectedStatus);
       }
     },
+    reactStatusLocally: (state, action) => {
+      const { statusId, reaction } = action.payload || {};
+      if (!statusId || !reaction) return;
+      const updateReaction = (item) => {
+        if (!item) return;
+        if (!item.reactions) item.reactions = [];
+        const rUserId = reaction?.user?._id || reaction?.user || reaction?._id;
+        if (!rUserId) return;
+
+        const existingIdx = item.reactions.findIndex(
+          (r) => String(r.user?._id || r.user || r._id || "") === String(rUserId)
+        );
+        if (existingIdx === -1) {
+          item.reactions.push(reaction);
+        } else {
+          item.reactions[existingIdx] = reaction;
+        }
+      };
+
+      const foundAll = state.allStatuses.find((s) => String(s._id) === String(statusId));
+      updateReaction(foundAll);
+      const foundMy = state.myStatuses.find((s) => String(s._id) === String(statusId));
+      updateReaction(foundMy);
+      const foundOther = state.otherStatuses.find((s) => String(s._id) === String(statusId));
+      updateReaction(foundOther);
+      if (state.selectedStatus && String(state.selectedStatus._id) === String(statusId)) {
+        updateReaction(state.selectedStatus);
+      }
+    },
     removeStatus: (state, action) => {
       const statusId = action.payload;
       state.myStatuses = state.myStatuses.filter((s) => String(s._id) !== String(statusId));
@@ -100,6 +129,7 @@ export const {
   setIsUploadOpen,
   setStatusLoading,
   viewStatusLocally,
+  reactStatusLocally,
   removeStatus,
 } = statusSlice.actions;
 

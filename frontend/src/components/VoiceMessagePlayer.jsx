@@ -105,8 +105,8 @@ const VoiceMessagePlayer = ({ audioUrl, duration = 0, isSentByMe = false }) => {
         onClick={togglePlay}
         className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-md transition-all active:scale-95 ${
           isSentByMe
-            ? "bg-[#00a884] text-white hover:bg-[#008f6f]"
-            : "bg-[#128c7e] text-white hover:bg-[#075e54]"
+            ? "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+            : "bg-[#1d4ed8] text-white hover:bg-[#1e40af]"
         }`}
         title={isPlaying ? "Pause" : "Play Voice Note"}
       >
@@ -135,11 +135,11 @@ const VoiceMessagePlayer = ({ audioUrl, duration = 0, isSentByMe = false }) => {
                 className={`w-[3px] rounded-full transition-colors duration-100 ${
                   isPlayed
                     ? isSentByMe
-                      ? "bg-[#00a884]"
-                      : "bg-[#128c7e]"
+                      ? "bg-[#2563eb]"
+                      : "bg-[#1d4ed8]"
                     : isSentByMe
-                    ? "bg-[#a3d9b8]"
-                    : "bg-gray-300 group-hover:bg-gray-400"
+                    ? "bg-[#93c5fd]"
+                    : "bg-[#cbd5e1] group-hover:bg-[#94a3b8]"
                 }`}
               />
             );
@@ -147,7 +147,7 @@ const VoiceMessagePlayer = ({ audioUrl, duration = 0, isSentByMe = false }) => {
         </div>
 
         {/* Bottom Time and Speed Pill */}
-        <div className="flex items-center justify-between text-[11px] font-medium text-gray-500 px-0.5">
+        <div className="flex items-center justify-between text-[11px] font-medium text-[#64748b] px-0.5">
           <span className="tabular-nums">
             {isPlaying ? formatTime(currentTime) : formatTime(totalDuration)}
           </span>
@@ -157,14 +157,14 @@ const VoiceMessagePlayer = ({ audioUrl, duration = 0, isSentByMe = false }) => {
             <button
               type="button"
               onClick={cycleSpeed}
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/5 hover:bg-black/10 text-gray-700 transition-colors"
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-[#1d4ed8] transition-colors"
               title="Change playback speed"
             >
               {playbackRate}x
             </button>
             <BsMicFill
               className={`text-xs ${
-                isSentByMe ? "text-[#00a884]" : "text-[#128c7e]"
+                isSentByMe ? "text-[#2563eb]" : "text-[#1d4ed8]"
               }`}
             />
           </div>

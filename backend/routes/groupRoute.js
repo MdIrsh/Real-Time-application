@@ -8,6 +8,7 @@ import {
   addGroupMembers,
   leaveGroup,
   updateGroupAvatar,
+  pinGroupMessage,
 } from "../controllers/groupController.js";
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.post("/send/:groupId", isAuthenticated, sendGroupMessage);
 router.post("/add-members/:groupId", isAuthenticated, addGroupMembers);
 router.post("/leave/:groupId", isAuthenticated, leaveGroup);
 router.post("/update-avatar/:groupId", isAuthenticated, updateGroupAvatar);
+router.put("/pin/:groupId", isAuthenticated, pinGroupMessage);
 
 export default router;

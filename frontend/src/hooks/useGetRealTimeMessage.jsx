@@ -6,13 +6,23 @@ import {
   setLastMessage,
   clearUnreadCount,
   markMessagesSeen,
+  updateMessageReactions,
+  updateMessagePoll,
 } from "../redux/messageSlice";
 import {
   setSelectedUser,
   setUserTyping,
   updateUserProfilePhoto,
 } from "../redux/userSlice";
-import { addGroupMessage, setSelectedGroup, updateGroup } from "../redux/groupSlice";
+import {
+  addGroupMessage,
+  setSelectedGroup,
+  updateGroup,
+  incrementGroupUnreadCount,
+  updateGroupMessageReactions,
+  updateGroupPoll,
+  updateGroupPinned,
+} from "../redux/groupSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import toast from "react-hot-toast";
@@ -234,6 +244,7 @@ const useGetRealTimeMessage = () => {
       const groupName = groupObj?.name || "Group";
 
       if (!isCurrentGroupActive) {
+        dispatch(incrementGroupUnreadCount(groupId));
         toast.custom(
           (t) => (
             <div
@@ -296,12 +307,42 @@ const useGetRealTimeMessage = () => {
       }
     };
 
+    // Real-time Message Reactions (Direct + Group)
+    const handleMessageReacted = ({ messageId, groupId, reactions }) => {
+      if (!messageId) return;
+      if (groupId) {
+        dispatch(updateGroupMessageReactions({ messageId, reactions }));
+      } else {
+        dispatch(updateMessageReactions({ messageId, reactions }));
+      }
+    };
+
+    // Real-time Poll Votes
+    const handlePollUpdated = ({ messageId, groupId, poll }) => {
+      if (!messageId || !poll) return;
+      if (groupId) {
+        dispatch(updateGroupPoll({ messageId, poll }));
+      } else {
+        dispatch(updateMessagePoll({ messageId, poll }));
+      }
+    };
+
+    // Real-time Pinned Message Update in Group
+    const handleGroupPinnedUpdated = ({ groupId, pinnedMessage }) => {
+      if (groupId) {
+        dispatch(updateGroupPinned({ groupId, pinnedMessage }));
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("newGroupMessage", handleNewGroupMessage);
     socket.on("groupAvatarUpdated", handleGroupAvatarUpdated);
     socket.on("messagesSeen", handleMessagesSeen);
     socket.on("userTyping", handleUserTyping);
     socket.on("userProfileUpdated", handleUserProfileUpdated);
+    socket.on("messageReacted", handleMessageReacted);
+    socket.on("pollUpdated", handlePollUpdated);
+    socket.on("groupPinnedUpdated", handleGroupPinnedUpdated);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
@@ -310,6 +351,9 @@ const useGetRealTimeMessage = () => {
       socket.off("messagesSeen", handleMessagesSeen);
       socket.off("userTyping", handleUserTyping);
       socket.off("userProfileUpdated", handleUserProfileUpdated);
+      socket.off("messageReacted", handleMessageReacted);
+      socket.off("pollUpdated", handlePollUpdated);
+      socket.off("groupPinnedUpdated", handleGroupPinnedUpdated);
     };
   }, [socket, dispatch]);
 };

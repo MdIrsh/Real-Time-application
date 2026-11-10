@@ -7,7 +7,7 @@ import { io, getReceiverSocketId } from "../socket/socket.js";
 export const createGroup = async (req, res) => {
   try {
     const creatorId = req.id;
-    const { name, description = "", participants = [], groupAvatar = "" } = req.body;
+    const { name, description = "", participants = [], groupAvatar = "", category = "General" } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Group name is required", success: false });
@@ -31,10 +31,14 @@ export const createGroup = async (req, res) => {
         name.trim()
       )}`;
 
+    const validCategories = ["General", "Work", "Team"];
+    const finalCategory = validCategories.includes(category) ? category : "General";
+
     const newGroup = await Group.create({
       name: name.trim(),
       description: description.trim(),
       groupAvatar: defaultAvatar,
+      category: finalCategory,
       admin: creatorId,
       participants: memberIds,
       messages: [],
@@ -116,10 +120,16 @@ export const getGroupMessages = async (req, res) => {
 
     const populatedGroup = await Group.findById(groupId).populate({
       path: "messages",
-      populate: {
-        path: "senderId",
-        select: "fullName username profilePhoto gender",
-      },
+      populate: [
+        {
+          path: "senderId",
+          select: "fullName username profilePhoto gender",
+        },
+        {
+          path: "reactions.user",
+          select: "fullName username profilePhoto",
+        },
+      ],
     });
 
     return res.status(200).json({
@@ -140,7 +150,7 @@ export const sendGroupMessage = async (req, res) => {
   try {
     const senderId = req.id;
     const { groupId } = req.params;
-    const { message, image, audio, audioDuration, replyTo } = req.body;
+    const { message, image, audio, audioDuration, file, poll, isSystem, replyTo } = req.body;
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -162,25 +172,29 @@ export const sendGroupMessage = async (req, res) => {
     const newMessage = await Message.create({
       senderId,
       groupId,
-      message: message || "",
+      message: message || (file?.name ? `📎 ${file.name}` : poll?.question ? `📊 ${poll.question}` : ""),
       image: image || null,
       audio: audio || null,
       audioDuration: audioDuration || 0,
+      file: file || undefined,
+      poll: poll || undefined,
+      isSystem: Boolean(isSystem),
       delivered: true,
       seen: false,
       replyTo: replyTo || null,
     });
 
     // Populate sender details on message
-    const populatedMessage = await Message.findById(newMessage._id).populate(
-      "senderId",
-      "fullName username profilePhoto gender"
-    );
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate("senderId", "fullName username profilePhoto gender")
+      .populate("reactions.user", "fullName username profilePhoto");
 
     // Update group's message list & lastMessage
     let previewText = message || "";
     if (image) previewText = "📷 Photo";
     if (audio) previewText = "🎤 Voice message";
+    if (file?.name) previewText = `📄 ${file.name}`;
+    if (poll?.question) previewText = `📊 Poll: ${poll.question}`;
 
     group.messages.push(newMessage._id);
     group.lastMessage = {
@@ -369,6 +383,59 @@ export const updateGroupAvatar = async (req, res) => {
     console.error("updateGroupAvatar error:", error);
     return res.status(500).json({
       message: error?.message || "Failed to update group DP",
+      success: false,
+    });
+  }
+};
+
+// 8. Pin or Unpin a message in a Group
+export const pinGroupMessage = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { groupId } = req.params;
+    const { messageId = null, text = "", senderName = "" } = req.body;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ message: "Group not found", success: false });
+    }
+
+    const isMember = group.participants.some(
+      (pId) => (pId._id || pId).toString() === userId.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({ message: "Not authorized", success: false });
+    }
+
+    group.pinnedMessage = messageId
+      ? { messageId, text, senderName }
+      : { messageId: null, text: "", senderName: "" };
+    await group.save();
+
+    io.to(`group-chat-${groupId}`).emit("groupPinnedUpdated", {
+      groupId,
+      pinnedMessage: group.pinnedMessage,
+    });
+
+    group.participants.forEach((mId) => {
+      const socketId = getReceiverSocketId(mId);
+      if (socketId) {
+        io.to(socketId).emit("groupPinnedUpdated", {
+          groupId,
+          pinnedMessage: group.pinnedMessage,
+        });
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      pinnedMessage: group.pinnedMessage,
+      message: messageId ? "Message pinned! 📌" : "Message unpinned",
+    });
+  } catch (error) {
+    console.error("pinGroupMessage error:", error);
+    return res.status(500).json({
+      message: "Failed to pin message",
       success: false,
     });
   }

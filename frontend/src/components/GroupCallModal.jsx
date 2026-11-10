@@ -6,14 +6,18 @@ import {
   IoMicOff,
   IoVideocam,
   IoVideocamOff,
-  IoCall,
   IoCameraReverseOutline,
   IoPersonAdd,
+  IoPersonAddOutline,
   IoCopy,
   IoCheckmark,
   IoShieldCheckmark,
   IoVolumeHigh,
+  IoChevronBack,
+  IoGridOutline,
+  IoListOutline,
 } from "react-icons/io5";
+import { MdCallEnd } from "react-icons/md";
 import { closeGroupCall } from "../redux/groupCallSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { getActiveUserStatus } from "../utils/statusHelper";
@@ -119,6 +123,15 @@ const GroupCallModal = () => {
   const [peers, setPeers] = useState({}); // { [socketId]: { user, stream, isMuted, isVideoOff } }
   const [showInviteDrawer, setShowInviteDrawer] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [viewMode, setViewMode] = useState(callType === "audio" ? "conference" : "grid");
+  const [invitedFriends, setInvitedFriends] = useState([]);
+
+  useEffect(() => {
+    if (isGroupCallOpen) {
+      setViewMode(callType === "audio" ? "conference" : "grid");
+      setInvitedFriends([]);
+    }
+  }, [isGroupCallOpen, callType]);
 
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -473,6 +486,9 @@ const GroupCallModal = () => {
       fromUser: authUser,
       callType: isVideoOff ? "audio" : "video",
     });
+    setInvitedFriends((prev) =>
+      prev.some((f) => String(f._id) === String(friend._id)) ? prev : [...prev, friend]
+    );
     toast.success(`Invite sent to ${friend.fullName}! 🚀`, {
       id: `invite-${friend._id}`,
     });
@@ -513,166 +529,292 @@ const GroupCallModal = () => {
     return "grid-cols-2 sm:grid-cols-3 max-w-5xl";
   };
 
+  // Pending invited friends who haven't joined peerList yet
+  const pendingInvites = invitedFriends.filter(
+    (inv) => !peerList.some(([, p]) => String(p.user?._id) === String(inv._id))
+  );
+
   return (
-    <div className="fixed inset-0 z-[120] bg-[#0b141a]/95 backdrop-blur-md flex flex-col items-center justify-between p-3 sm:p-5 select-none animate-fade-in text-white">
-      {/* Top Header Bar */}
-      <div className="w-full max-w-4xl flex items-center justify-between px-3 py-2 bg-[#111b21]/80 backdrop-blur-md rounded-2xl border border-[#202c33] shadow-md shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#103629] text-[#25d366] flex items-center justify-center shadow-xs">
-            <IoCall size={16} />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h3 className="font-bold text-xs sm:text-sm text-gray-100">
-                {roomTitle || "Group Call Room"}
-              </h3>
-              <span className="text-[10px] bg-[#202c33] text-[#25d366] px-1.5 py-0.2 rounded-full font-semibold">
-                👥 {totalParticipants} Live
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-[#8696a0]">
-              <span className="font-mono text-[#25d366]">{formatTimer(callTimer)}</span>
+    <div className="fixed inset-0 z-[120] bg-[#0e1c2f] flex flex-col items-center justify-between p-4 sm:p-6 select-none animate-fade-in text-white">
+      {/* Top Header Bar matching Screen 3 (< Conference) */}
+      <div className="w-full max-w-2xl flex items-center justify-between px-2 py-2 shrink-0">
+        <button
+          onClick={handleLeaveCall}
+          className="flex items-center gap-2 text-white hover:text-gray-300 transition cursor-pointer group"
+          title="Back / Leave Conference"
+        >
+          <IoChevronBack size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+          <div className="text-left">
+            <h3 className="font-semibold text-base sm:text-lg leading-tight">
+              {roomTitle && !roomTitle.startsWith("Group Call") ? roomTitle : "Conference"}
+            </h3>
+            <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+              <IoShieldCheckmark size={11} className="text-[#2ecc71]" />
+              <span>{totalParticipants} active</span>
               <span>•</span>
-              <span className="flex items-center gap-1 text-[10px]">
-                <IoShieldCheckmark size={12} className="text-[#25d366]" /> End-to-End Encrypted
-              </span>
-            </div>
+              <span className="font-mono text-[#2ecc71]">{formatTimer(callTimer)}</span>
+            </p>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2">
+          {/* Toggle between Conference List and Video Grid */}
+          <button
+            onClick={() => setViewMode((v) => (v === "conference" ? "grid" : "conference"))}
+            className="flex items-center gap-1.5 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
+            title={viewMode === "conference" ? "Switch to Video Grid" : "Switch to Conference List"}
+          >
+            {viewMode === "conference" ? <IoGridOutline size={14} /> : <IoListOutline size={14} />}
+            <span className="hidden sm:inline">
+              {viewMode === "conference" ? "Video Grid" : "Conference List"}
+            </span>
+          </button>
+
           {/* Copy Link Button */}
           <button
             onClick={handleCopyInviteLink}
-            className="flex items-center gap-1 text-[11px] bg-[#202c33] hover:bg-[#2a3942] text-gray-200 px-3 py-1.5 rounded-xl border border-white/10 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1 text-[11px] bg-[#162840] hover:bg-[#1f3656] text-gray-200 px-3 py-1.5 rounded-full border border-white/10 transition active:scale-95 cursor-pointer"
             title="Copy Invite Link"
           >
-            {copiedLink ? <IoCheckmark size={14} className="text-[#25d366]" /> : <IoCopy size={13} />}
-            <span className="hidden sm:inline">{copiedLink ? "Copied" : "Copy Link"}</span>
-          </button>
-
-          {/* Invite Friends Button */}
-          <button
-            onClick={() => setShowInviteDrawer(!showInviteDrawer)}
-            className="flex items-center gap-1 text-[11px] bg-[#25d366] hover:bg-[#22c35e] text-[#0b141a] font-bold px-3 py-1.5 rounded-xl transition active:scale-95 cursor-pointer shadow-md"
-          >
-            <IoPersonAdd size={14} />
-            <span className="hidden sm:inline">Invite</span>
+            {copiedLink ? <IoCheckmark size={14} className="text-[#2ecc71]" /> : <IoCopy size={13} />}
+            <span className="hidden sm:inline">{copiedLink ? "Copied" : "Link"}</span>
           </button>
         </div>
       </div>
 
-      {/* Main Multi-User Video Grid View */}
-      <div className="flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-        <div className={`w-full grid gap-3 sm:gap-4 auto-rows-fr h-full max-h-[72vh] ${getGridClasses()}`}>
-          {/* Local User Tile (You) */}
-          <div className="relative w-full h-full min-h-[160px] bg-[#1a1f24] rounded-2xl overflow-hidden border-2 border-[#25d366]/40 flex items-center justify-center shadow-xl group">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className={`w-full h-full object-cover scale-x-[-1] ${
-                isVideoOff ? "hidden" : "block"
-              }`}
-            />
+      {/* Main Content: Screen 3 Conference Pill List OR Video Grid */}
+      {viewMode === "conference" ? (
+        <div className="flex-1 w-full max-w-md flex flex-col items-center pt-6 pb-4 overflow-y-auto px-1">
+          {/* Hidden audio/video elements still needed when in conference list mode */}
+          <video ref={localVideoRef} autoPlay muted playsInline className="hidden" />
+          <div className="hidden">
+            {peerList.map(([socketId, peer]) => (
+              <RemotePeerTile key={`audio-${socketId}`} peer={peer} />
+            ))}
+          </div>
 
-            {/* Fallback avatar if local video is off */}
-            {isVideoOff && (
-              <div className="flex flex-col items-center justify-center gap-2 p-4">
+          <div className="w-full space-y-3">
+            {/* Local User Row ("You") */}
+            <div className="w-full bg-[#162840]/95 border border-white/10 rounded-full p-2 pr-3 flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-3 min-w-0">
                 <img
                   src={getAvatarUrl(authUser)}
                   alt="You"
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#25d366] shadow-xl"
+                  className="w-10 h-10 rounded-full object-cover border border-white/20 shrink-0"
                   onError={(e) => handleImageError(e, authUser?.fullName)}
                 />
-                <span className="text-xs font-semibold text-gray-200">
-                  {authUser?.fullName || "You"} (Camera Off)
-                </span>
-              </div>
-            )}
-
-            {/* Local User Badge */}
-            <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
-              <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1 border border-white/10 shadow-sm">
-                <span>{authUser?.fullName || "You"} (You)</span>
-              </div>
-              {isMuted && (
-                <div className="bg-red-500/80 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
-                  <IoMicOff size={12} />
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-white truncate block">
+                    You {isMuted ? "(Muted)" : ""}
+                  </span>
                 </div>
-              )}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-xs font-mono font-semibold text-[#2ecc71]">
+                  {formatTimer(callTimer)}
+                </span>
+                <button
+                  onClick={handleLeaveCall}
+                  className="w-8 h-8 rounded-full bg-[#e06363] hover:bg-[#d95353] text-white flex items-center justify-center shadow-md transition active:scale-90 cursor-pointer"
+                  title="Leave Call"
+                >
+                  <MdCallEnd size={15} />
+                </button>
+              </div>
             </div>
+
+            {/* Connected Remote Peers Rows */}
+            {peerList.map(([socketId, peer]) => (
+              <div
+                key={socketId}
+                className="w-full bg-[#162840]/95 border border-white/10 rounded-full p-2 pr-3 flex items-center justify-between shadow-lg"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={getAvatarUrl(peer.user)}
+                    alt={peer.user?.fullName || "Peer"}
+                    className="w-10 h-10 rounded-full object-cover border border-white/20 shrink-0"
+                    onError={(e) => handleImageError(e, peer.user?.fullName)}
+                  />
+                  <span className="text-sm font-medium text-white truncate">
+                    {peer.user?.fullName || "Participant"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-mono font-semibold text-[#2ecc71]">
+                    {formatTimer(callTimer)}
+                  </span>
+                  <button
+                    onClick={handleLeaveCall}
+                    className="w-8 h-8 rounded-full bg-[#e06363] hover:bg-[#d95353] text-white flex items-center justify-center shadow-md transition active:scale-90 cursor-pointer"
+                    title="End Call"
+                  >
+                    <MdCallEnd size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Pending Invited Friends ("Ringing" in Coral Red) */}
+            {pendingInvites.map((friend) => (
+              <div
+                key={friend._id}
+                className="w-full bg-[#162840]/70 border border-white/5 rounded-full p-2 pr-3 flex items-center justify-between shadow-md"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={getAvatarUrl(friend)}
+                    alt={friend.fullName}
+                    className="w-10 h-10 rounded-full object-cover border border-white/15 opacity-80 shrink-0"
+                    onError={(e) => handleImageError(e, friend.fullName)}
+                  />
+                  <span className="text-sm font-medium text-gray-300 truncate">
+                    {friend.fullName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-medium text-[#e06363] animate-pulse">
+                    Ringing
+                  </span>
+                  <button
+                    onClick={() =>
+                      setInvitedFriends((prev) =>
+                        prev.filter((f) => String(f._id) !== String(friend._id))
+                      )
+                    }
+                    className="w-8 h-8 rounded-full bg-[#e06363] hover:bg-[#d95353] text-white flex items-center justify-center shadow-md transition active:scale-90 cursor-pointer"
+                    title="Cancel Invite"
+                  >
+                    <MdCallEnd size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Remote Peers Tiles */}
-          {peerList.map(([socketId, peer]) => (
-            <RemotePeerTile key={socketId} peer={peer} />
-          ))}
+          {/* Centered Outlined Add Participant Button matching Screen 3 */}
+          <button
+            onClick={() => setShowInviteDrawer(true)}
+            className="mt-8 w-12 h-12 rounded-full border border-white/40 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center shadow-lg transition hover:scale-105 active:scale-95 cursor-pointer"
+            title="Add Participant to Conference"
+          >
+            <IoPersonAddOutline size={21} />
+          </button>
+        </div>
+      ) : (
+        /* Multi-User Video Grid View */
+        <div className="flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className={`w-full grid gap-3 sm:gap-4 auto-rows-fr h-full max-h-[68vh] ${getGridClasses()}`}>
+            {/* Local User Tile (You) */}
+            <div className="relative w-full h-full min-h-[160px] bg-[#162840] rounded-2xl overflow-hidden border border-white/15 flex items-center justify-center shadow-xl group">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className={`w-full h-full object-cover scale-x-[-1] ${
+                  isVideoOff ? "hidden" : "block"
+                }`}
+              />
 
-          {/* Waiting banner if alone in room */}
-          {peerList.length === 0 && (
-            <div className="hidden sm:flex flex-col items-center justify-center bg-[#111b21]/60 rounded-2xl border border-dashed border-[#2a3942] p-6 text-center text-gray-400">
-              <div className="w-12 h-12 rounded-full bg-[#202c33] text-[#25d366] flex items-center justify-center mb-2 animate-bounce">
-                <IoPersonAdd size={22} />
+              {isVideoOff && (
+                <div className="flex flex-col items-center justify-center gap-2 p-4">
+                  <img
+                    src={getAvatarUrl(authUser)}
+                    alt="You"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#2ecc71] shadow-xl"
+                    onError={(e) => handleImageError(e, authUser?.fullName)}
+                  />
+                  <span className="text-xs font-semibold text-gray-200">
+                    {authUser?.fullName || "You"} (Camera Off)
+                  </span>
+                </div>
+              )}
+
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
+                <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1 border border-white/10 shadow-sm">
+                  <span>{authUser?.fullName || "You"} (You)</span>
+                </div>
+                {isMuted && (
+                  <div className="bg-red-500/80 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
+                    <IoMicOff size={12} />
+                  </div>
+                )}
               </div>
-              <h4 className="text-sm font-semibold text-gray-200">
-                Waiting for friends to join...
-              </h4>
-              <p className="text-xs text-[#8696a0] mt-1 max-w-xs">
-                Click <b>"Invite"</b> above to call friends directly into this room!
-              </p>
             </div>
+
+            {peerList.map(([socketId, peer]) => (
+              <RemotePeerTile key={socketId} peer={peer} />
+            ))}
+
+            {peerList.length === 0 && (
+              <div className="hidden sm:flex flex-col items-center justify-center bg-[#162840]/60 rounded-2xl border border-dashed border-white/20 p-6 text-center text-gray-400">
+                <button
+                  onClick={() => setShowInviteDrawer(true)}
+                  className="w-12 h-12 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center mb-2 transition cursor-pointer"
+                >
+                  <IoPersonAddOutline size={22} />
+                </button>
+                <h4 className="text-sm font-semibold text-gray-200">
+                  Waiting for friends to join...
+                </h4>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">
+                  Tap above to invite friends into this conference room!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Controls + Wide Coral-Red "End Group Call" Button matching Screen 3 */}
+      <div className="w-full max-w-md flex flex-col items-center gap-3 shrink-0 pb-2">
+        {/* Compact Media Toggles */}
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={handleToggleMute}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md ${
+              isMuted
+                ? "bg-white text-[#0e1c2f]"
+                : "bg-[#162840] hover:bg-[#1f3656] text-white border border-white/10"
+            }`}
+            title={isMuted ? "Unmute Mic" : "Mute Mic"}
+          >
+            {isMuted ? <IoMicOff /> : <IoMic />}
+          </button>
+
+          <button
+            onClick={() => {
+              handleToggleVideo();
+              if (isVideoOff) setViewMode("grid");
+            }}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md ${
+              !isVideoOff
+                ? "bg-white text-[#0e1c2f]"
+                : "bg-[#162840] hover:bg-[#1f3656] text-white border border-white/10"
+            }`}
+            title={isVideoOff ? "Turn Video On" : "Turn Video Off"}
+          >
+            {isVideoOff ? <IoVideocamOff /> : <IoVideocam />}
+          </button>
+
+          {!isVideoOff && (
+            <button
+              onClick={handleSwitchCamera}
+              className="w-11 h-11 rounded-full bg-[#162840] hover:bg-[#1f3656] text-white border border-white/10 flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md"
+              title="Switch Camera"
+            >
+              <IoCameraReverseOutline />
+            </button>
           )}
         </div>
-      </div>
 
-      {/* Bottom Controls Bar (Glassmorphic WhatsApp/Zoom Style) */}
-      <div className="px-5 py-3 bg-[#111b21]/90 backdrop-blur-md rounded-full border border-[#202c33] shadow-2xl flex items-center gap-3 sm:gap-4 shrink-0">
-        {/* Mute / Unmute Button */}
-        <button
-          onClick={handleToggleMute}
-          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-lg ${
-            isMuted
-              ? "bg-red-500/90 hover:bg-red-600 text-white"
-              : "bg-[#202c33] hover:bg-[#2a3942] text-white border border-white/10"
-          }`}
-          title={isMuted ? "Unmute Mic" : "Mute Mic"}
-        >
-          {isMuted ? <IoMicOff /> : <IoMic />}
-        </button>
-
-        {/* Video On / Off Button */}
-        <button
-          onClick={handleToggleVideo}
-          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-lg ${
-            isVideoOff
-              ? "bg-red-500/90 hover:bg-red-600 text-white"
-              : "bg-[#202c33] hover:bg-[#2a3942] text-white border border-white/10"
-          }`}
-          title={isVideoOff ? "Turn Video On" : "Turn Video Off"}
-        >
-          {isVideoOff ? <IoVideocamOff /> : <IoVideocam />}
-        </button>
-
-        {/* Switch Front/Back Camera */}
-        {!isVideoOff && (
-          <button
-            onClick={handleSwitchCamera}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#202c33] hover:bg-[#2a3942] text-white border border-white/10 flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-lg"
-            title="Switch Camera"
-          >
-            <IoCameraReverseOutline />
-          </button>
-        )}
-
-        {/* End / Leave Group Call Button */}
+        {/* Wide Coral-Red "End Group Call" Pill Button matching Screen 3 */}
         <button
           onClick={handleLeaveCall}
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-2xl transition active:scale-95 cursor-pointer shadow-xl shadow-red-600/40 ml-1"
-          title="Leave Call"
+          className="w-full py-3.5 rounded-full bg-[#e06363] hover:bg-[#d95353] active:scale-98 text-white font-semibold text-sm shadow-[0_8px_25px_rgba(224,99,99,0.4)] transition cursor-pointer"
         >
-          <IoClose />
+          End Group Call
         </button>
       </div>
 

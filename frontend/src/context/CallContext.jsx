@@ -59,6 +59,8 @@ export const CallProvider = ({ children }) => {
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isRemoteVideoOff, setIsRemoteVideoOff] = useState(false);
+  const [isRemoteMuted, setIsRemoteMuted] = useState(false);
   const [facingMode, setFacingMode] = useState("user"); // "user" (front) or "environment" (back)
   const facingModeRef = useRef("user");
   const [audioBlocked, setAudioBlocked] = useState(false);
@@ -162,6 +164,8 @@ export const CallProvider = ({ children }) => {
     setCallSeconds(0);
     setIsMuted(false);
     setIsVideoOff(false);
+    setIsRemoteVideoOff(false);
+    setIsRemoteMuted(false);
     setMicPermissionDenied(false);
     setCallVolume(1.0);
     callVolumeRef.current = 1.0;
@@ -634,7 +638,15 @@ export const CallProvider = ({ children }) => {
       audioTracks.forEach((t) => {
         t.enabled = !t.enabled;
       });
-      setIsMuted((prev) => !prev);
+      const nextMuted = !isMuted;
+      setIsMuted(nextMuted);
+      if (socket && callUserRef.current?._id) {
+        socket.emit("callMediaState", {
+          to: callUserRef.current._id,
+          isVideoOff,
+          isMuted: nextMuted,
+        });
+      }
     }
   };
 
@@ -646,7 +658,15 @@ export const CallProvider = ({ children }) => {
         videoTracks.forEach((t) => {
           t.enabled = !t.enabled;
         });
-        setIsVideoOff((prev) => !prev);
+        const nextVideoOff = !isVideoOff;
+        setIsVideoOff(nextVideoOff);
+        if (socket && callUserRef.current?._id) {
+          socket.emit("callMediaState", {
+            to: callUserRef.current._id,
+            isVideoOff: nextVideoOff,
+            isMuted,
+          });
+        }
       }
     }
   };
@@ -810,12 +830,19 @@ export const CallProvider = ({ children }) => {
       cleanupCall();
     };
 
+    // Remote user toggled Camera On/Off or Mic Mute/Unmute
+    const handleCallMediaState = ({ isVideoOff: rVideoOff, isMuted: rMuted }) => {
+      setIsRemoteVideoOff(Boolean(rVideoOff));
+      setIsRemoteMuted(Boolean(rMuted));
+    };
+
     socket.on("incomingCall", handleIncomingCall);
     socket.on("callAccepted", handleCallAccepted);
     socket.on("iceCandidate", handleIceCandidate);
     socket.on("callEnded", handleCallEnded);
     socket.on("callRejected", handleCallRejected);
     socket.on("callUnavailable", handleCallUnavailable);
+    socket.on("callMediaState", handleCallMediaState);
 
     return () => {
       socket.off("incomingCall", handleIncomingCall);
@@ -824,6 +851,7 @@ export const CallProvider = ({ children }) => {
       socket.off("callEnded", handleCallEnded);
       socket.off("callRejected", handleCallRejected);
       socket.off("callUnavailable", handleCallUnavailable);
+      socket.off("callMediaState", handleCallMediaState);
     };
   }, [socket, callActive, cleanupCall]);
 
@@ -838,6 +866,8 @@ export const CallProvider = ({ children }) => {
         callSeconds,
         isMuted,
         isVideoOff,
+        isRemoteVideoOff,
+        isRemoteMuted,
         audioBlocked,
         micPermissionDenied,
         enableAudio,

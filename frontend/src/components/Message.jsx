@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import axios from "axios";
 import {
   IoCheckmarkDoneSharp,
   IoCheckmarkSharp,
@@ -10,10 +11,25 @@ import {
   IoLogoInstagram,
   IoOpenOutline,
   IoArrowUndoOutline,
+  IoDocumentText,
+  IoDownloadOutline,
+  IoBarChart,
 } from "react-icons/io5";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import { openSpecificReel } from "../redux/reelSlice";
-import { setReplyingMessage } from "../redux/messageSlice";
+import {
+  setReplyingMessage,
+  updateMessageReactions,
+  updateMessagePoll,
+} from "../redux/messageSlice";
+import {
+  updateGroupMessageReactions,
+  updateGroupPoll,
+  updateGroupPinned,
+} from "../redux/groupSlice";
+import { getAvatarUrl, handleImageError } from "../utils/avatar";
+import { MetaAiRing } from "../utils/metaAi";
+import { BASE_URL } from "../config/api";
 import toast from "react-hot-toast";
 
 // Helper to parse WhatsApp status reply and reaction messages
@@ -209,14 +225,35 @@ const renderClickableText = (text) => {
   });
 };
 
+const formatFileSize = (bytes = 0) => {
+  if (!bytes || bytes <= 0) return "File";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = Math.round(bytes / 1024);
+  if (kb < 1024) return `${kb} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const Message = ({ message }) => {
   const scroll = useRef();
   const dispatch = useDispatch();
-  const { authUser } = useSelector((store) => store.user);
+  const { authUser, selectedUser, otherUsers } = useSelector((store) => store.user);
+  const { selectedGroup } = useSelector((store) => store.group);
+  const [showPollResults, setShowPollResults] = useState(false);
 
   useEffect(() => {
     scroll.current?.scrollIntoView({ behavior: "smooth" });
   }, [message]);
+
+  if (message?.isSystem) {
+    return (
+      <div ref={scroll} className="flex justify-center my-2.5 select-none">
+        <span className="px-3.5 py-1 rounded-full bg-[#e2e8f0]/85 text-[#475569] text-xs font-medium shadow-2xs border border-white/80 flex items-center gap-1.5">
+          <span>👥</span>
+          <span>{message.message}</span>
+        </span>
+      </div>
+    );
+  }
 
   const msgSenderId =
     typeof message?.senderId === "object"
@@ -229,6 +266,14 @@ const Message = ({ message }) => {
     message?.senderId === "demo-user-me";
   const isMetaAi = message?.senderId === "meta-ai";
   const isTyping = message?.isTyping;
+
+  // Resolve sender object for avatar on incoming messages
+  const senderObj =
+    typeof message?.senderId === "object" && message.senderId?.fullName
+      ? message.senderId
+      : selectedUser && String(selectedUser._id) === String(msgSenderId)
+      ? selectedUser
+      : otherUsers?.find((u) => String(u._id) === String(msgSenderId)) || selectedUser;
   const statusInfo = parseStatusReply(message?.message);
   const reelInfo = parseReelMessage(message?.message);
 
@@ -278,46 +323,208 @@ const Message = ({ message }) => {
     const targetEl = document.getElementById(`msg-${message.replyTo.messageId}`);
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      targetEl.classList.add("ring-2", "ring-[#25d366]", "transition-all");
+      targetEl.classList.add("ring-2", "ring-[#2563eb]", "transition-all");
       setTimeout(() => {
-        targetEl.classList.remove("ring-2", "ring-[#25d366]");
+        targetEl.classList.remove("ring-2", "ring-[#2563eb]");
       }, 1400);
     }
   };
 
+  const activeGroupId = message?.groupId || selectedGroup?._id || null;
+
+  const handleReactToMessage = async (emoji, e) => {
+    if (e) e.stopPropagation();
+    if (!message?._id || isTyping) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `${BASE_URL}/api/v1/message/react/${message._id}`,
+        { emoji },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      if (res.data?.success) {
+        if (activeGroupId) {
+          dispatch(
+            updateGroupMessageReactions({
+              messageId: message._id,
+              reactions: res.data.reactions,
+            })
+          );
+        } else {
+          dispatch(
+            updateMessageReactions({
+              messageId: message._id,
+              reactions: res.data.reactions,
+            })
+          );
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to react");
+    }
+  };
+
+  const handleVotePoll = async (optionIndex, e) => {
+    if (e) e.stopPropagation();
+    if (!message?._id) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `${BASE_URL}/api/v1/message/poll/vote/${message._id}`,
+        { optionIndex },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      if (res.data?.success && res.data.poll) {
+        if (activeGroupId) {
+          dispatch(updateGroupPoll({ messageId: message._id, poll: res.data.poll }));
+        } else {
+          dispatch(updateMessagePoll({ messageId: message._id, poll: res.data.poll }));
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to record vote");
+    }
+  };
+
+  const handlePinMessage = async (e) => {
+    if (e) e.stopPropagation();
+    if (!activeGroupId || !message?._id) return;
+    const snippet =
+      message?.message ||
+      (message?.file?.name
+        ? `📄 ${message.file.name}`
+        : message?.poll?.question
+        ? `📊 ${message.poll.question}`
+        : message?.image
+        ? "📷 Photo"
+        : "Voice message");
+    const sName = isSentByMe
+      ? authUser?.fullName || "You"
+      : senderObj?.fullName || "Member";
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `${BASE_URL}/api/v1/group/pin/${activeGroupId}`,
+        { messageId: message._id, text: snippet, senderName: sName },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      if (res.data?.success) {
+        dispatch(
+          updateGroupPinned({
+            groupId: activeGroupId,
+            pinnedMessage: res.data.pinnedMessage,
+          })
+        );
+        toast.success("Pinned message to group header! 📌");
+      }
+    } catch (err) {
+      toast.error("Failed to pin message");
+    }
+  };
+
+  const reactionList = message?.reactions || [];
+  const groupedReactions = reactionList.reduce((acc, r) => {
+    const emoji = r?.emoji || "👍";
+    if (!acc[emoji]) {
+      acc[emoji] = { emoji, count: 0, users: [], myReacted: false };
+    }
+    acc[emoji].count += 1;
+    const uid = typeof r.user === "object" ? r.user?._id : r.user;
+    if (authUser?._id && String(uid) === String(authUser._id)) {
+      acc[emoji].myReacted = true;
+    }
+    if (typeof r.user === "object" && r.user) {
+      acc[emoji].users.push(r.user);
+    }
+    return acc;
+  }, {});
+  const groupedReactionArr = Object.values(groupedReactions);
+  const hasReactions = groupedReactionArr.length > 0;
+
   return (
     <div
       ref={scroll}
-      className={`group flex w-full my-1.5 px-2 ${
-        isSentByMe ? "justify-end" : "justify-start"
-      }`}
+      className={`group flex items-end gap-2.5 w-full ${
+        hasReactions ? "mt-2 mb-5" : "my-2"
+      } px-1.5 sm:px-2 ${isSentByMe ? "justify-end" : "justify-start"}`}
     >
+      {/* Incoming Sender Circular Avatar on left matching screenshot */}
+      {!isSentByMe && (
+        <div className="shrink-0 self-end mb-0.5">
+          {isMetaAi ? (
+            <MetaAiRing size="w-8 h-8" />
+          ) : (
+            <img
+              src={getAvatarUrl(senderObj)}
+              alt={senderObj?.fullName || "User"}
+              className="w-8 h-8 rounded-full object-cover border border-white shadow-xs"
+              onError={(e) => handleImageError(e, senderObj?.fullName)}
+            />
+          )}
+        </div>
+      )}
+
       <div
         id={`msg-${message?._id}`}
         onDoubleClick={handleReplyClick}
-        className={`relative max-w-[85%] sm:max-w-[72%] px-3.5 pt-2 pb-1.5 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] rounded-2xl ${
+        className={`relative max-w-[82%] sm:max-w-[72%] px-4 pt-2.5 pb-2 rounded-2xl ${
           isSentByMe
-            ? "bg-[#d9fdd3] text-[#111b21] rounded-tr-xs"
-            : "bg-white text-[#111b21] rounded-tl-xs"
+            ? "bg-[#d6e8ff] text-[#0f172a] rounded-br-sm shadow-[0_1px_4px_rgba(37,99,235,0.14)]"
+            : "bg-white text-[#1e293b] rounded-bl-sm shadow-[0_1px_4px_rgba(15,23,42,0.07)] border border-blue-50/90"
         }`}
       >
-        {/* Quick Reply Button on Hover */}
+        {/* Quick Reaction, Pin & Reply Action Bar on Hover */}
         {!isTyping && (
-          <button
-            type="button"
-            onClick={handleReplyClick}
-            className={`absolute top-1.5 ${
-              isSentByMe ? "-left-8" : "-right-8"
-            } opacity-0 group-hover:opacity-100 p-1.5 rounded-full bg-white dark:bg-[#202c33] shadow-md border border-gray-200 dark:border-gray-700 text-[#54656f] hover:text-[#00a884] dark:hover:text-[#25d366] hover:scale-110 active:scale-95 transition-all cursor-pointer z-10`}
-            title="Reply to message (or double click)"
+          <div
+            className={`absolute -top-4 ${
+              isSentByMe ? "right-2" : "left-2"
+            } opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md shadow-md border border-blue-100 transition-all duration-150 z-20`}
           >
-            <IoArrowUndoOutline size={14} />
-          </button>
+            {["❤️", "👍", "😂"].map((emo) => (
+              <button
+                key={emo}
+                type="button"
+                onClick={(e) => handleReactToMessage(emo, e)}
+                className="w-6 h-6 rounded-full hover:bg-blue-50 flex items-center justify-center text-sm hover:scale-125 transition-transform cursor-pointer"
+                title={`React ${emo}`}
+              >
+                {emo}
+              </button>
+            ))}
+            {activeGroupId && (
+              <button
+                type="button"
+                onClick={handlePinMessage}
+                className="w-6 h-6 rounded-full hover:bg-blue-50 flex items-center justify-center text-xs hover:scale-110 transition-transform cursor-pointer"
+                title="Pin message to group"
+              >
+                📌
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleReplyClick}
+              className="w-6 h-6 rounded-full hover:bg-blue-50 text-[#64748b] hover:text-[#2563eb] flex items-center justify-center transition cursor-pointer"
+              title="Reply"
+            >
+              <IoArrowUndoOutline size={13} />
+            </button>
+          </div>
         )}
 
         {/* Group Chat Sender Name Tag */}
         {!isSentByMe && !isMetaAi && message?.senderId?.fullName && (
-          <div className="text-[12px] font-bold text-[#00a884] dark:text-[#25d366] pb-0.5 select-none leading-none">
+          <div className="text-[12px] font-bold text-[#1d4ed8] pb-0.5 select-none leading-none">
             {message.senderId.fullName}
           </div>
         )}
@@ -334,7 +541,7 @@ const Message = ({ message }) => {
           </div>
         )}
 
-        {/* WhatsApp Quoted Reply Preview on TOP */}
+        {/* Quoted Reply Preview on TOP */}
         {message?.replyTo &&
           (message.replyTo.message ||
             message.replyTo.image ||
@@ -343,12 +550,12 @@ const Message = ({ message }) => {
               onClick={scrollToQuotedMessage}
               className={`mb-2 p-2 rounded-xl border-l-[3.5px] text-xs transition-all cursor-pointer shadow-xs ${
                 isSentByMe
-                  ? "bg-[#025144]/15 border-[#00a884] hover:bg-[#025144]/25 text-[#111b21]"
-                  : "bg-black/5 dark:bg-white/5 border-[#00a884] dark:border-[#25d366] hover:bg-black/10 text-[#111b21]"
+                  ? "bg-blue-600/10 border-[#2563eb] hover:bg-blue-600/15 text-[#0f172a]"
+                  : "bg-slate-100 border-[#2563eb] hover:bg-slate-200/70 text-[#0f172a]"
               }`}
               title="Click to view original message"
             >
-              <div className="font-bold text-[11px] text-[#00a884] dark:text-[#25d366] flex items-center gap-1">
+              <div className="font-bold text-[11px] text-[#1d4ed8] flex items-center gap-1">
                 <IoArrowUndoOutline size={12} />
                 <span>{message.replyTo.senderName || "Message"}</span>
               </div>
@@ -435,6 +642,117 @@ const Message = ({ message }) => {
               duration={message.audioDuration}
               isSentByMe={isSentByMe}
             />
+          </div>
+        )}
+
+        {/* File / Document Download Card */}
+        {message?.file?.url && (
+          <a
+            href={message.file.url}
+            download={message.file.name || "document"}
+            onClick={(e) => e.stopPropagation()}
+            className="mb-1.5 p-2.5 rounded-xl bg-[#f8fafc] hover:bg-[#eff6ff] border border-blue-100/90 flex items-center gap-3 min-w-[220px] sm:min-w-[260px] transition-colors group/file cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-lg bg-[#2563eb]/12 text-[#1d4ed8] flex items-center justify-center shrink-0">
+              <IoDocumentText className="text-2xl" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-bold text-[#0f172a] truncate">
+                {message.file.name || "Document"}
+              </p>
+              <p className="text-[11px] text-[#64748b] font-medium mt-0.5">
+                {formatFileSize(message.file.size)} •{" "}
+                {(message.file.name?.split(".").pop() || "FILE").toUpperCase()}
+              </p>
+            </div>
+            <span className="w-8 h-8 rounded-full bg-white border border-blue-100 text-[#1d4ed8] group-hover/file:bg-[#2563eb] group-hover/file:text-white flex items-center justify-center shrink-0 shadow-2xs transition-colors">
+              <IoDownloadOutline className="text-base" />
+            </span>
+          </a>
+        )}
+
+        {/* Interactive Group Poll Card */}
+        {message?.poll?.question && Array.isArray(message.poll.options) && (
+          <div className="mb-1.5 min-w-[235px] sm:min-w-[275px] bg-[#f8fafc]/95 rounded-xl p-3 border border-blue-100/90">
+            <div className="flex items-center gap-2 mb-2.5">
+              <IoBarChart className="text-[#1d4ed8] text-lg shrink-0" />
+              <h4 className="text-[14px] font-bold text-[#0f172a] leading-snug">
+                Poll: {message.poll.question}
+              </h4>
+            </div>
+
+            {(() => {
+              const totalVotes = message.poll.options.reduce(
+                (sum, opt) => sum + (opt?.votes?.length || 0),
+                0
+              );
+              return (
+                <div className="space-y-2.5">
+                  {message.poll.options.map((opt, idx) => {
+                    const voteCount = opt?.votes?.length || 0;
+                    const percent =
+                      totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                    const iVoted = (opt?.votes || []).some(
+                      (v) =>
+                        authUser?._id &&
+                        String(typeof v === "object" ? v._id : v) === String(authUser._id)
+                    );
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(e) => handleVotePoll(idx, e)}
+                        className="w-full text-left group/opt cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {iVoted ? (
+                              <IoCheckmarkCircle className="text-[#1d4ed8] text-[19px] shrink-0" />
+                            ) : (
+                              <span className="w-[17px] h-[17px] rounded-full border-2 border-[#cbd5e1] group-hover/opt:border-[#2563eb] shrink-0 transition-colors" />
+                            )}
+                            <span
+                              className={`text-[13px] truncate ${
+                                iVoted
+                                  ? "font-bold text-[#0f172a]"
+                                  : "font-medium text-[#334155]"
+                              }`}
+                            >
+                              {opt.text}
+                            </span>
+                          </div>
+                          <span className="text-[11.5px] font-semibold text-[#64748b] shrink-0">
+                            {voteCount} {voteCount === 1 ? "vote" : "votes"}
+                            {showPollResults && totalVotes > 0 ? ` (${percent}%)` : ""}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-[#e2e8f0] overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              iVoted ? "bg-[#1d4ed8]" : "bg-[#93c5fd]"
+                            }`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPollResults((prev) => !prev);
+                    }}
+                    className="w-full mt-1 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-blue-100 text-[#1d4ed8] text-xs font-bold transition cursor-pointer"
+                  >
+                    {showPollResults
+                      ? `Total Votes: ${totalVotes} (Hide %)`
+                      : "View Results"}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -564,7 +882,9 @@ const Message = ({ message }) => {
           </div>
         ) : (
           message?.message &&
-          message.message !== "🎤 Voice message" && (
+          message.message !== "🎤 Voice message" &&
+          !(message?.file?.url && message.message.startsWith("📄 ")) &&
+          !(message?.poll?.question && message.message.startsWith("📊 Poll:")) && (
             <div className="text-[14.5px] leading-relaxed break-words font-normal select-text pr-14 inline-block whitespace-pre-wrap">
               {renderClickableText(message?.message)}
             </div>
@@ -573,30 +893,68 @@ const Message = ({ message }) => {
 
         {/* Timestamp and ticks on bottom right */}
         {!isTyping && (
-          <span className="float-right ml-2 mt-1 flex items-center gap-1 text-[11px] text-[#667781] select-none">
+          <span className="float-right ml-2 mt-1 flex items-center gap-1 text-[11px] text-[#64748b] select-none">
             <span>{formattedTime}</span>
             {isSentByMe && (
               message?.seen ? (
                 // Double Blue Tick: Seen / Read by receiver
                 <IoCheckmarkDoneSharp
-                  className="text-[#53bdeb] text-sm"
+                  className="text-[#2563eb] text-sm"
                   title="Read"
                 />
               ) : message?.delivered ? (
                 // Double Gray Tick: Delivered to receiver
                 <IoCheckmarkDoneSharp
-                  className="text-[#8696a0] text-sm"
+                  className="text-[#64748b] text-sm"
                   title="Delivered"
                 />
               ) : (
                 // Single Gray Tick: Sent from your device
                 <IoCheckmarkSharp
-                  className="text-[#8696a0] text-sm"
+                  className="text-[#94a3b8] text-sm"
                   title="Sent"
                 />
               )
             )}
           </span>
+        )}
+
+        {/* Floating Reaction Summary Pills Below Bubble */}
+        {hasReactions && (
+          <div
+            className={`absolute -bottom-3.5 ${
+              isSentByMe ? "right-2" : "left-2"
+            } flex items-center gap-1.5 z-10`}
+          >
+            {groupedReactionArr.map((grp) => (
+              <button
+                key={grp.emoji}
+                type="button"
+                onClick={(e) => handleReactToMessage(grp.emoji, e)}
+                className={`px-2 py-0.5 rounded-full bg-white shadow-sm border text-[11px] font-bold flex items-center gap-1 cursor-pointer transition hover:scale-105 ${
+                  grp.myReacted
+                    ? "border-[#2563eb] text-[#1d4ed8]"
+                    : "border-blue-100 text-[#334155]"
+                }`}
+              >
+                <span>{grp.emoji}</span>
+                <span>{grp.count}</span>
+                {grp.users.length > 0 && (
+                  <span className="flex -space-x-1.5 ml-0.5">
+                    {grp.users.slice(0, 3).map((u, idx) => (
+                      <img
+                        key={u._id || idx}
+                        src={getAvatarUrl(u)}
+                        alt={u.fullName || "User"}
+                        className="w-4 h-4 rounded-full object-cover border border-white"
+                        onError={(e) => handleImageError(e, u.fullName)}
+                      />
+                    ))}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

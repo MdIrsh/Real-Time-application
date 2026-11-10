@@ -15,6 +15,16 @@ const groupSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    category: {
+      type: String,
+      enum: ["General", "Work", "Team"],
+      default: "General",
+    },
+    pinnedMessage: {
+      messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+      text: { type: String, default: "" },
+      senderName: { type: String, default: "" },
+    },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

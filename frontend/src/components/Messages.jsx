@@ -4,7 +4,6 @@ import useGetMessages from "../hooks/useGetMessages";
 import useGetGroupMessages from "../hooks/useGetGroupMessages";
 import { useSelector, useDispatch } from "react-redux";
 import { setMessages } from "../redux/messageSlice";
-import { IoLockClosed } from "react-icons/io5";
 import { MetaAiRing, generateAiReply } from "../utils/metaAi";
 
 const SUGGESTED_PROMPTS = [
@@ -67,25 +66,20 @@ const Messages = () => {
   };
 
   return (
-    <div className="px-3 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto space-y-1">
-      {/* Notice / Encryption */}
-      <div className="flex justify-center my-3">
-        {isMetaAi ? (
-          <div className="bg-white/90 text-[#54656f] text-[11px] font-medium px-4 py-1.5 rounded-lg shadow-sm max-w-md text-center flex items-center gap-2 border border-blue-200/60">
+    <div className="px-4 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto space-y-2.5">
+      {/* Meta AI Privacy Notice (only for Meta AI) */}
+      {isMetaAi && (
+        <div className="flex justify-center my-2">
+          <div className="bg-white/90 text-[#54656f] text-[11px] font-medium px-4 py-1.5 rounded-full shadow-sm max-w-md text-center flex items-center gap-2 border border-blue-200/60">
             <span className="text-blue-500 font-bold">✨</span>
             <span>Meta AI uses Llama 3 to assist you. Messages are private and secure.</span>
           </div>
-        ) : (
-          <div className="bg-[#ffeecd]/90 text-[#54656f] text-[11px] font-medium px-4 py-1.5 rounded-lg shadow-sm max-w-md text-center flex items-center gap-1.5 border border-amber-200/60">
-            <IoLockClosed className="text-amber-600 text-xs shrink-0" />
-            <span>Messages are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Date Divider Badge */}
+      {/* Date Divider Badge matching screenshot */}
       <div className="flex justify-center my-2">
-        <span className="bg-white/90 text-[#54656f] text-[11px] font-semibold tracking-wider px-3 py-1 rounded-lg shadow-sm uppercase border border-gray-200/50">
+        <span className="bg-white/95 text-[#475569] text-xs font-medium px-4 py-1 rounded-full shadow-xs border border-blue-100/80">
           Today
         </span>
       </div>
@@ -134,11 +128,11 @@ const Messages = () => {
       {/* Live Typing Indicator Bubble */}
       {isTyping && (
         <div className="flex items-center gap-2 my-2 animate-fadeIn">
-          <div className="bg-white rounded-2xl rounded-tl-none px-3.5 py-2 shadow-sm border border-gray-100 flex items-center gap-1.5 w-fit">
-            <span className="text-xs text-gray-500 font-medium mr-0.5">typing</span>
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
+          <div className="bg-white rounded-2xl rounded-bl-sm px-3.5 py-2 shadow-sm border border-blue-100/80 flex items-center gap-1.5 w-fit">
+            <span className="text-xs text-[#64748b] font-medium mr-0.5">typing</span>
+            <span className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-1.5 h-1.5 bg-[#2563eb] rounded-full animate-bounce"></span>
           </div>
         </div>
       )}

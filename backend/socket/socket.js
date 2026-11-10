@@ -124,6 +124,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on("callMediaState", ({ to, isVideoOff, isMuted }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("callMediaState", {
+        isVideoOff: Boolean(isVideoOff),
+        isMuted: Boolean(isMuted),
+      });
+    }
+  });
+
   socket.on("markAsSeen", ({ senderId }) => {
     const userId = socket.handshake.query.userId;
     if (userId && senderId) {

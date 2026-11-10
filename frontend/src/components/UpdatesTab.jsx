@@ -1,10 +1,15 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   IoAdd,
   IoCamera,
   IoPencil,
   IoMusicalNotes,
   IoChevronForward,
+  IoSearchOutline,
+  IoEllipsisVertical,
+  IoEyeOutline,
+  IoHeart,
+  IoClose,
 } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -14,6 +19,7 @@ import {
   setStatusLoading,
   addOtherStatus,
   viewStatusLocally,
+  reactStatusLocally,
   removeStatus,
 } from "../redux/statusSlice";
 import { BASE_URL } from "../config/api";
@@ -41,7 +47,11 @@ const UpdatesTab = ({ onOpenUpload }) => {
   const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
 
-  // Real-time listener for incoming statuses & viewer notifications from friends
+  const [showSearch, setShowSearch] = useState(false);
+  const [statusSearch, setStatusSearch] = useState("");
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
+
+  // Real-time listener for incoming statuses, views, reactions & deletions
   useEffect(() => {
     if (!socket) return;
 
@@ -59,17 +69,23 @@ const UpdatesTab = ({ onOpenUpload }) => {
       dispatch(viewStatusLocally({ statusId, viewer }));
     };
 
+    const handleStatusReacted = ({ statusId, reaction }) => {
+      dispatch(reactStatusLocally({ statusId, reaction }));
+    };
+
     const handleStatusDeleted = (statusId) => {
       dispatch(removeStatus(statusId));
     };
 
     socket.on("newStatus", handleNewStatus);
     socket.on("statusViewed", handleStatusViewed);
+    socket.on("statusReacted", handleStatusReacted);
     socket.on("statusDeleted", handleStatusDeleted);
 
     return () => {
       socket.off("newStatus", handleNewStatus);
       socket.off("statusViewed", handleStatusViewed);
+      socket.off("statusReacted", handleStatusReacted);
       socket.off("statusDeleted", handleStatusDeleted);
     };
   }, [socket, authUser?._id, dispatch]);
@@ -119,182 +135,379 @@ const UpdatesTab = ({ onOpenUpload }) => {
     return seen.size || status.viewers.length;
   };
 
+  const getReactionCount = (status) => {
+    return status?.reactions?.length || 0;
+  };
+
+  const filteredOtherStatuses = otherStatuses.filter((s) => {
+    if (!statusSearch.trim()) return true;
+    const name = s.user?.fullName || s.userName || "";
+    const cap = s.caption || "";
+    return (
+      name.toLowerCase().includes(statusSearch.toLowerCase()) ||
+      cap.toLowerCase().includes(statusSearch.toLowerCase())
+    );
+  });
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b141a] text-[#e9edef] select-none p-3.5 flex flex-col gap-5">
-      {/* 1. Status Section Header */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-base text-[#e9edef]">Status</h3>
+    <div className="flex-1 min-h-0 overflow-y-auto bg-[#f8faff] text-[#0f172a] select-none p-4 flex flex-col gap-4 relative">
+      {/* 1. Header matching screenshot ("Status" + "Share what's on your mind" + Search & 3-dots) */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-[#0f172a] leading-tight">Status</h2>
+          <p className="text-xs text-[#64748b] mt-0.5">
+            Share what&apos;s on your mind
+          </p>
         </div>
 
-        {/* My Status Card */}
-        <div className="flex items-center justify-between p-2 hover:bg-[#202c33]/50 rounded-2xl transition cursor-pointer">
-          <div
+        <div className="flex items-center gap-2 relative">
+          <button
+            type="button"
             onClick={() => {
-              if (hasMyStatus) {
-                handleOpenStatus(myStatuses, 0);
-              } else {
-                onOpenUpload();
-              }
+              setShowSearch((prev) => !prev);
+              setStatusSearch("");
             }}
-            className="flex items-center gap-3.5 min-w-0 flex-1"
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer ${
+              showSearch
+                ? "bg-[#2563eb] text-white shadow-sm"
+                : "bg-[#eef4fc] hover:bg-[#e0ecfb] text-[#334155]"
+            }`}
+            title="Search statuses"
           >
-            {/* Avatar with Green '+' Badge or Story Ring */}
-            <div className="relative shrink-0">
-              <div
-                className={`p-[2px] rounded-full ${
-                  hasMyStatus
-                    ? "bg-[#25d366]"
-                    : "border-2 border-dashed border-[#8696a0]"
-                }`}
-              >
-                <img
-                  src={getAvatarUrl(authUser)}
-                  alt="My Status"
-                  className="w-12 h-12 rounded-full object-cover border border-[#0b141a]"
-                  onError={(e) => handleImageError(e, authUser?.fullName)}
-                />
-              </div>
+            <IoSearchOutline size={18} />
+          </button>
 
-              {/* Green '+' add button */}
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenUpload();
+          <button
+            type="button"
+            onClick={() => setShowQuickMenu((prev) => !prev)}
+            className="w-9 h-9 rounded-full bg-[#eef4fc] hover:bg-[#e0ecfb] text-[#334155] flex items-center justify-center transition cursor-pointer"
+            title="Status options"
+          >
+            <IoEllipsisVertical size={18} />
+          </button>
+
+          {showQuickMenu && (
+            <div className="absolute right-0 top-11 w-44 bg-white rounded-2xl shadow-xl border border-blue-100 py-1.5 z-40 text-xs text-[#1e293b]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuickMenu(false);
+                  onOpenUpload("image");
                 }}
-                className="absolute bottom-0 right-0 w-5 h-5 bg-[#00a884] text-white rounded-full flex items-center justify-center border-2 border-[#0b141a] shadow-sm hover:scale-110 active:scale-95 transition"
-                title="Add status"
+                className="w-full px-3.5 py-2 hover:bg-blue-50 flex items-center gap-2 text-left font-medium cursor-pointer"
               >
-                <IoAdd size={14} className="font-bold" />
-              </div>
-            </div>
-
-            <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-[#e9edef] leading-tight">
-                My status
-              </h4>
-              <div className="text-xs text-[#8696a0] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                {hasMyStatus ? (
-                  <>
-                    <span className="shrink-0">
-                      {formatStatusTime(latestMyStatus.createdAt)}
-                    </span>
-                    <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-1.5 py-0.2 rounded-full shrink-0">
-                      👁️ {getUniqueViewCount(latestMyStatus)} views
-                    </span>
-                    {latestMyStatus.song?.title && (
-                      <span className="text-[10px] text-[#25d366] font-medium truncate max-w-[110px] shrink-0">
-                        🎵 {latestMyStatus.song.title}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span>Tap to add status update</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Camera & Pencil Floating Shortcuts */}
-          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            <button
-              onClick={() => onOpenUpload()}
-              className="w-8 h-8 rounded-full bg-[#202c33] hover:bg-[#2a3942] text-[#25d366] flex items-center justify-center transition active:scale-95"
-              title="Add text or photo status"
-            >
-              <IoCamera size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Recent Updates List */}
-        <div className="mt-4">
-          <h4 className="text-xs font-bold text-[#8696a0] uppercase tracking-wider mb-2 px-2">
-            Recent updates
-          </h4>
-
-          {loading && otherStatuses.length === 0 ? (
-            <div className="flex items-center justify-center py-6 text-xs text-[#8696a0]">
-              <div className="w-4 h-4 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin mr-2" />
-              <span>Loading updates...</span>
-            </div>
-          ) : otherStatuses.length === 0 ? (
-            <div className="p-4 bg-[#111b21] rounded-2xl text-center text-xs text-[#8696a0]">
-              No recent updates from friends
-            </div>
-          ) : (
-            <div className="flex flex-col divide-y divide-[#202c33]/30">
-              {otherStatuses.map((status, index) => {
-                const displayName =
-                  status.user?.fullName || status.userName || "Contact";
-                const avatar =
-                  status.user?.profilePhoto ||
-                  status.userAvatar ||
-                  `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(
-                    displayName
-                  )}`;
-
-                const isViewed = status.viewers?.some(
-                  (v) => String(v.user?._id || v.user) === String(authUser?._id)
-                );
-
-                return (
-                  <div
-                    key={status._id || index}
-                    onClick={() => handleOpenStatus(otherStatuses, index)}
-                    className="flex items-center justify-between p-2.5 hover:bg-[#202c33]/50 rounded-2xl transition cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      {/* Avatar with Status Ring (Green if unviewed, Gray if viewed) */}
-                      <div
-                        className={`p-[2.5px] rounded-full shrink-0 ${
-                          isViewed
-                            ? "border-2 border-[#8696a0]/40"
-                            : "bg-gradient-to-tr from-[#25d366] to-[#00a884] shadow-xs"
-                        }`}
-                      >
-                        <img
-                          src={avatar}
-                          alt={displayName}
-                          className="w-11 h-11 rounded-full object-cover border border-[#0b141a]"
-                        />
-                      </div>
-
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-[#e9edef] truncate">
-                          {displayName}
-                        </h4>
-                        <div className="text-xs text-[#8696a0] truncate mt-0.5 flex items-center gap-1.5">
-                          <span className="shrink-0">{formatStatusTime(status.createdAt)}</span>
-                          {status.song?.title && (
-                            <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-1.5 py-0.2 rounded-full truncate flex items-center gap-0.5 shrink-0 max-w-[120px]">
-                              🎵 {status.song.title}
-                            </span>
-                          )}
-                          {status.caption && (
-                            <span className="truncate">• {status.caption}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <IoChevronForward size={16} className="text-[#8696a0] shrink-0" />
-                  </div>
-                );
-              })}
+                <IoCamera className="text-[#2563eb]" size={15} />
+                <span>Photo / Video Status</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuickMenu(false);
+                  onOpenUpload("text");
+                }}
+                className="w-full px-3.5 py-2 hover:bg-blue-50 flex items-center gap-2 text-left font-medium cursor-pointer"
+              >
+                <IoPencil className="text-purple-600" size={15} />
+                <span>Text Status</span>
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="h-[1px] bg-[#202c33] my-1" />
+      {/* Optional Search Input */}
+      {showSearch && (
+        <div className="flex items-center bg-white rounded-full px-3.5 py-2 border border-blue-200 shadow-xs">
+          <IoSearchOutline size={16} className="text-[#64748b] mr-2 shrink-0" />
+          <input
+            type="text"
+            value={statusSearch}
+            onChange={(e) => setStatusSearch(e.target.value)}
+            placeholder="Search friend status..."
+            className="flex-1 bg-transparent text-xs text-[#0f172a] placeholder-[#94a3b8] outline-none border-none"
+            autoFocus
+          />
+          {statusSearch && (
+            <button
+              type="button"
+              onClick={() => setStatusSearch("")}
+              className="text-gray-400 hover:text-gray-700"
+            >
+              <IoClose size={15} />
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* 3. Status Lagane Ka Option (Quick Creation Options) */}
-      <div className="flex flex-col gap-2.5 pb-2">
-        <div className="flex items-center justify-between mb-0.5 px-1">
-          <h3 className="font-bold text-sm text-[#e9edef] flex items-center gap-1.5">
-            <span>Status Lagayein</span>
-            <span className="text-[10px] text-[#25d366] font-semibold bg-[#103629] px-2 py-0.2 rounded-full">
+      {/* 2. "My Status" Soft Blue Card matching screenshot */}
+      <div
+        onClick={() => {
+          if (hasMyStatus) {
+            handleOpenStatus(myStatuses, 0);
+          } else {
+            onOpenUpload("image");
+          }
+        }}
+        className="flex items-center justify-between p-3 bg-[#eff6ff] hover:bg-[#e5f0ff] border border-blue-100 rounded-2xl transition cursor-pointer shadow-xs"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="relative shrink-0">
+            <div
+              className={`p-[2px] rounded-full ${
+                hasMyStatus
+                  ? "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb]"
+                  : "border border-blue-200"
+              }`}
+            >
+              <img
+                src={getAvatarUrl(authUser)}
+                alt="My Status"
+                className="w-12 h-12 rounded-full object-cover border-2 border-white"
+                onError={(e) => handleImageError(e, authUser?.fullName)}
+              />
+            </div>
+
+            {/* Blue '+' add button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenUpload("image");
+              }}
+              className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#2563eb] text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:scale-110 active:scale-95 transition cursor-pointer"
+              title="Add status"
+            >
+              <IoAdd size={13} />
+            </button>
+          </div>
+
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-[#0f172a] leading-tight">
+              My Status
+            </h4>
+            <div className="text-xs text-[#64748b] mt-0.5 flex items-center gap-1.5 flex-wrap">
+              {hasMyStatus ? (
+                <>
+                  <span>{formatStatusTime(latestMyStatus.createdAt)}</span>
+                  <span className="text-[11px] font-semibold text-[#2563eb] flex items-center gap-1">
+                    • <IoEyeOutline size={12} /> {getUniqueViewCount(latestMyStatus)}
+                  </span>
+                  {getReactionCount(latestMyStatus) > 0 && (
+                    <span className="text-[11px] font-semibold text-rose-500 flex items-center gap-0.5">
+                      • <IoHeart size={11} /> {getReactionCount(latestMyStatus)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span>Tap to add status</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenUpload("image");
+          }}
+          className="w-9 h-9 rounded-full bg-white hover:bg-blue-50 text-[#2563eb] flex items-center justify-center shadow-xs border border-blue-100 transition active:scale-95 shrink-0 cursor-pointer"
+          title="Add status"
+        >
+          <IoCamera size={18} />
+        </button>
+      </div>
+
+      {/* 3. Horizontal Story Rings Strip matching screenshot */}
+      {(hasMyStatus || filteredOtherStatuses.length > 0) && (
+        <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 shrink-0">
+          {/* My Status Ring */}
+          <button
+            type="button"
+            onClick={() =>
+              hasMyStatus ? handleOpenStatus(myStatuses, 0) : onOpenUpload("image")
+            }
+            className="flex flex-col items-center gap-1 shrink-0 group cursor-pointer"
+          >
+            <div className="relative">
+              <div
+                className={`p-[2.5px] rounded-full ${
+                  hasMyStatus
+                    ? "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb]"
+                    : "bg-blue-100"
+                }`}
+              >
+                <img
+                  src={getAvatarUrl(authUser)}
+                  alt="My Status"
+                  className="w-13 h-13 rounded-full object-cover border-2 border-white group-hover:scale-105 transition-transform"
+                  onError={(e) => handleImageError(e, authUser?.fullName)}
+                />
+              </div>
+              <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#2563eb] text-white border-2 border-white flex items-center justify-center text-[9px] shadow-xs">
+                {hasMyStatus ? <IoEyeOutline size={9} /> : <IoAdd size={10} />}
+              </span>
+            </div>
+            <span className="text-[11px] font-medium text-[#334155] truncate max-w-[56px]">
+              My Status
+            </span>
+          </button>
+
+          {/* Friends Story Rings */}
+          {filteredOtherStatuses.map((status, index) => {
+            const displayName =
+              status.user?.fullName || status.userName || "Contact";
+            const firstName = displayName.split(" ")[0];
+            const avatar =
+              status.user?.profilePhoto ||
+              status.userAvatar ||
+              getAvatarUrl({ fullName: displayName });
+            const isViewed = status.viewers?.some(
+              (v) => String(v.user?._id || v.user) === String(authUser?._id)
+            );
+
+            return (
+              <button
+                key={`ring-${status._id || index}`}
+                type="button"
+                onClick={() => handleOpenStatus(filteredOtherStatuses, index)}
+                className="flex flex-col items-center gap-1 shrink-0 group cursor-pointer"
+              >
+                <div
+                  className={`p-[2.5px] rounded-full ${
+                    isViewed
+                      ? "bg-slate-300"
+                      : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
+                  }`}
+                >
+                  <img
+                    src={avatar}
+                    alt={displayName}
+                    className="w-13 h-13 rounded-full object-cover border-2 border-white group-hover:scale-105 transition-transform"
+                    onError={(e) => handleImageError(e, displayName)}
+                  />
+                </div>
+                <span className="text-[11px] font-medium text-[#334155] truncate max-w-[56px]">
+                  {firstName}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 4. Recent Updates List with Eye + Heart Counts matching screenshot */}
+      <div>
+        <div className="flex items-center justify-between mb-2 px-0.5">
+          <h3 className="font-bold text-sm text-[#0f172a]">Recent Updates</h3>
+          <button
+            type="button"
+            onClick={() => {
+              if (filteredOtherStatuses.length > 0) {
+                handleOpenStatus(filteredOtherStatuses, 0);
+              } else {
+                onOpenUpload("image");
+              }
+            }}
+            className="text-xs font-semibold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
+          >
+            <span>See All</span>
+            <IoChevronForward size={13} />
+          </button>
+        </div>
+
+        {loading && otherStatuses.length === 0 ? (
+          <div className="flex items-center justify-center py-6 text-xs text-[#64748b]">
+            <div className="w-4 h-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin mr-2" />
+            <span>Loading updates...</span>
+          </div>
+        ) : filteredOtherStatuses.length === 0 ? (
+          <div className="p-4 bg-white rounded-2xl border border-blue-100 text-center text-xs text-[#64748b] shadow-xs">
+            No recent updates from friends yet
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {filteredOtherStatuses.map((status, index) => {
+              const displayName =
+                status.user?.fullName || status.userName || "Contact";
+              const avatar =
+                status.user?.profilePhoto ||
+                status.userAvatar ||
+                getAvatarUrl({ fullName: displayName });
+
+              const isViewed = status.viewers?.some(
+                (v) => String(v.user?._id || v.user) === String(authUser?._id)
+              );
+
+              const viewsCount = getUniqueViewCount(status);
+              const likesCount = getReactionCount(status);
+
+              return (
+                <div
+                  key={status._id || index}
+                  onClick={() => handleOpenStatus(filteredOtherStatuses, index)}
+                  className={`flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer ${
+                    index === 0
+                      ? "bg-[#eff6ff] border border-blue-100 shadow-xs"
+                      : "bg-white hover:bg-[#f1f5f9] border border-transparent hover:border-blue-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Gradient Story Ring */}
+                    <div
+                      className={`p-[2.5px] rounded-full shrink-0 ${
+                        isViewed
+                          ? "bg-slate-300"
+                          : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
+                      }`}
+                    >
+                      <img
+                        src={avatar}
+                        alt={displayName}
+                        className="w-11 h-11 rounded-full object-cover border-2 border-white"
+                        onError={(e) => handleImageError(e, displayName)}
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-[#0f172a] truncate">
+                        {displayName}
+                      </h4>
+                      <div className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1.5">
+                        <span className="shrink-0">{formatStatusTime(status.createdAt)}</span>
+                        {status.song?.title && (
+                          <span className="text-[10px] text-[#2563eb] font-medium bg-blue-50 px-1.5 py-0.2 rounded-full truncate max-w-[110px] shrink-0">
+                            🎵 {status.song.title}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Stats: Eye Count + Red Heart Count matching screenshot */}
+                  <div className="flex items-center gap-3 shrink-0 ml-2">
+                    <span className="flex items-center gap-1 text-xs font-semibold text-[#475569]">
+                      <IoEyeOutline size={15} className="text-[#475569]" />
+                      <span>{viewsCount}</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-[#0f172a]">
+                      <IoHeart size={14} className="text-[#ef4444]" />
+                      <span>{likesCount}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 5. Quick Creation Cards ("Status Lagayein") */}
+      <div className="flex flex-col gap-2.5 pt-2 border-t border-blue-100 pb-2">
+        <div className="flex items-center justify-between px-0.5">
+          <h3 className="font-bold text-sm text-[#0f172a] flex items-center gap-1.5">
+            <span>Create Status</span>
+            <span className="text-[10px] text-[#2563eb] font-semibold bg-blue-100 px-2 py-0.2 rounded-full">
               New Story
             </span>
           </h3>
@@ -303,26 +516,26 @@ const UpdatesTab = ({ onOpenUpload }) => {
         {/* Option 1: Photo / Video Status with Song */}
         <div
           onClick={() => onOpenUpload("image")}
-          className="p-3.5 rounded-2xl bg-gradient-to-r from-[#103629]/60 via-[#103629]/30 to-[#0b141a] border border-[#25d366]/30 hover:border-[#25d366] transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-lg"
+          className="p-3 rounded-2xl bg-gradient-to-r from-[#eff6ff] to-white border border-blue-200 hover:border-[#2563eb] transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-xs"
         >
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-[#00a884] text-[#0b141a] flex items-center justify-center text-xl shadow-lg shrink-0 group-hover:scale-105 transition">
-              <IoCamera size={22} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
+              <IoCamera size={20} />
             </div>
             <div className="min-w-0">
-              <h5 className="text-xs font-bold text-[#e9edef] flex items-center gap-1.5">
+              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
                 <span>Photo / Video Status</span>
-                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-[#25d366] text-[#0b141a] font-black">
+                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-[#2563eb] text-white font-black">
                   + SONG
                 </span>
               </h5>
-              <p className="text-[11px] text-[#8696a0] truncate mt-0.5 flex items-center gap-1">
-                <IoMusicalNotes size={12} className="text-[#25d366] shrink-0" />
+              <p className="text-[11px] text-[#64748b] truncate mt-0.5 flex items-center gap-1">
+                <IoMusicalNotes size={12} className="text-[#2563eb] shrink-0" />
                 <span>Upload photo/video + Bollywood music</span>
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-[#25d366] px-3 py-1.5 rounded-xl bg-[#25d366]/15 group-hover:bg-[#25d366] group-hover:text-[#0b141a] transition shrink-0 ml-2">
+          <span className="text-xs font-bold text-[#2563eb] px-3 py-1.5 rounded-xl bg-blue-100 group-hover:bg-[#2563eb] group-hover:text-white transition shrink-0 ml-2">
             Upload →
           </span>
         </div>
@@ -330,26 +543,26 @@ const UpdatesTab = ({ onOpenUpload }) => {
         {/* Option 2: Colorful Text Status with Song */}
         <div
           onClick={() => onOpenUpload("text")}
-          className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/50 via-purple-950/20 to-[#0b141a] border border-purple-500/30 hover:border-purple-400 transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-lg"
+          className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-white border border-purple-200 hover:border-purple-500 transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-xs"
         >
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-xl shadow-lg shrink-0 group-hover:scale-105 transition">
-              <IoPencil size={20} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
+              <IoPencil size={18} />
             </div>
             <div className="min-w-0">
-              <h5 className="text-xs font-bold text-[#e9edef] flex items-center gap-1.5">
+              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
                 <span>Text Status</span>
-                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-purple-500 text-white font-black">
+                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-purple-600 text-white font-black">
                   COLOR
                 </span>
               </h5>
-              <p className="text-[11px] text-[#8696a0] truncate mt-0.5 flex items-center gap-1">
-                <IoMusicalNotes size={12} className="text-purple-400 shrink-0" />
+              <p className="text-[11px] text-[#64748b] truncate mt-0.5 flex items-center gap-1">
+                <IoMusicalNotes size={12} className="text-purple-500 shrink-0" />
                 <span>Type thoughts with 7 vibrant colors & song</span>
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-purple-400 px-3 py-1.5 rounded-xl bg-purple-500/15 group-hover:bg-purple-500 group-hover:text-white transition shrink-0 ml-2">
+          <span className="text-xs font-bold text-purple-600 px-3 py-1.5 rounded-xl bg-purple-100 group-hover:bg-purple-600 group-hover:text-white transition shrink-0 ml-2">
             Write →
           </span>
         </div>

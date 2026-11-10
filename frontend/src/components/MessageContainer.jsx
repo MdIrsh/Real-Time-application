@@ -6,13 +6,17 @@ import { useCall } from "../context/CallContext";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser, setUserStatus } from "../redux/userSlice";
 import { setMessages } from "../redux/messageSlice";
-import { setSelectedGroup, setGroupMessages } from "../redux/groupSlice";
+import {
+  setSelectedGroup,
+  setGroupMessages,
+  updateGroupPinned,
+} from "../redux/groupSlice";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import { MetaAiRing } from "../utils/metaAi";
 import { openGroupCall } from "../redux/groupCallSlice";
 import { getActiveUserStatus, STATUS_OPTIONS } from "../utils/statusHelper";
 import {
-  IoChevronBack,
+  IoArrowBack,
   IoCallOutline,
   IoVideocamOutline,
   IoPeopleOutline,
@@ -168,6 +172,43 @@ const MessageContainer = () => {
     }
   };
 
+  const handleUnpinMessage = async () => {
+    if (!selectedGroup?._id) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `${BASE_URL}/api/v1/group/pin/${selectedGroup._id}`,
+        { messageId: null },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        }
+      );
+      dispatch(
+        updateGroupPinned({
+          groupId: selectedGroup._id,
+          pinnedMessage: res.data?.pinnedMessage || null,
+        })
+      );
+      toast.success("Pinned message removed");
+    } catch (err) {
+      toast.error("Failed to unpin message");
+    }
+  };
+
+  const scrollToPinnedMessage = () => {
+    const msgId = selectedGroup?.pinnedMessage?.messageId;
+    if (!msgId) return;
+    const targetEl = document.getElementById(`msg-${msgId}`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetEl.classList.add("ring-2", "ring-[#2563eb]", "transition-all");
+      setTimeout(() => {
+        targetEl.classList.remove("ring-2", "ring-[#2563eb]");
+      }, 1500);
+    }
+  };
+
   const activeStatus = getActiveUserStatus(selectedUser, onlineUsers, userStatuses);
   const isOnline = activeStatus === "Online";
   const isAway = activeStatus === "Away";
@@ -178,18 +219,39 @@ const MessageContainer = () => {
   return (
     <>
       {hasActiveChat ? (
-        <div className="flex-1 flex flex-col h-full bg-[#efeae2] relative min-w-0 overflow-hidden">
-          {/* Header */}
-          <div className="bg-[#f0f2f5] px-3 sm:px-4 py-2 flex items-center justify-between border-b border-gray-200 shadow-sm z-10 select-none shrink-0 relative">
+        <div className="flex-1 flex flex-col h-full bg-[#edf3fc] relative min-w-0 overflow-hidden">
+          {/* Royal Blue Wave Header matching screenshot */}
+          <div className="bg-gradient-to-r from-[#0d47a1] via-[#1565c0] to-[#1e88e5] px-3 sm:px-4 py-2.5 flex items-center justify-between shadow-md z-20 select-none shrink-0 relative">
+            {/* Decorative Blue Wave Background Layer (clipped inside absolute wrapper so dropdown is never clipped) */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div
+                className="absolute inset-0 opacity-45"
+                style={{
+                  background:
+                    "radial-gradient(circle at 20% -30%, rgba(56,189,248,0.55) 0%, transparent 55%), radial-gradient(circle at 85% 130%, rgba(14,165,233,0.45) 0%, transparent 60%)",
+                }}
+              />
+              <svg
+                className="absolute inset-0 w-full h-full opacity-25"
+                viewBox="0 0 600 80"
+                preserveAspectRatio="none"
+                fill="none"
+              >
+                <path
+                  d="M0 60 C 180 10, 350 90, 600 20 L 600 0 L 0 0 Z"
+                  fill="rgba(255,255,255,0.22)"
+                />
+              </svg>
+            </div>
+
             {/* Left: Back button + Avatar + Name + Subtitle */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 relative z-10">
               <button
                 onClick={closeChatHandler}
-                className="flex items-center text-[#007aff] hover:opacity-80 transition-opacity pr-1 text-sm font-medium"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 transition active:scale-95 cursor-pointer shrink-0"
                 title="Back to chats"
               >
-                <IoChevronBack className="text-2xl" />
-                <span className="hidden sm:inline">Back</span>
+                <IoArrowBack className="text-xl" />
               </button>
 
               {/* Group View Avatar vs User View Avatar */}
@@ -204,16 +266,16 @@ const MessageContainer = () => {
                     <img
                       src={selectedGroup.groupAvatar}
                       alt={selectedGroup.name}
-                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white/80 shadow-xs"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#103629] border border-[#25d366]/40 flex items-center justify-center text-lg font-bold text-[#25d366] shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/70 flex items-center justify-center text-lg font-bold text-white shadow-sm">
                       {selectedGroup.groupAvatar && selectedGroup.groupAvatar.length <= 4
                         ? selectedGroup.groupAvatar
                         : selectedGroup.name?.charAt(0)?.toUpperCase() || "👥"}
                     </div>
                   )}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#103629] text-[#25d366] rounded-full flex items-center justify-center text-[9px] border border-white">
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#22c55e] text-white rounded-full flex items-center justify-center text-[9px] border border-white">
                     <IoPeople size={9} />
                   </span>
                 </div>
@@ -226,16 +288,16 @@ const MessageContainer = () => {
                       <img
                         src={getAvatarUrl(selectedUser)}
                         alt="user"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white/80 shadow-xs"
                         onError={(e) => handleImageError(e, selectedUser?.fullName)}
                       />
                       {/* Exactly ONE active status badge dot */}
                       {isOnline ? (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25d366] border-2 border-white rounded-full" title="Online" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#22c55e] border-2 border-white rounded-full shadow-xs" title="Online" />
                       ) : isAway ? (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-white rounded-full" title="Away" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-white rounded-full shadow-xs" title="Away" />
                       ) : (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 border-2 border-white rounded-full" title="Offline" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 border-2 border-white rounded-full shadow-xs" title="Offline" />
                       )}
                     </>
                   )}
@@ -249,77 +311,75 @@ const MessageContainer = () => {
                   className="flex flex-col min-w-0 cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-[#111b21] font-semibold text-base leading-tight truncate">
+                    <h3 className="text-white font-semibold text-base leading-tight truncate">
                       {selectedGroup.name}
                     </h3>
-                    <span className="text-[10px] text-[#25d366] bg-[#103629] px-1.5 py-0.2 rounded font-bold shrink-0">
+                    <span className="text-[10px] text-white bg-white/20 px-1.5 py-0.2 rounded font-bold shrink-0">
                       Group
                     </span>
                   </div>
-                  <span className="text-xs text-[#667781] leading-tight truncate">
-                    {selectedGroup.participants
-                      ? `${selectedGroup.participants.length} members: ${selectedGroup.participants
-                          .map((p) => p.fullName || p.username || "Member")
-                          .slice(0, 3)
-                          .join(", ")}${
-                          selectedGroup.participants.length > 3 ? "..." : ""
-                        }`
-                      : "Tap for group details"}
+                  <span className="text-xs text-blue-100 leading-tight truncate flex items-center gap-1.5">
+                    {(() => {
+                      const parts = selectedGroup.participants || [];
+                      const onlineCount = parts.filter((p) => {
+                        const pid = typeof p === "string" ? p : p?._id;
+                        return pid === authUser?._id || onlineUsers?.includes(pid);
+                      }).length;
+                      return (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-[#22c55e] inline-block shrink-0" />
+                          <span>
+                            {parts.length} members • Online {onlineCount}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </span>
                 </div>
               ) : (
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-[#111b21] font-semibold text-base leading-tight truncate">
+                    <h3 className="text-white font-semibold text-base leading-tight truncate">
                       {selectedUser?.fullName}
                     </h3>
                     {isMetaAi && (
-                      <IoShieldCheckmark className="text-[#0064e0] text-sm shrink-0" />
+                      <IoShieldCheckmark className="text-sky-200 text-sm shrink-0" />
                     )}
                   </div>
-                  <span className="text-xs text-[#667781] leading-tight">
+                  <span className="text-xs leading-tight">
                     {isTyping ? (
-                      <span className="text-emerald-600 font-semibold flex items-center gap-1 animate-pulse">
+                      <span className="text-white font-semibold flex items-center gap-1 animate-pulse">
                         typing...
                       </span>
                     ) : isMetaAi ? (
-                      <span className="text-blue-600 font-medium">
+                      <span className="text-blue-100 font-medium">
                         with Llama 3 • AI Assistant
                       </span>
                     ) : !isAcceptedFriend ? (
-                      <span className="text-amber-600 font-medium">
+                      <span className="text-amber-200 font-medium">
                         Connection pending
                       </span>
                     ) : isOnline ? (
-                      <span className="text-emerald-600 font-medium flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#25d366] inline-block" />
-                        online
-                      </span>
+                      <span className="text-blue-50 font-medium">Online</span>
                     ) : isAway ? (
-                      <span className="text-amber-500 font-medium flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-                        away
-                      </span>
+                      <span className="text-amber-200 font-medium">Away</span>
                     ) : (
-                      <span className="text-[#8696a0] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
-                        offline
-                      </span>
+                      <span className="text-blue-200/80">Offline</span>
                     )}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Right: Calling icons & more */}
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Right: Calling icons & more (Video, Phone, 3-dots) matching screenshot */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 relative z-10">
               {selectedGroup ? (
                 /* Group Chat Calling Icons */
                 <>
                   {/* Group Video Call */}
                   <button
                     onClick={() => handleStartGroupCallRoom("video")}
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-[#007aff] hover:bg-gray-200 transition active:scale-95"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
                     title="Start Group Video Call 👥📹"
                   >
                     <IoVideocamOutline className="text-2xl" />
@@ -328,7 +388,7 @@ const MessageContainer = () => {
                   {/* Group Voice Call */}
                   <button
                     onClick={() => handleStartGroupCallRoom("audio")}
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-[#007aff] hover:bg-gray-200 transition active:scale-95"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
                     title="Start Group Voice Call 👥📞"
                   >
                     <IoCallOutline className="text-xl" />
@@ -343,8 +403,8 @@ const MessageContainer = () => {
                     onClick={() => handleStartCall("video")}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       isAcceptedFriend
-                        ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
-                        : "text-gray-400 cursor-not-allowed opacity-50"
+                        ? "text-white hover:bg-white/15 active:scale-95 cursor-pointer"
+                        : "text-white/40 cursor-not-allowed"
                     }`}
                     title={
                       isAcceptedFriend
@@ -355,32 +415,14 @@ const MessageContainer = () => {
                     <IoVideocamOutline className="text-2xl" />
                   </button>
 
-                  {/* Group Call Room Icon */}
-                  <button
-                    disabled={!isAcceptedFriend}
-                    onClick={handleStartGroupCallFromDirect}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                      isAcceptedFriend
-                        ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
-                        : "text-gray-400 cursor-not-allowed opacity-50"
-                    }`}
-                    title={
-                      isAcceptedFriend
-                        ? "Start Group Call Room 👥"
-                        : "Calling locked (Accept friend request first)"
-                    }
-                  >
-                    <IoPeopleOutline className="text-2xl" />
-                  </button>
-
                   {/* Audio / Phone Call Icon */}
                   <button
                     disabled={!isAcceptedFriend}
                     onClick={() => handleStartCall("audio")}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       isAcceptedFriend
-                        ? "text-[#007aff] hover:bg-gray-200 active:scale-95"
-                        : "text-gray-400 cursor-not-allowed opacity-50"
+                        ? "text-white hover:bg-white/15 active:scale-95 cursor-pointer"
+                        : "text-white/40 cursor-not-allowed"
                     }`}
                     title={
                       isAcceptedFriend
@@ -397,7 +439,7 @@ const MessageContainer = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-[#54656f] hover:bg-gray-200 transition-colors"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 transition-colors cursor-pointer"
                   title="More options"
                 >
                   <IoEllipsisVertical className="text-lg" />
@@ -405,14 +447,14 @@ const MessageContainer = () => {
 
                 {/* Dropdown Menu */}
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-40 text-sm">
+                  <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-blue-100 py-1.5 z-40 text-sm">
                     {/* User's own status switcher from chat screen */}
-                    <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/90 select-none">
+                    <div className="px-3 py-2 border-b border-gray-100 bg-blue-50/50 select-none">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                           My Status
                         </span>
-                        <span className="text-[10px] font-bold text-[#00a884]">
+                        <span className="text-[10px] font-bold text-[#1d4ed8]">
                           {userStatuses?.[authUser?._id] || authUser?.userStatus || "Online"}
                         </span>
                       </div>
@@ -430,7 +472,7 @@ const MessageContainer = () => {
                               }}
                               className={`py-1 px-1 rounded-md text-[10px] font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
                                 isActive
-                                  ? "bg-[#00a884] text-white shadow-xs font-bold"
+                                  ? "bg-[#1d4ed8] text-white shadow-xs font-bold"
                                   : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
                               }`}
                             >
@@ -441,22 +483,36 @@ const MessageContainer = () => {
                         })}
                       </div>
                     </div>
+
+                    {!selectedGroup && isAcceptedFriend && (
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleStartGroupCallFromDirect();
+                        }}
+                        className="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50/60 flex items-center gap-2 cursor-pointer"
+                      >
+                        <IoPeopleOutline className="text-[#1d4ed8]" />
+                        <span>Start Group Call Room</span>
+                      </button>
+                    )}
+
                     {selectedGroup && (
                       <button
                         onClick={() => {
                           setShowMenu(false);
                           setIsGroupInfoOpen(true);
                         }}
-                        className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50/60 flex items-center gap-2 cursor-pointer"
                       >
-                        <IoInformationCircleOutline className="text-[#00a884]" />
+                        <IoInformationCircleOutline className="text-[#1d4ed8]" />
                         <span>Group Info</span>
                       </button>
                     )}
 
                     <button
                       onClick={clearChatHandler}
-                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50/60 flex items-center gap-2 cursor-pointer"
                     >
                       <IoTrashOutline className="text-red-500" />
                       <span>Clear Chat</span>
@@ -465,7 +521,7 @@ const MessageContainer = () => {
                     {selectedGroup && (
                       <button
                         onClick={handleLeaveGroup}
-                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
                       >
                         <IoLogOutOutline />
                         <span>Leave Group</span>
@@ -474,7 +530,7 @@ const MessageContainer = () => {
 
                     <button
                       onClick={closeChatHandler}
-                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50/60 flex items-center gap-2 cursor-pointer"
                     >
                       <IoCloseCircleOutline />
                       <span>Close Chat</span>
@@ -485,8 +541,42 @@ const MessageContainer = () => {
             </div>
           </div>
 
-          {/* Messages Area with WhatsApp doodle background */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col whatsapp-chat-bg">
+          {/* Group Pinned Message Banner */}
+          {selectedGroup?.pinnedMessage?.messageId && (
+            <div
+              onClick={scrollToPinnedMessage}
+              className="bg-[#f0f6ff] hover:bg-[#e5f0ff] border-b border-blue-100/90 px-4 py-2 flex items-center justify-between gap-3 cursor-pointer transition-colors shrink-0 shadow-2xs select-none"
+              title="Jump to pinned message"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[#1d4ed8] text-base shrink-0 leading-none">
+                  📌
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-[#1d4ed8] leading-tight">
+                    Pinned Message
+                  </p>
+                  <p className="text-[13px] text-[#334155] truncate leading-snug">
+                    {selectedGroup.pinnedMessage.text || "Pinned message"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUnpinMessage();
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#1e293b] hover:bg-blue-100 transition shrink-0 cursor-pointer text-xs font-bold"
+                title="Unpin message"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Messages Area with Soft Sky-Blue Doodle Wallpaper */}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col chat-sky-bg">
             <Messages />
           </div>
 
@@ -495,7 +585,7 @@ const MessageContainer = () => {
             {selectedGroup || isAcceptedFriend ? (
               <SendInput />
             ) : (
-              <div className="bg-[#f0f2f5] p-3 text-center border-t border-gray-200 text-xs text-gray-600 flex items-center justify-center gap-2 select-none">
+              <div className="bg-[#f4f7fc] p-3 text-center border-t border-blue-100 text-xs text-gray-600 flex items-center justify-center gap-2 select-none">
                 <IoLockClosed className="text-amber-600 text-sm" />
                 <span>
                   Messaging and calling are locked until this friend request is accepted.

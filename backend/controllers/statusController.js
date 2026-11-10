@@ -34,6 +34,7 @@ export const getAllStatuses = async (req, res) => {
     })
       .populate("user", "fullName username profilePhoto")
       .populate("viewers.user", "fullName username profilePhoto")
+      .populate("reactions.user", "fullName username profilePhoto")
       .sort({ createdAt: -1 });
 
     // Deduplicate viewers on each status so every viewer appears at most once (WhatsApp standard)
@@ -194,6 +195,62 @@ export const viewStatus = async (req, res) => {
   } catch (error) {
     console.error("viewStatus error:", error);
     return res.status(500).json({ message: "Failed to view status" });
+  }
+};
+
+export const reactToStatus = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { statusId } = req.params;
+    const { emoji = "❤️" } = req.body;
+
+    const status = await Status.findById(statusId);
+    if (!status) {
+      return res.status(404).json({ message: "Status not found" });
+    }
+
+    if (!status.reactions) status.reactions = [];
+    const existingIndex = status.reactions.findIndex((r) => {
+      const uId = String(r.user?._id || r.user || "");
+      return uId && uId === String(userId);
+    });
+
+    if (existingIndex === -1) {
+      status.reactions.push({ user: userId, emoji, reactedAt: new Date() });
+    } else {
+      status.reactions[existingIndex].emoji = emoji;
+      status.reactions[existingIndex].reactedAt = new Date();
+    }
+
+    await status.save();
+
+    const reactorUser = await User.findById(userId).select(
+      "fullName username profilePhoto"
+    );
+
+    const reactionObj = {
+      user: reactorUser,
+      emoji,
+      reactedAt: new Date(),
+    };
+
+    try {
+      io.emit("statusReacted", {
+        statusId,
+        reaction: reactionObj,
+      });
+    } catch (e) {
+      console.error("Socket emit statusReacted error:", e);
+    }
+
+    return res.status(200).json({
+      success: true,
+      reactionsCount: status.reactions.length,
+      reaction: reactionObj,
+    });
+  } catch (error) {
+    console.error("reactToStatus error:", error);
+    return res.status(500).json({ message: "Failed to react to status" });
   }
 };
 

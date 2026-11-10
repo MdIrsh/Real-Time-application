@@ -7,7 +7,7 @@ export const sendMessage = async (req, res) => {
   try {
     const senderId = req.id;
     const receiverId = req.params.id;
-    const { message, image, audio, audioDuration, replyTo } = req.body;
+    const { message, image, audio, audioDuration, file, poll, replyTo } = req.body;
 
     const sender = await User.findById(senderId).select("fullName username profilePhoto friends").lean();
     if (!sender) {
@@ -44,10 +44,12 @@ export const sendMessage = async (req, res) => {
       Message.create({
         senderId,
         receiverId,
-        message: message || (audio ? "🎤 Voice message" : ""),
+        message: message || (audio ? "🎤 Voice message" : file?.name ? `📎 ${file.name}` : poll?.question ? `📊 ${poll.question}` : ""),
         image: image || null,
         audio: audio || null,
         audioDuration: Number(audioDuration) || 0,
+        file: file || undefined,
+        poll: poll || undefined,
         delivered: isReceiverOnline, // delivered if receiver is online
         seen: false, // only marked true once receiver views the chat
         replyTo: replyTo || null,
@@ -115,7 +117,13 @@ export const getMessage = async (req, res) => {
 
     const conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
-    }).populate("messages");
+    }).populate({
+      path: "messages",
+      populate: {
+        path: "reactions.user",
+        select: "fullName username profilePhoto",
+      },
+    });
 
     return res.status(200).json(conversation?.messages || []);
   } catch (error) {
@@ -143,5 +151,105 @@ export const markAsSeen = async (req, res) => {
   } catch (error) {
     console.error("markAsSeen error:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Toggle or set emoji reaction on any 1-on-1 or Group message
+export const reactToMessage = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { messageId } = req.params;
+    const { emoji = "👍" } = req.body;
+
+    const msg = await Message.findById(messageId);
+    if (!msg) {
+      return res.status(404).json({ message: "Message not found", success: false });
+    }
+
+    if (!msg.reactions) msg.reactions = [];
+    const existingIndex = msg.reactions.findIndex(
+      (r) => String(r.user?._id || r.user || "") === String(userId)
+    );
+
+    if (existingIndex !== -1) {
+      if (msg.reactions[existingIndex].emoji === emoji) {
+        // Toggle off if clicking same emoji again
+        msg.reactions.splice(existingIndex, 1);
+      } else {
+        msg.reactions[existingIndex].emoji = emoji;
+      }
+    } else {
+      msg.reactions.push({ user: userId, emoji });
+    }
+
+    await msg.save();
+
+    const populatedMsg = await Message.findById(messageId).populate(
+      "reactions.user",
+      "fullName username profilePhoto"
+    );
+
+    io.emit("messageReacted", {
+      messageId: msg._id,
+      groupId: msg.groupId || null,
+      senderId: msg.senderId,
+      receiverId: msg.receiverId,
+      reactions: populatedMsg?.reactions || [],
+    });
+
+    return res.status(200).json({
+      success: true,
+      reactions: populatedMsg?.reactions || [],
+    });
+  } catch (error) {
+    console.error("reactToMessage error:", error);
+    return res.status(500).json({ message: "Failed to react to message", success: false });
+  }
+};
+
+// Vote or switch vote on a Group/Direct Poll message
+export const voteOnPoll = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { messageId } = req.params;
+    const { optionIndex } = req.body;
+
+    const msg = await Message.findById(messageId);
+    if (!msg || !msg.poll || !Array.isArray(msg.poll.options)) {
+      return res.status(404).json({ message: "Poll not found", success: false });
+    }
+
+    if (optionIndex < 0 || optionIndex >= msg.poll.options.length) {
+      return res.status(400).json({ message: "Invalid option", success: false });
+    }
+
+    // Single-choice poll: remove user's previous vote from all options, then add to selected option
+    const alreadyVotedThisOption = msg.poll.options[optionIndex].votes?.some(
+      (v) => String(v) === String(userId)
+    );
+
+    msg.poll.options.forEach((opt) => {
+      opt.votes = (opt.votes || []).filter((v) => String(v) !== String(userId));
+    });
+
+    if (!alreadyVotedThisOption) {
+      msg.poll.options[optionIndex].votes.push(userId);
+    }
+
+    await msg.save();
+
+    io.emit("pollUpdated", {
+      messageId: msg._id,
+      groupId: msg.groupId || null,
+      poll: msg.poll,
+    });
+
+    return res.status(200).json({
+      success: true,
+      poll: msg.poll,
+    });
+  } catch (error) {
+    console.error("voteOnPoll error:", error);
+    return res.status(500).json({ message: "Failed to vote on poll", success: false });
   }
 };

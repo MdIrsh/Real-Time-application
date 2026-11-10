@@ -26,6 +26,7 @@ const CreateGroupModal = () => {
 
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("General");
   const [selectedEmoji, setSelectedEmoji] = useState("👥");
   const [uploadedAvatar, setUploadedAvatar] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
@@ -84,6 +85,7 @@ const CreateGroupModal = () => {
         {
           name: groupName.trim(),
           description: description.trim(),
+          category,
           participants: selectedMemberIds,
           groupAvatar,
         },
@@ -225,6 +227,25 @@ const CreateGroupModal = () => {
               maxLength={60}
               className="w-full bg-[#202c33] text-xs text-[#e9edef] px-3 py-2 rounded-xl outline-hidden border border-[#2a3942] focus:border-[#25d366] placeholder-[#8696a0]"
             />
+
+            {/* Group Category */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <span className="text-[11px] text-[#8696a0] shrink-0">Category:</span>
+              {["General", "Work", "Team"].map((cat) => (
+                <button
+                  type="button"
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition cursor-pointer ${
+                    category === cat
+                      ? "bg-[#2563eb] text-white shadow-xs"
+                      : "bg-[#202c33] text-[#8696a0] hover:text-white"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Selected Member Chips */}

@@ -1,16 +1,17 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setSelectedGroup } from "../redux/groupSlice";
+import { setSelectedGroup, clearGroupUnreadCount } from "../redux/groupSlice";
 import { setSelectedUser } from "../redux/userSlice";
 import { IoPeople, IoChevronForward } from "react-icons/io5";
 
 const GroupItem = ({ group }) => {
   const dispatch = useDispatch();
-  const { selectedGroup } = useSelector((store) => store.group);
+  const { selectedGroup, groupUnreadCounts } = useSelector((store) => store.group);
 
   const isSelected = selectedGroup?._id === group?._id;
   const participantCount = group?.participants?.length || 0;
   const lastMsg = group?.lastMessage;
+  const unreadCount = groupUnreadCounts?.[group?._id] || 0;
 
   const formattedTime = lastMsg?.time
     ? new Date(lastMsg.time).toLocaleTimeString([], {
@@ -25,6 +26,7 @@ const GroupItem = ({ group }) => {
       e.stopPropagation();
     }
     dispatch(setSelectedGroup(group));
+    dispatch(clearGroupUnreadCount(group?._id));
     dispatch(setSelectedUser(null));
   };
 
@@ -72,13 +74,17 @@ const GroupItem = ({ group }) => {
               {participantCount}
             </span>
           </div>
-          <span className="text-[11px] text-[#64748b] shrink-0 ml-1 font-medium">
+          <span
+            className={`text-[11px] shrink-0 ml-1 font-medium ${
+              unreadCount > 0 ? "text-[#60a5fa] font-semibold" : "text-[#64748b]"
+            }`}
+          >
             {formattedTime}
           </span>
         </div>
 
-        <div className="flex items-center justify-between mt-0.5">
-          <p className="text-[13px] text-[#8ea2c6] truncate pr-2">
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <p className="text-[13px] text-[#8ea2c6] truncate pr-1">
             {lastMsg?.text ? (
               <>
                 <span className="font-semibold text-white">
@@ -90,6 +96,11 @@ const GroupItem = ({ group }) => {
               <span>Tap to chat in this group</span>
             )}
           </p>
+          {unreadCount > 0 && (
+            <span className="bg-[#2563eb] text-white text-[11px] font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(37,99,235,0.45)]">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </div>
       </div>
 

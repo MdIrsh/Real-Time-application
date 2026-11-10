@@ -16,6 +16,8 @@ import {
   IoChevronBack,
   IoGridOutline,
   IoListOutline,
+  IoExpandOutline,
+  IoContractOutline,
 } from "react-icons/io5";
 import { MdCallEnd } from "react-icons/md";
 import { closeGroupCall } from "../redux/groupCallSlice";
@@ -52,7 +54,7 @@ const ICE_SERVERS = {
 };
 
 // Video & Audio Tile for a Remote Peer
-const RemotePeerTile = ({ peer }) => {
+const RemotePeerTile = ({ peer, isPinned = false, onTogglePin, className = "" }) => {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
 
@@ -68,9 +70,17 @@ const RemotePeerTile = ({ peer }) => {
   }, [peer.stream, peer.streamVer]);
 
   const user = peer.user || {};
+  const showAvatarFallback = peer.isVideoOff || !peer.stream;
 
   return (
-    <div className="relative w-full h-full min-h-[145px] sm:min-h-[180px] bg-[#1a1f24] rounded-2xl overflow-hidden border border-[#2a3942] flex items-center justify-center shadow-lg group select-none">
+    <div
+      onClick={onTogglePin}
+      className={`relative bg-[#152236] rounded-[22px] overflow-hidden border transition-all duration-200 flex items-center justify-center shadow-xl group select-none cursor-pointer ${
+        isPinned
+          ? "border-[#2ecc71]/70 ring-2 ring-[#2ecc71]/30"
+          : "border-white/12 hover:border-[#2ecc71]/50"
+      } ${className}`}
+    >
       {/* Dedicated Audio Element ensures remote voice ALWAYS plays in Conference list & Camera-Off modes */}
       <audio
         ref={audioRef}
@@ -85,23 +95,23 @@ const RemotePeerTile = ({ peer }) => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover ${
-          peer.isVideoOff ? "hidden" : "block"
+        className={`w-full h-full object-cover object-[50%_22%] ${
+          showAvatarFallback ? "hidden" : "block"
         }`}
       />
 
-      {/* Fallback Avatar when camera is off */}
-      {peer.isVideoOff && (
-        <div className="flex flex-col items-center justify-center gap-2 p-4">
+      {/* Fallback Avatar when camera is off OR stream is connecting */}
+      {showAvatarFallback && (
+        <div className="flex flex-col items-center justify-center gap-2 p-4 relative">
           <div className="relative">
             <img
               src={getAvatarUrl(user)}
               alt={user.fullName || "Peer"}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#25d366]/60 shadow-xl"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#2ecc71]/70 shadow-xl"
               onError={(e) => handleImageError(e, user.fullName)}
             />
             {!peer.isMuted && (
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#25d366] text-[#0b141a] rounded-full flex items-center justify-center text-xs shadow-md">
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#2ecc71] text-[#0b141a] rounded-full flex items-center justify-center text-xs shadow-md">
                 <IoVolumeHigh size={12} />
               </span>
             )}
@@ -109,16 +119,45 @@ const RemotePeerTile = ({ peer }) => {
           <span className="text-xs font-semibold text-gray-200">
             {user.fullName || user.username || "Participant"}
           </span>
+          {!peer.stream && !peer.isVideoOff && (
+            <span className="text-[10px] text-[#38bdf8] animate-pulse font-medium">
+              Connecting video...
+            </span>
+          )}
         </div>
       )}
 
-      {/* Peer Name Tag & Mic Status */}
+      {/* Top-Right Pin / Fullscreen Toggle */}
+      {onTogglePin && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin();
+          }}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/45 hover:bg-black/75 backdrop-blur-md text-white/85 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-75 transition z-10 border border-white/10 cursor-pointer"
+          title={isPinned ? "Exit Spotlight" : "Spotlight"}
+        >
+          {isPinned ? <IoContractOutline size={15} /> : <IoExpandOutline size={15} />}
+        </button>
+      )}
+
+      {/* Peer Name Tag with Avatar + Mic Status */}
       <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
-        <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1.5 max-w-[80%] border border-white/10 shadow-sm truncate">
+        <div className="bg-black/55 backdrop-blur-md pl-1.5 pr-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1.5 max-w-[82%] border border-white/15 shadow-sm">
+          <img
+            src={getAvatarUrl(user)}
+            alt=""
+            className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/30"
+            onError={(e) => handleImageError(e, user.fullName)}
+          />
           <span className="truncate">{user.fullName || user.username || "Friend"}</span>
+          {!peer.isMuted && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71] shrink-0" />
+          )}
         </div>
         {peer.isMuted && (
-          <div className="bg-red-500/80 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
+          <div className="bg-[#e06363]/90 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
             <IoMicOff size={12} />
           </div>
         )}
@@ -153,6 +192,7 @@ const GroupCallModal = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [viewMode, setViewMode] = useState(callType === "audio" ? "conference" : "grid");
   const [invitedFriends, setInvitedFriends] = useState([]);
+  const [pinnedId, setPinnedId] = useState(null); // "local" | socketId | null
 
   const authUserRef = useRef(authUser);
   useEffect(() => {
@@ -167,6 +207,7 @@ const GroupCallModal = () => {
       setViewMode(callType === "audio" ? "conference" : "grid");
       setInvitedFriends(Array.isArray(invitedMembers) ? invitedMembers : []);
       setShowInviteDrawer(Boolean(openDrawerOnStart));
+      setPinnedId(null);
     }
   }, [isGroupCallOpen, callType, invitedMembers, openDrawerOnStart]);
 
@@ -714,13 +755,24 @@ const GroupCallModal = () => {
   const peerList = Object.entries(peers);
   const totalParticipants = peerList.length + 1; // Peers + You
 
-  // Dynamic scalable grid layout supporting maximum simultaneous participants (1 to 12+)
-  const getGridClasses = () => {
-    if (totalParticipants === 1) return "grid-cols-1 max-w-2xl";
-    if (totalParticipants === 2) return "grid-cols-1 sm:grid-cols-2 max-w-4xl";
-    if (totalParticipants <= 4) return "grid-cols-2 max-w-4xl";
-    if (totalParticipants <= 9) return "grid-cols-2 sm:grid-cols-3 max-w-5xl";
-    return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-6xl";
+  // Balanced centered tile sizing so 1, 2, 3, 4, 5, 6..12+ tiles have ZERO orphan gaps or face-cropping strips
+  const getFlexTileClasses = () => {
+    if (totalParticipants === 1) {
+      return "w-full max-w-2xl h-full max-h-[66dvh]";
+    }
+    if (totalParticipants === 2) {
+      return "w-full sm:w-[calc(50%-8px)] max-w-xl h-[48%] sm:h-full max-h-[64dvh]";
+    }
+    if (totalParticipants === 3) {
+      return "w-[calc(50%-6px)] md:w-[calc(33.333%-11px)] h-[47%] md:h-full max-h-[66dvh]";
+    }
+    if (totalParticipants === 4) {
+      return "w-[calc(50%-6px)] max-w-xl h-[47%] sm:h-[48%]";
+    }
+    if (totalParticipants <= 6) {
+      return "w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] h-[175px] sm:h-[47%]";
+    }
+    return "w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] h-[165px] sm:h-[215px]";
   };
 
   // Pending invited friends who haven't joined peerList yet
@@ -728,10 +780,13 @@ const GroupCallModal = () => {
     (inv) => !peerList.some(([, p]) => String(p.user?._id) === String(inv._id))
   );
 
+  const activePinnedPeer = pinnedId && pinnedId !== "local" ? peers[pinnedId] : null;
+  const isSpotlightActive = pinnedId === "local" || Boolean(activePinnedPeer);
+
   return (
-    <div className="fixed inset-0 z-[120] h-[100dvh] bg-[#0e1c2f] flex flex-col items-center justify-between p-3 sm:p-6 select-none animate-fade-in text-white overflow-hidden">
-      {/* Top Header Bar matching Screen 3 (< Conference) */}
-      <div className="w-full max-w-4xl flex items-center justify-between gap-2 px-1 sm:px-2 py-1.5 shrink-0">
+    <div className="fixed inset-0 z-[120] h-[100dvh] bg-gradient-to-b from-[#0b1628] via-[#0e1c2f] to-[#091220] flex flex-col items-center justify-between p-2.5 sm:p-5 select-none animate-fade-in text-white overflow-hidden">
+      {/* Top Header Bar aligned with video workspace */}
+      <div className="w-full max-w-6xl flex items-center justify-between gap-2 px-1 sm:px-2 py-1 shrink-0">
         <button
           onClick={handleLeaveCall}
           className="flex items-center gap-1.5 sm:gap-2 text-white hover:text-gray-300 transition cursor-pointer group min-w-0"
@@ -906,83 +961,214 @@ const GroupCallModal = () => {
           </button>
         </div>
       ) : (
-        /* Multi-User Video Grid View (scales smoothly for 1 to 12+ participants) */
-        <div
-          className={`flex-1 min-h-0 w-full flex ${
-            totalParticipants > 4 ? "items-start" : "items-center"
-          } justify-center p-2 sm:p-4 overflow-y-auto`}
-        >
-          <div
-            className={`w-full grid gap-2.5 sm:gap-4 ${
-              totalParticipants <= 4 ? "auto-rows-fr h-full max-h-[68dvh]" : "auto-rows-[minmax(145px,1fr)]"
-            } ${getGridClasses()}`}
-          >
-            {/* Local User Tile (You) */}
-            <div className="relative w-full h-full min-h-[160px] bg-[#162840] rounded-2xl overflow-hidden border border-white/15 flex items-center justify-center shadow-xl group">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className={`w-full h-full object-cover scale-x-[-1] ${
-                  isVideoOff ? "hidden" : "block"
-                }`}
-              />
-
-              {isVideoOff && (
-                <div className="flex flex-col items-center justify-center gap-2 p-4">
-                  <img
-                    src={getAvatarUrl(authUser)}
-                    alt="You"
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#2ecc71] shadow-xl"
-                    onError={(e) => handleImageError(e, authUser?.fullName)}
-                  />
-                  <span className="text-xs font-semibold text-gray-200">
-                    {authUser?.fullName || "You"} (Camera Off)
-                  </span>
-                </div>
-              )}
-
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
-                <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1 border border-white/10 shadow-sm">
-                  <span>{authUser?.fullName || "You"} (You)</span>
-                </div>
-                {isMuted && (
-                  <div className="bg-red-500/80 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
-                    <IoMicOff size={12} />
+        /* Multi-User Video Grid View (balanced studio bento + tap-to-spotlight) */
+        <div className="flex-1 min-h-0 w-full max-w-6xl flex flex-col items-center justify-center p-1.5 sm:p-3 overflow-y-auto no-scrollbar">
+          {isSpotlightActive ? (
+            <div className="w-full h-full flex flex-col gap-2.5 min-h-0">
+              {/* Spotlight Main Tile */}
+              <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                {pinnedId === "local" ? (
+                  <div
+                    onClick={() => setPinnedId(null)}
+                    className="relative w-full h-full max-w-4xl bg-[#152236] rounded-[24px] overflow-hidden border-2 border-[#2ecc71]/70 flex items-center justify-center shadow-2xl group cursor-pointer"
+                  >
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className={`w-full h-full object-cover object-[50%_22%] scale-x-[-1] ${
+                        isVideoOff ? "hidden" : "block"
+                      }`}
+                    />
+                    {isVideoOff && (
+                      <div className="flex flex-col items-center justify-center gap-2 p-4">
+                        <img
+                          src={getAvatarUrl(authUser)}
+                          alt="You"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-[#2ecc71] shadow-xl"
+                          onError={(e) => handleImageError(e, authUser?.fullName)}
+                        />
+                        <span className="text-sm font-semibold text-gray-200">
+                          {authUser?.fullName || "You"} (Camera Off)
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPinnedId(null);
+                      }}
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/55 backdrop-blur-md text-white flex items-center justify-center border border-white/15 cursor-pointer"
+                      title="Back to Grid"
+                    >
+                      <IoContractOutline size={16} />
+                    </button>
+                    <div className="absolute bottom-3 left-3 bg-black/55 backdrop-blur-md pl-1.5 pr-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1.5 border border-white/15">
+                      <img
+                        src={getAvatarUrl(authUser)}
+                        alt=""
+                        className="w-4 h-4 rounded-full object-cover"
+                        onError={(e) => handleImageError(e, authUser?.fullName)}
+                      />
+                      <span>{authUser?.fullName || "You"} (You)</span>
+                    </div>
                   </div>
+                ) : (
+                  <RemotePeerTile
+                    peer={activePinnedPeer}
+                    isPinned
+                    onTogglePin={() => setPinnedId(null)}
+                    className="w-full h-full max-w-4xl"
+                  />
                 )}
               </div>
-            </div>
 
-            {peerList.map(([socketId, peer]) => (
-              <RemotePeerTile key={socketId} peer={peer} />
-            ))}
+              {/* Thumbnail Strip for other callers */}
+              <div className="h-24 sm:h-28 w-full flex items-center justify-center gap-2.5 overflow-x-auto no-scrollbar shrink-0 px-1">
+                {pinnedId !== "local" && (
+                  <div
+                    onClick={() => setPinnedId("local")}
+                    className="relative h-full aspect-video rounded-xl overflow-hidden bg-[#152236] border border-white/15 shrink-0 cursor-pointer hover:border-[#2ecc71]/60 flex items-center justify-center"
+                  >
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className={`w-full h-full object-cover scale-x-[-1] ${
+                        isVideoOff ? "hidden" : "block"
+                      }`}
+                    />
+                    {isVideoOff && (
+                      <img
+                        src={getAvatarUrl(authUser)}
+                        alt="You"
+                        className="w-10 h-10 rounded-full object-cover border border-[#2ecc71]"
+                        onError={(e) => handleImageError(e, authUser?.fullName)}
+                      />
+                    )}
+                    <span className="absolute bottom-1 left-1.5 bg-black/60 text-[10px] px-1.5 py-0.5 rounded-full truncate max-w-[90%]">
+                      You
+                    </span>
+                  </div>
+                )}
 
-            {peerList.length === 0 && (
-              <div className="flex flex-col items-center justify-center bg-[#162840]/60 rounded-2xl border border-dashed border-white/20 p-4 sm:p-6 text-center text-gray-400">
-                <button
-                  onClick={() => setShowInviteDrawer(true)}
-                  className="w-12 h-12 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center mb-2 transition cursor-pointer"
-                >
-                  <IoPersonAddOutline size={22} />
-                </button>
-                <h4 className="text-sm font-semibold text-gray-200">
-                  Waiting for friends to join...
-                </h4>
-                <p className="text-xs text-gray-400 mt-1 max-w-xs">
-                  Tap &quot;+ Add&quot; above to ring more friends or invite everyone!
-                </p>
+                {peerList
+                  .filter(([sid]) => sid !== pinnedId)
+                  .map(([sid, peer]) => (
+                    <RemotePeerTile
+                      key={`strip-${sid}`}
+                      peer={peer}
+                      onTogglePin={() => setPinnedId(sid)}
+                      className="h-full aspect-video shrink-0 rounded-xl min-h-0 sm:min-h-0"
+                    />
+                  ))}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-wrap items-center justify-center content-center gap-2.5 sm:gap-3.5">
+              {/* Local User Tile (You) */}
+              <div
+                onClick={() => peerList.length > 0 && setPinnedId("local")}
+                className={`relative bg-[#152236] rounded-[22px] overflow-hidden border border-white/15 hover:border-[#2ecc71]/50 flex items-center justify-center shadow-xl group cursor-pointer transition-all duration-200 ${getFlexTileClasses()}`}
+              >
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className={`w-full h-full object-cover object-[50%_22%] scale-x-[-1] ${
+                    isVideoOff ? "hidden" : "block"
+                  }`}
+                />
+
+                {isVideoOff && (
+                  <div className="flex flex-col items-center justify-center gap-2 p-4">
+                    <img
+                      src={getAvatarUrl(authUser)}
+                      alt="You"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#2ecc71] shadow-xl"
+                      onError={(e) => handleImageError(e, authUser?.fullName)}
+                    />
+                    <span className="text-xs font-semibold text-gray-200">
+                      {authUser?.fullName || "You"} (Camera Off)
+                    </span>
+                  </div>
+                )}
+
+                {peerList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPinnedId("local");
+                    }}
+                    className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/45 hover:bg-black/75 backdrop-blur-md text-white/85 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-75 transition z-10 border border-white/10 cursor-pointer"
+                    title="Spotlight"
+                  >
+                    <IoExpandOutline size={15} />
+                  </button>
+                )}
+
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
+                  <div className="bg-black/55 backdrop-blur-md pl-1.5 pr-2.5 py-1 rounded-full text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/15 shadow-sm max-w-[82%]">
+                    <img
+                      src={getAvatarUrl(authUser)}
+                      alt=""
+                      className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/30"
+                      onError={(e) => handleImageError(e, authUser?.fullName)}
+                    />
+                    <span className="truncate">{authUser?.fullName || "You"} (You)</span>
+                    {!isMuted && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71] shrink-0" />
+                    )}
+                  </div>
+                  {isMuted && (
+                    <div className="bg-[#e06363]/90 backdrop-blur-md p-1.5 rounded-full text-white shadow-md">
+                      <IoMicOff size={12} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {peerList.map(([socketId, peer]) => (
+                <RemotePeerTile
+                  key={socketId}
+                  peer={peer}
+                  onTogglePin={() => setPinnedId(socketId)}
+                  className={getFlexTileClasses()}
+                />
+              ))}
+
+              {peerList.length === 0 && (
+                <div
+                  className={`flex flex-col items-center justify-center bg-[#162840]/60 rounded-[22px] border border-dashed border-white/20 p-4 sm:p-6 text-center text-gray-400 ${getFlexTileClasses()}`}
+                >
+                  <button
+                    onClick={() => setShowInviteDrawer(true)}
+                    className="w-12 h-12 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center mb-2 transition cursor-pointer"
+                  >
+                    <IoPersonAddOutline size={22} />
+                  </button>
+                  <h4 className="text-sm font-semibold text-gray-200">
+                    Waiting for friends to join...
+                  </h4>
+                  <p className="text-xs text-gray-400 mt-1 max-w-xs">
+                    Tap &quot;+ Add&quot; above to ring more friends or invite everyone!
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Bottom Controls + Wide Coral-Red "End Group Call" Button matching Screen 3 */}
-      <div className="w-full max-w-md flex flex-col items-center gap-3 shrink-0 pb-2">
-        {/* Compact Media Toggles */}
-        <div className="flex items-center justify-center gap-3 sm:gap-4">
+      <div className="w-full max-w-md flex flex-col items-center gap-2.5 shrink-0 pb-1">
+        {/* Glassmorphic Media Controls Pill */}
+        <div className="flex items-center justify-center gap-2.5 sm:gap-3.5 bg-[#162840]/85 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-xl">
           <button
             onClick={handleToggleMute}
             className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition active:scale-95 cursor-pointer shadow-md ${

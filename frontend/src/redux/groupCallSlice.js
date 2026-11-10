@@ -5,22 +5,34 @@ const groupCallSlice = createSlice({
   initialState: {
     isGroupCallOpen: false,
     activeRoomId: null,
+    activeGroupId: null,
     callType: "video", // "video" | "audio"
     roomTitle: "Group Call Room",
-    incomingGroupInvite: null, // { roomId, fromUser, callType }
+    invitedMembers: [],
+    incomingGroupInvite: null, // { roomId, fromUser, callType, roomTitle, groupId }
   },
   reducers: {
     openGroupCall: (state, action) => {
-      const { roomId, callType, roomTitle } = action.payload || {};
+      const {
+        roomId,
+        callType,
+        roomTitle,
+        groupId = null,
+        invitedMembers = [],
+      } = action.payload || {};
       state.isGroupCallOpen = true;
       state.activeRoomId = roomId || `room-${Date.now().toString(36)}`;
+      state.activeGroupId = groupId || null;
       state.callType = callType || "video";
       state.roomTitle = roomTitle || "Group Video Room";
+      state.invitedMembers = Array.isArray(invitedMembers) ? invitedMembers : [];
       state.incomingGroupInvite = null;
     },
     closeGroupCall: (state) => {
       state.isGroupCallOpen = false;
       state.activeRoomId = null;
+      state.activeGroupId = null;
+      state.invitedMembers = [];
     },
     setIncomingGroupInvite: (state, action) => {
       state.incomingGroupInvite = action.payload;

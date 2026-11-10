@@ -108,29 +108,30 @@ const MessageContainer = () => {
   const handleStartGroupCallRoom = (callType = "video") => {
     if (!selectedGroup) return;
     const roomId = `room-group-${selectedGroup._id}`;
+    const otherMembers = (selectedGroup.participants || []).filter(
+      (p) => String(p?._id || p) !== String(authUser?._id)
+    );
     dispatch(
       openGroupCall({
         roomId,
         callType,
+        groupId: selectedGroup._id,
         roomTitle: `${selectedGroup.name} (${callType === "video" ? "Video" : "Voice"} Call)`,
+        invitedMembers: otherMembers.filter((m) => typeof m === "object"),
       })
     );
 
-    // Broadcast invite to all participants in this group who are online
-    if (socket && selectedGroup.participants) {
-      selectedGroup.participants.forEach((p) => {
-        const pId = p._id || p;
-        if (pId && String(pId) !== String(authUser?._id)) {
-          socket.emit("inviteToGroupCall", {
-            toUserId: pId,
-            roomId,
-            fromUser: authUser,
-            callType,
-            roomTitle: selectedGroup.name,
-          });
-        }
+    // Broadcast single unified invite (server notifies all group members & multi-tab sockets)
+    if (socket && authUser?._id) {
+      socket.emit("inviteToGroupCall", {
+        groupId: selectedGroup._id,
+        toUserIds: otherMembers.map((p) => p?._id || p).filter(Boolean),
+        roomId,
+        fromUser: authUser,
+        callType,
+        roomTitle: selectedGroup.name,
       });
-      toast.success(`Group Call ringing for ${selectedGroup.name} members! 👥📞`);
+      toast.success(`Group ${callType === "video" ? "Video" : "Voice"} Call ringing for ${selectedGroup.name} members! 👥📞`);
     }
   };
 
@@ -221,7 +222,7 @@ const MessageContainer = () => {
       {hasActiveChat ? (
         <div className="flex-1 flex flex-col h-full bg-[#edf3fc] relative min-w-0 overflow-hidden">
           {/* Royal Blue Wave Header matching screenshot */}
-          <div className="bg-gradient-to-r from-[#0d47a1] via-[#1565c0] to-[#1e88e5] px-3 sm:px-4 py-2.5 flex items-center justify-between shadow-md z-20 select-none shrink-0 relative">
+          <div className="bg-gradient-to-r from-[#0d47a1] via-[#1565c0] to-[#1e88e5] px-2.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 shadow-md z-20 select-none shrink-0 relative">
             {/* Decorative Blue Wave Background Layer (clipped inside absolute wrapper so dropdown is never clipped) */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div
@@ -601,19 +602,26 @@ const MessageContainer = () => {
           />
         </div>
       ) : (
-        /* Empty State / WhatsApp Web Splash in Dark Mode */
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#111b21] border-b-[6px] border-[#00a884] p-8 text-center select-none text-[#e9edef]">
-          <div className="relative mb-6">
+        /* Empty State / Desktop & Tablet Splash in Dark Aurora Theme */
+        <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#050814] border-b-[4px] border-[#2563eb] p-6 lg:p-10 text-center select-none text-[#e9edef] relative overflow-hidden">
+          <div
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 35%, rgba(37,99,235,0.22) 0%, transparent 60%)",
+            }}
+          />
+          <div className="relative mb-5">
             <img
               src="/irshad_3d_signature_transparent.png"
               alt="Irshad 3D Signature"
-              className="h-24 sm:h-28 w-auto object-contain filter drop-shadow-[0_0_25px_rgba(234,179,8,0.45)]"
+              className="h-20 lg:h-28 w-auto object-contain filter drop-shadow-[0_0_25px_rgba(234,179,8,0.45)]"
               style={{ mixBlendMode: "screen" }}
             />
           </div>
           {/* 3D Cursive Official Messenger Main Brand Title */}
-          <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 flex-wrap">
-            <span className="text-3d-official text-3xl sm:text-4xl md:text-5xl font-bold tracking-wide">
+          <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 flex-wrap relative">
+            <span className="text-3d-official text-3xl lg:text-5xl font-bold tracking-wide">
               Official Messenger
             </span>
             <span
@@ -623,11 +631,11 @@ const MessageContainer = () => {
               ✓
             </span>
           </div>
-          <p className="text-sm text-[#8696a0] max-w-md leading-relaxed mb-8">
-            Send and receive messages privately. Create Groups, start Audio/Video Group Calls, watch Reels & Status, and chat with <strong>Meta AI</strong> anytime.
+          <p className="text-xs sm:text-sm text-[#8ea2c6] max-w-md leading-relaxed mb-8 relative">
+            Send and receive messages privately. Create Groups, start Audio/Video Group Calls, watch Reels &amp; Status, and chat with <strong className="text-white">Meta AI</strong> anytime.
           </p>
-          <div className="flex items-center gap-1.5 text-xs text-[#8696a0]">
-            <IoLockClosed className="text-xs text-[#00a884]" />
+          <div className="flex items-center gap-1.5 text-xs text-[#64748b] relative">
+            <IoLockClosed className="text-xs text-[#38bdf8]" />
             <span>End-to-end encrypted • Private connections only</span>
           </div>
         </div>

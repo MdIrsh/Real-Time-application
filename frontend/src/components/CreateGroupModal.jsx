@@ -127,7 +127,7 @@ const CreateGroupModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-md bg-[#111b21] text-[#e9edef] rounded-2xl shadow-2xl border border-[#202c33] overflow-hidden flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="px-4 py-3.5 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">

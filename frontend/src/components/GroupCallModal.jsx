@@ -43,25 +43,39 @@ const ICE_SERVERS = {
   ],
 };
 
-// Video Tile for a Remote Peer
+// Video & Audio Tile for a Remote Peer
 const RemotePeerTile = ({ peer }) => {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     if (videoRef.current && peer.stream) {
       videoRef.current.srcObject = peer.stream;
       videoRef.current.play().catch(() => {});
     }
+    if (audioRef.current && peer.stream) {
+      audioRef.current.srcObject = peer.stream;
+      audioRef.current.play().catch(() => {});
+    }
   }, [peer.stream]);
 
   const user = peer.user || {};
 
   return (
-    <div className="relative w-full h-full min-h-[160px] bg-[#1a1f24] rounded-2xl overflow-hidden border border-[#2a3942] flex items-center justify-center shadow-lg group select-none">
-      {/* Video Element */}
+    <div className="relative w-full h-full min-h-[150px] sm:min-h-[160px] bg-[#1a1f24] rounded-2xl overflow-hidden border border-[#2a3942] flex items-center justify-center shadow-lg group select-none">
+      {/* Dedicated Audio Element ensures remote voice ALWAYS plays in Conference list & Camera-Off modes */}
+      <audio
+        ref={audioRef}
+        autoPlay
+        playsInline
+        className="w-0 h-0 opacity-0 pointer-events-none"
+      />
+
+      {/* Video Element (muted because dedicated <audio> handles sound) */}
       <video
         ref={videoRef}
         autoPlay
+        muted
         playsInline
         className={`w-full h-full object-cover ${
           peer.isVideoOff ? "hidden" : "block"
@@ -107,15 +121,20 @@ const RemotePeerTile = ({ peer }) => {
 
 const GroupCallModal = () => {
   const dispatch = useDispatch();
-  const { isGroupCallOpen, activeRoomId, callType, roomTitle } = useSelector(
-    (store) => store.groupCall
-  );
+  const {
+    isGroupCallOpen,
+    activeRoomId,
+    activeGroupId,
+    callType,
+    roomTitle,
+    invitedMembers,
+  } = useSelector((store) => store.groupCall);
   const { socket } = useSelector((store) => store.socket);
   const { authUser, otherUsers, onlineUsers, userStatuses } = useSelector(
     (store) => store.user
   );
 
-  const [, setLocalStream] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(callType === "audio");
   const [facingMode, setFacingMode] = useState("user");
@@ -128,15 +147,26 @@ const GroupCallModal = () => {
 
   useEffect(() => {
     if (isGroupCallOpen) {
+      setIsVideoOff(callType === "audio");
+      setIsMuted(false);
+      setCallTimer(0);
       setViewMode(callType === "audio" ? "conference" : "grid");
-      setInvitedFriends([]);
+      setInvitedFriends(Array.isArray(invitedMembers) ? invitedMembers : []);
     }
-  }, [isGroupCallOpen, callType]);
+  }, [isGroupCallOpen, callType, invitedMembers]);
 
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const peerConnectionsRef = useRef({}); // { [socketId]: RTCPeerConnection }
+  const iceQueuesRef = useRef({}); // { [socketId]: RTCIceCandidateInit[] }
   const timerIntervalRef = useRef(null);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => {});
+    }
+  }, [localStream, viewMode, isVideoOff, isGroupCallOpen]);
 
   // Stop all media tracks and clean up WebRTC connections
   const cleanupGroupCall = useCallback(() => {
@@ -158,6 +188,7 @@ const GroupCallModal = () => {
       } catch (e) {}
     });
     peerConnectionsRef.current = {};
+    iceQueuesRef.current = {};
     setPeers({});
 
     if (socket && activeRoomId) {
@@ -208,7 +239,10 @@ const GroupCallModal = () => {
 
       // If this client is the initiator, create and send WebRTC Offer
       if (isInitiator) {
-        pc.createOffer()
+        pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        })
           .then((offer) => pc.setLocalDescription(offer))
           .then(() => {
             if (socket) {
@@ -228,49 +262,67 @@ const GroupCallModal = () => {
     [socket, authUser]
   );
 
-  // Initialize Local Media Stream on Room Open
+  // Initialize Local Media Stream on Room Open (with automatic audio/listen-only fallback)
   useEffect(() => {
     if (!isGroupCallOpen) return;
 
     let isMounted = true;
 
     const startLocalMedia = async () => {
+      let stream = null;
+      let effectiveVideoOff = callType === "audio";
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: callType === "video" ? { facingMode: "user" } : false,
         });
-
-        if (!isMounted) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+      } catch (primaryErr) {
+        if (callType === "video") {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: false,
+            });
+            effectiveVideoOff = true;
+            toast("Camera unavailable — joined with audio", { icon: "🎙️" });
+          } catch (audioErr) {
+            effectiveVideoOff = true;
+            toast.error("Mic/camera blocked — joined in listen mode");
+          }
+        } else {
+          effectiveVideoOff = true;
+          toast.error("Mic permission blocked — joined in listen mode");
         }
-
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-
-        if (localVideoRef.current && callType === "video") {
-          localVideoRef.current.srcObject = stream;
-        }
-
-        // Join Group Call room via Socket.io
-        if (socket && activeRoomId) {
-          socket.emit("joinGroupCall", {
-            roomId: activeRoomId,
-            user: authUser,
-            isMuted: false,
-            isVideoOff: callType === "audio",
-          });
-        }
-
-        // Start Call Duration Timer
-        timerIntervalRef.current = setInterval(() => {
-          setCallTimer((prev) => prev + 1);
-        }, 1000);
-      } catch (err) {
-        console.error("Failed to access camera/mic for group call:", err);
-        toast.error("Could not access microphone/camera. Please check permissions!");
       }
+
+      if (!isMounted) {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+      setIsVideoOff(effectiveVideoOff);
+
+      if (localVideoRef.current && stream && !effectiveVideoOff) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Always join Group Call room via Socket.io so signaling completes reliably
+      if (socket && activeRoomId) {
+        socket.emit("joinGroupCall", {
+          roomId: activeRoomId,
+          user: authUser,
+          isMuted: !stream,
+          isVideoOff: effectiveVideoOff,
+        });
+      }
+
+      // Start Call Duration Timer
+      timerIntervalRef.current = setInterval(() => {
+        setCallTimer((prev) => prev + 1);
+      }, 1000);
     };
 
     startLocalMedia();
@@ -329,6 +381,17 @@ const GroupCallModal = () => {
 
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
+        // Flush any ICE candidates queued before remoteDescription was ready
+        const queued = iceQueuesRef.current[fromSocketId] || [];
+        if (queued.length > 0) {
+          for (const cand of queued) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (e) {}
+          }
+          delete iceQueuesRef.current[fromSocketId];
+        }
+
         if (isOffer) {
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -347,9 +410,15 @@ const GroupCallModal = () => {
     // 4. ICE candidate received from a peer
     const handleIceCandidate = async ({ fromSocketId, candidate }) => {
       try {
+        if (!candidate) return;
         const pc = peerConnectionsRef.current[fromSocketId];
-        if (pc && candidate) {
+        if (pc && pc.remoteDescription) {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          if (!iceQueuesRef.current[fromSocketId]) {
+            iceQueuesRef.current[fromSocketId] = [];
+          }
+          iceQueuesRef.current[fromSocketId].push(candidate);
         }
       } catch (err) {
         console.error("Add ICE candidate error:", err);
@@ -505,6 +574,13 @@ const GroupCallModal = () => {
 
   // Leave and Close Group Call
   const handleLeaveCall = () => {
+    if (Object.keys(peers).length === 0 && socket && activeRoomId) {
+      socket.emit("cancelGroupCall", {
+        roomId: activeRoomId,
+        groupId: activeGroupId,
+        participantIds: invitedFriends.map((f) => f?._id || f).filter(Boolean),
+      });
+    }
     cleanupGroupCall();
     dispatch(closeGroupCall());
     toast("You left the group call.", { icon: "👋" });
@@ -535,7 +611,7 @@ const GroupCallModal = () => {
   );
 
   return (
-    <div className="fixed inset-0 z-[120] bg-[#0e1c2f] flex flex-col items-center justify-between p-4 sm:p-6 select-none animate-fade-in text-white">
+    <div className="fixed inset-0 z-[120] h-[100dvh] bg-[#0e1c2f] flex flex-col items-center justify-between p-3 sm:p-6 select-none animate-fade-in text-white overflow-hidden">
       {/* Top Header Bar matching Screen 3 (< Conference) */}
       <div className="w-full max-w-2xl flex items-center justify-between px-2 py-2 shrink-0">
         <button
@@ -585,9 +661,9 @@ const GroupCallModal = () => {
       {/* Main Content: Screen 3 Conference Pill List OR Video Grid */}
       {viewMode === "conference" ? (
         <div className="flex-1 w-full max-w-md flex flex-col items-center pt-6 pb-4 overflow-y-auto px-1">
-          {/* Hidden audio/video elements still needed when in conference list mode */}
-          <video ref={localVideoRef} autoPlay muted playsInline className="hidden" />
-          <div className="hidden">
+          {/* Offscreen (not display:none) audio elements so voice ALWAYS plays in Conference list mode */}
+          <video ref={localVideoRef} autoPlay muted playsInline className="w-0 h-0 opacity-0 pointer-events-none" />
+          <div className="fixed w-0 h-0 overflow-hidden opacity-0 pointer-events-none" aria-hidden="true">
             {peerList.map(([socketId, peer]) => (
               <RemotePeerTile key={`audio-${socketId}`} peer={peer} />
             ))}
@@ -820,7 +896,7 @@ const GroupCallModal = () => {
 
       {/* Slide-over Invite Friends Drawer */}
       {showInviteDrawer && (
-        <div className="absolute right-4 top-20 bottom-24 w-72 bg-[#111b21] border border-[#2a3942] rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-slide-left">
+        <div className="absolute right-3 sm:right-4 top-20 bottom-24 w-72 max-w-[calc(100vw-24px)] bg-[#111b21] border border-[#2a3942] rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-slide-left">
           <div className="px-4 py-3 bg-[#202c33] flex items-center justify-between border-b border-[#2a3942]">
             <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
               <IoPersonAdd size={14} className="text-[#25d366]" />

@@ -2,6 +2,7 @@ import {Server} from "socket.io";
 import http from "http";
 import express from "express";
 import { User } from "../models/userModel.js";
+import { Group } from "../models/groupModel.js";
 
 const app=express();
 
@@ -29,9 +30,11 @@ io.on('connection', (socket) => {
   console.log('user connected', socket.id);
   const userId = socket.handshake.query.userId;
   if (userId && userId !== "undefined") {
-    userSocketMap[userId] = socket.id;
-    if (!userStatusMap[userId] || userStatusMap[userId] === "Offline") {
-      userStatusMap[userId] = "Online";
+    const uidStr = String(userId);
+    socket.join(`user:${uidStr}`);
+    userSocketMap[uidStr] = socket.id;
+    if (!userStatusMap[uidStr] || userStatusMap[uidStr] === "Offline") {
+      userStatusMap[uidStr] = "Online";
     }
   }
   io.emit('getOnlineUsers', Object.keys(userSocketMap));
@@ -257,26 +260,93 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on("inviteToGroupCall", ({ toUserId, roomId, fromUser, callType }) => {
-    const receiverSocketId = getReceiverSocketId(toUserId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("incomingGroupCallInvite", {
+  socket.on("inviteToGroupCall", async ({ toUserId, toUserIds = [], roomId, fromUser, callType, roomTitle, groupId }) => {
+    try {
+      const callerId = String(fromUser?._id || socket.handshake.query.userId || "");
+      const payload = {
         roomId,
         fromUser,
         callType: callType || "video",
+        roomTitle: roomTitle || "",
+        groupId: groupId || null,
+      };
+
+      const targetIds = new Set();
+      if (toUserId) {
+        targetIds.add(String(toUserId));
+      }
+      if (Array.isArray(toUserIds)) {
+        toUserIds.forEach((id) => id && targetIds.add(String(id?._id || id)));
+      }
+
+      if (groupId) {
+        try {
+          const grp = await Group.findById(groupId).select("participants name").lean();
+          if (grp) {
+            if (!payload.roomTitle && grp.name) {
+              payload.roomTitle = grp.name;
+            }
+            (grp.participants || []).forEach((pid) => {
+              const idStr = String(pid?._id || pid || "");
+              if (idStr && idStr !== callerId) {
+                targetIds.add(idStr);
+              }
+            });
+          }
+        } catch (dbErr) {
+          console.error("inviteToGroupCall DB lookup error:", dbErr);
+        }
+      }
+
+      targetIds.forEach((uid) => {
+        if (!uid || uid === callerId) return;
+        io.to(`user:${uid}`).emit("incomingGroupCallInvite", payload);
+        const receiverSocketId = getReceiverSocketId(uid);
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit("incomingGroupCallInvite", payload);
+        }
       });
+
+      if (groupId) {
+        socket.to(`group-chat-${groupId}`).emit("incomingGroupCallInvite", payload);
+      }
+    } catch (err) {
+      console.error("inviteToGroupCall error:", err);
     }
+  });
+
+  socket.on("cancelGroupCall", async ({ roomId, groupId, participantIds = [] }) => {
+    try {
+      const callerId = String(socket.handshake.query.userId || "");
+      const targetIds = new Set((participantIds || []).map((id) => String(id?._id || id)));
+      if (groupId) {
+        try {
+          const grp = await Group.findById(groupId).select("participants").lean();
+          (grp?.participants || []).forEach((pid) => targetIds.add(String(pid?._id || pid)));
+        } catch (e) {}
+        socket.to(`group-chat-${groupId}`).emit("groupCallInviteCancelled", { roomId });
+      }
+      targetIds.forEach((uid) => {
+        if (uid && uid !== callerId) {
+          io.to(`user:${uid}`).emit("groupCallInviteCancelled", { roomId });
+        }
+      });
+    } catch (err) {}
   });
 
   socket.on('disconnect', () => {
     console.log('user disconnected', socket.id);
-    if (userId && userSocketMap[userId] === socket.id) {
-      delete userSocketMap[userId];
-      userStatusMap[userId] = "Offline";
-      io.emit("userStatusChanged", {
-        userId,
-        userStatus: "Offline",
-      });
+    if (userId && userId !== "undefined") {
+      const uidStr = String(userId);
+      const activeSocketsInRoom = io.sockets.adapter.rooms.get(`user:${uidStr}`)?.size || 0;
+      if (activeSocketsInRoom === 0 && userSocketMap[uidStr] === socket.id) {
+        delete userSocketMap[uidStr];
+        userStatusMap[uidStr] = "Offline";
+        io.emit("userStatusChanged", {
+          userId: uidStr,
+          userStatus: "Offline",
+        });
+      }
     }
     io.emit('getOnlineUsers', Object.keys(userSocketMap));
     io.emit('getUserStatuses', userStatusMap);

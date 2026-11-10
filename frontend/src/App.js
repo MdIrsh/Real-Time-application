@@ -88,7 +88,7 @@ function App() {
 
 
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#050814]">
+    <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-[#050814]">
       {/* WhatsApp In-App Webview Detector & 1-Tap Browser Breakout */}
       <WhatsAppInAppModal />
       <CallProvider>

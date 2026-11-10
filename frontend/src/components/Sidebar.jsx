@@ -217,16 +217,16 @@ const Sidebar = () => {
       </div>
 
       {/* Top Header matching screenshot */}
-      <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between shrink-0 border-b border-[#18233c]/60 z-20 relative">
+      <div className="px-3 sm:px-4 pt-3 pb-2.5 flex items-center justify-between gap-2 shrink-0 border-b border-[#18233c]/60 z-20 relative">
         {/* IRSHAD • Official Messenger Branding */}
         <div
           onClick={() => setIsProfileModalOpen(true)}
-          className="flex flex-col cursor-pointer group select-none py-0.5"
+          className="flex flex-col cursor-pointer group select-none py-0.5 min-w-0"
           title="IRSHAD • Official Messenger (Tap to view profile)"
         >
-          <div className="flex items-center gap-2 leading-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 leading-none">
             <span
-              className="font-signature text-3xl sm:text-4xl text-white font-normal tracking-wide inline-block"
+              className="font-signature text-[28px] sm:text-4xl text-white font-normal tracking-wide inline-block truncate"
               style={{
                 textShadow: "0 0 16px rgba(255,255,255,0.45), 0 0 25px rgba(59,130,246,0.6)",
               }}
@@ -234,47 +234,47 @@ const Sidebar = () => {
               Irshad
             </span>
             <span
-              className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-[#1d9bf0] text-white text-[10px] font-black shrink-0 shadow-[0_0_10px_rgba(29,155,240,0.8)]"
+              className="inline-flex items-center justify-center w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full bg-[#1d9bf0] text-white text-[9px] sm:text-[10px] font-black shrink-0 shadow-[0_0_10px_rgba(29,155,240,0.8)]"
               title="Verified Official"
             >
               ✓
             </span>
           </div>
-          <div className="flex items-center gap-1.5 mt-1 leading-none">
-            <IoShieldCheckmark size={13} className="text-[#38bdf8] shrink-0" />
-            <span className="text-[12px] font-medium text-[#60a5fa] tracking-wide">
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 leading-none">
+            <IoShieldCheckmark size={12} className="text-[#38bdf8] shrink-0" />
+            <span className="text-[11px] sm:text-[12px] font-medium text-[#60a5fa] tracking-wide truncate">
               Official Messenger
             </span>
           </div>
         </div>
 
         {/* Top Right Action Icons: Status Selector, 📷, ⋮ */}
-        <div className="flex items-center gap-2 text-[#8ea2c6]" ref={menuRef}>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[#8ea2c6] shrink-0" ref={menuRef}>
           {/* Active Presence Status Dropdown (Online, Away, Offline) */}
           <UserStatusDropdown />
 
           {/* Camera Button */}
           <button
             onClick={() => dispatch(openCamera())}
-            className="w-10 h-10 rounded-2xl bg-[#0d1629]/80 hover:bg-[#1a284a] border border-[#1d2b4f] text-white flex items-center justify-center transition active:scale-95 shadow-xs"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0d1629]/80 hover:bg-[#1a284a] border border-[#1d2b4f] text-white flex items-center justify-center transition active:scale-95 shadow-xs shrink-0"
             title="Camera"
           >
-            <IoCameraOutline size={20} />
+            <IoCameraOutline size={18} />
           </button>
 
           {/* Three Dots Menu Button */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-              className="w-10 h-10 rounded-2xl bg-[#0d1629]/80 hover:bg-[#1a284a] border border-[#1d2b4f] text-white flex items-center justify-center transition active:scale-95 shadow-xs"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#0d1629]/80 hover:bg-[#1a284a] border border-[#1d2b4f] text-white flex items-center justify-center transition active:scale-95 shadow-xs"
               title="More options"
             >
-              <IoEllipsisVertical size={18} />
+              <IoEllipsisVertical size={17} />
             </button>
 
             {/* Dropdown Menu */}
             {showMenuDropdown && (
-              <div className="absolute right-0 top-11 w-52 bg-[#202c33] rounded-2xl shadow-2xl border border-[#2a3942] py-2 z-50 text-xs text-[#e9edef] animate-fade-in">
+              <div className="absolute right-0 top-11 w-52 max-w-[calc(100vw-24px)] bg-[#202c33] rounded-2xl shadow-2xl border border-[#2a3942] py-2 z-50 text-xs text-[#e9edef] animate-fade-in">
                 {/* Profile row */}
                 <button
                   onClick={() => {
@@ -563,7 +563,7 @@ const Sidebar = () => {
 
       {/* 5. Floating Action Buttons - +Friend Logo Removed as requested */}
       {activeBottomTab === "updates" ? (
-        <div className="absolute right-4 bottom-20 flex flex-col items-center gap-3 z-30 pointer-events-auto select-none">
+        <div className="absolute right-3 sm:right-4 bottom-[84px] flex flex-col items-center gap-2.5 z-30 pointer-events-auto select-none">
           {/* Pencil Button for Text Status */}
           <button
             onClick={() => {
@@ -582,7 +582,7 @@ const Sidebar = () => {
               setStatusUploadType("image");
               setIsUploadStatusOpen(true);
             }}
-            className="w-13 h-13 rounded-2xl bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:brightness-110 active:scale-95 text-white shadow-[0_0_20px_rgba(37,99,235,0.5)] flex items-center justify-center transition-all cursor-pointer font-bold"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:brightness-110 active:scale-95 text-white shadow-[0_0_20px_rgba(37,99,235,0.5)] flex items-center justify-center transition-all cursor-pointer font-bold"
             title="Photo / Video Status"
           >
             <IoCamera size={22} />
@@ -591,21 +591,21 @@ const Sidebar = () => {
       ) : null}
 
       {/* 6. Floating Glassmorphic Bottom Navigation Dock matching screenshot */}
-      <div className="mx-3 mb-2 rounded-3xl bg-[#080d1e]/95 backdrop-blur-xl border border-[#1a2748] h-16 px-2 flex items-center justify-around shrink-0 select-none z-20 shadow-[0_0_30px_rgba(0,0,0,0.85)]">
+      <div className="mx-2 sm:mx-3 mb-2 pb-[env(safe-area-inset-bottom)] rounded-3xl bg-[#080d1e]/95 backdrop-blur-xl border border-[#1a2748] min-h-[64px] px-1 sm:px-2 py-1 grid grid-cols-5 items-center shrink-0 select-none z-20 shadow-[0_0_30px_rgba(0,0,0,0.85)]">
         {/* Chats Tab */}
         <button
           onClick={() => setActiveBottomTab("chats")}
-          className="flex flex-col items-center cursor-pointer transition active:scale-95 relative"
+          className="flex flex-col items-center justify-center cursor-pointer transition active:scale-95 relative min-w-0"
         >
           <div
-            className={`px-5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all relative ${
+            className={`px-2.5 sm:px-4 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all relative max-w-full ${
               activeBottomTab === "chats"
                 ? "bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] text-white shadow-[0_0_18px_rgba(37,99,235,0.6)]"
                 : "text-[#64748b] hover:text-[#cbd5e1]"
             }`}
           >
-            <IoChatbubbleEllipses size={20} />
-            <span className="text-[11px] font-bold mt-0.5 leading-none">Chats</span>
+            <IoChatbubbleEllipses size={19} />
+            <span className="text-[10px] sm:text-[11px] font-bold mt-0.5 leading-none truncate max-w-full">Chats</span>
             {totalUnreadCount > 0 && activeBottomTab !== "chats" && (
               <span className="absolute -top-1 -right-1 bg-[#22c55e] text-[#050814] text-[10px] font-black px-1.5 min-w-[17px] h-4 rounded-full flex items-center justify-center shadow">
                 {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
@@ -617,36 +617,44 @@ const Sidebar = () => {
         {/* Updates Tab */}
         <button
           onClick={() => setActiveBottomTab("updates")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition active:scale-95 relative px-3 py-1"
+          className="flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 relative px-1 py-1 min-w-0"
         >
-          <div className="relative text-[#64748b] hover:text-[#cbd5e1]">
-            <IoRadioButtonOn
-              size={20}
-              className={activeBottomTab === "updates" ? "text-blue-400" : "text-[#64748b]"}
-            />
-            {/* Green dot on top right matching screenshot */}
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#22c55e] rounded-full ring-2 ring-[#080d1e] shadow-[0_0_6px_#22c55e]" />
-          </div>
-          <span
-            className={`text-[11px] ${
-              activeBottomTab === "updates" ? "font-bold text-white" : "font-medium text-[#64748b]"
+          <div
+            className={`px-2 sm:px-3 py-1 rounded-2xl flex flex-col items-center justify-center transition-all max-w-full ${
+              activeBottomTab === "updates"
+                ? "bg-[#111c3a] border border-blue-500/40"
+                : ""
             }`}
           >
-            Updates
-          </span>
+            <div className="relative text-[#64748b] hover:text-[#cbd5e1]">
+              <IoRadioButtonOn
+                size={19}
+                className={activeBottomTab === "updates" ? "text-blue-400" : "text-[#64748b]"}
+              />
+              {/* Green dot on top right matching screenshot */}
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#22c55e] rounded-full ring-2 ring-[#080d1e] shadow-[0_0_6px_#22c55e]" />
+            </div>
+            <span
+              className={`text-[10px] sm:text-[11px] truncate max-w-full mt-0.5 leading-none ${
+                activeBottomTab === "updates" ? "font-bold text-white" : "font-medium text-[#64748b]"
+              }`}
+            >
+              Updates
+            </span>
+          </div>
         </button>
 
         {/* Dedicated Reels Tab */}
         <button
           onClick={() => dispatch(setIsReelsOpen(true))}
-          className="flex flex-col items-center gap-1 cursor-pointer transition active:scale-95 relative px-3 py-1 text-[#64748b] hover:text-[#cbd5e1]"
+          className="flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 relative px-1 py-1 text-[#64748b] hover:text-[#cbd5e1] min-w-0"
         >
           <IoFilmOutline
-            size={20}
+            size={19}
             className={isReelsOpen ? "text-pink-400" : "text-[#64748b]"}
           />
           <span
-            className={`text-[11px] ${
+            className={`text-[10px] sm:text-[11px] truncate max-w-full leading-none ${
               isReelsOpen ? "font-bold text-pink-400" : "font-medium text-[#64748b]"
             }`}
           >
@@ -660,11 +668,11 @@ const Sidebar = () => {
             setActiveBottomTab("communities");
             setIsRequestsModalOpen(true);
           }}
-          className="flex flex-col items-center gap-1 cursor-pointer transition active:scale-95 relative px-3 py-1 text-[#64748b] hover:text-[#cbd5e1]"
+          className="flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 relative px-1 py-1 text-[#64748b] hover:text-[#cbd5e1] min-w-0"
         >
           <div className="relative">
             <IoPeople
-              size={21}
+              size={20}
               className={activeBottomTab === "communities" ? "text-blue-400" : "text-[#64748b]"}
             />
             {pendingReceivedCount > 0 && (
@@ -674,23 +682,25 @@ const Sidebar = () => {
             )}
           </div>
           <span
-            className={`text-[11px] ${
+            className={`text-[10px] sm:text-[11px] truncate max-w-full leading-none ${
               activeBottomTab === "communities"
                 ? "font-bold text-white"
                 : "font-medium text-[#64748b]"
             }`}
           >
-            Communities
+            Groups
           </span>
         </button>
 
         {/* Calls Tab */}
         <button
           onClick={() => setIsCallsModalOpen(true)}
-          className="flex flex-col items-center gap-1 cursor-pointer transition active:scale-95 relative px-3 py-1 text-[#64748b] hover:text-[#cbd5e1]"
+          className="flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 relative px-1 py-1 text-[#64748b] hover:text-[#cbd5e1] min-w-0"
         >
-          <IoCallOutline size={20} />
-          <span className="text-[11px] font-medium text-[#64748b]">Calls</span>
+          <IoCallOutline size={19} />
+          <span className="text-[10px] sm:text-[11px] font-medium text-[#64748b] truncate max-w-full leading-none">
+            Calls
+          </span>
         </button>
       </div>
 

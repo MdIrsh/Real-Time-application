@@ -451,7 +451,7 @@ const CallModal = () => {
             <div className="flex flex-col items-center">
               <button
                 onClick={() => setShowVolumePopup((prev) => !prev)}
-                className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
+                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
                   showVolumePopup || callVolume > 1
                     ? "bg-white text-[#162330]"
                     : "bg-white/15 text-white hover:bg-white/25"
@@ -476,7 +476,7 @@ const CallModal = () => {
               <div className="flex flex-col items-center">
                 <button
                   onClick={toggleVideo}
-                  className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
                     isVideoOff
                       ? "bg-white/15 text-gray-400 hover:bg-white/25"
                       : "bg-white text-[#162330]"
@@ -495,7 +495,7 @@ const CallModal = () => {
             <div className="flex flex-col items-center">
               <button
                 onClick={endCall}
-                className="w-15 h-15 sm:w-16 sm:h-16 rounded-full bg-[#e06363] hover:bg-[#d95353] active:scale-95 text-white flex items-center justify-center text-3xl shadow-[0_8px_25px_rgba(224,99,99,0.45)] transition-all cursor-pointer"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#e06363] hover:bg-[#d95353] active:scale-95 text-white flex items-center justify-center text-3xl shadow-[0_8px_25px_rgba(224,99,99,0.45)] transition-all cursor-pointer"
                 title="End Call"
               >
                 <MdCallEnd />
@@ -506,7 +506,7 @@ const CallModal = () => {
             <div className="flex flex-col items-center">
               <button
                 onClick={toggleMute}
-                className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
+                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl transition-all shadow-lg backdrop-blur-md cursor-pointer ${
                   isMuted
                     ? "bg-white text-[#162330]"
                     : "bg-white/15 text-white hover:bg-white/25"

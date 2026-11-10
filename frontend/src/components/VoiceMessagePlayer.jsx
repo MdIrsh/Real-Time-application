@@ -89,7 +89,7 @@ const VoiceMessagePlayer = ({ audioUrl, duration = 0, isSentByMe = false }) => {
   const progressRatio = totalDuration > 0 ? currentTime / totalDuration : 0;
 
   return (
-    <div className="flex items-center gap-2.5 py-1 min-w-[220px] sm:min-w-[260px] max-w-sm select-none">
+    <div className="flex items-center gap-2.5 py-1 min-w-[180px] sm:min-w-[250px] w-full max-w-sm select-none">
       <audio
         ref={audioRef}
         src={audioUrl}

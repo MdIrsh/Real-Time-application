@@ -150,7 +150,7 @@ const UpdatesTab = ({ onOpenUpload }) => {
   });
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-[#f8faff] text-[#0f172a] select-none p-4 flex flex-col gap-4 relative">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#f8faff] text-[#0f172a] select-none p-3 sm:p-4 pb-24 flex flex-col gap-3.5 sm:gap-4 relative">
       {/* 1. Header matching screenshot ("Status" + "Share what's on your mind" + Search & 3-dots) */}
       <div className="flex items-start justify-between">
         <div>
@@ -337,12 +337,14 @@ const UpdatesTab = ({ onOpenUpload }) => {
                     : "bg-blue-100"
                 }`}
               >
-                <img
-                  src={getAvatarUrl(authUser)}
-                  alt="My Status"
-                  className="w-13 h-13 rounded-full object-cover border-2 border-white group-hover:scale-105 transition-transform"
-                  onError={(e) => handleImageError(e, authUser?.fullName)}
-                />
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white bg-slate-100 shrink-0">
+                  <img
+                    src={getAvatarUrl(authUser)}
+                    alt="My Status"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    onError={(e) => handleImageError(e, authUser?.fullName)}
+                  />
+                </div>
               </div>
               <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#2563eb] text-white border-2 border-white flex items-center justify-center text-[9px] shadow-xs">
                 {hasMyStatus ? <IoEyeOutline size={9} /> : <IoAdd size={10} />}
@@ -380,12 +382,14 @@ const UpdatesTab = ({ onOpenUpload }) => {
                       : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
                   }`}
                 >
-                  <img
-                    src={avatar}
-                    alt={displayName}
-                    className="w-13 h-13 rounded-full object-cover border-2 border-white group-hover:scale-105 transition-transform"
-                    onError={(e) => handleImageError(e, displayName)}
-                  />
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white bg-slate-100 shrink-0">
+                    <img
+                      src={avatar}
+                      alt={displayName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => handleImageError(e, displayName)}
+                    />
+                  </div>
                 </div>
                 <span className="text-[11px] font-medium text-[#334155] truncate max-w-[56px]">
                   {firstName}
@@ -516,26 +520,26 @@ const UpdatesTab = ({ onOpenUpload }) => {
         {/* Option 1: Photo / Video Status with Song */}
         <div
           onClick={() => onOpenUpload("image")}
-          className="p-3 rounded-2xl bg-gradient-to-r from-[#eff6ff] to-white border border-blue-200 hover:border-[#2563eb] transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-xs"
+          className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-[#eff6ff] to-white border border-blue-200 hover:border-[#2563eb] transition cursor-pointer flex items-center justify-between gap-2 group active:scale-98 shadow-xs"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
-              <IoCamera size={20} />
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
+              <IoCamera size={19} />
             </div>
             <div className="min-w-0">
-              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
+              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5 flex-wrap">
                 <span>Photo / Video Status</span>
-                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-[#2563eb] text-white font-black">
+                <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-[#2563eb] text-white font-black">
                   + SONG
                 </span>
               </h5>
               <p className="text-[11px] text-[#64748b] truncate mt-0.5 flex items-center gap-1">
                 <IoMusicalNotes size={12} className="text-[#2563eb] shrink-0" />
-                <span>Upload photo/video + Bollywood music</span>
+                <span>Upload photo/video + music</span>
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-[#2563eb] px-3 py-1.5 rounded-xl bg-blue-100 group-hover:bg-[#2563eb] group-hover:text-white transition shrink-0 ml-2">
+          <span className="text-[11px] sm:text-xs font-bold text-[#2563eb] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-blue-100 group-hover:bg-[#2563eb] group-hover:text-white transition shrink-0">
             Upload →
           </span>
         </div>
@@ -543,26 +547,26 @@ const UpdatesTab = ({ onOpenUpload }) => {
         {/* Option 2: Colorful Text Status with Song */}
         <div
           onClick={() => onOpenUpload("text")}
-          className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-white border border-purple-200 hover:border-purple-500 transition cursor-pointer flex items-center justify-between group active:scale-98 shadow-xs"
+          className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-white border border-purple-200 hover:border-purple-500 transition cursor-pointer flex items-center justify-between gap-2 group active:scale-98 shadow-xs"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
-              <IoPencil size={18} />
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition">
+              <IoPencil size={17} />
             </div>
             <div className="min-w-0">
-              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
+              <h5 className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5 flex-wrap">
                 <span>Text Status</span>
-                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-purple-600 text-white font-black">
+                <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-purple-600 text-white font-black">
                   COLOR
                 </span>
               </h5>
               <p className="text-[11px] text-[#64748b] truncate mt-0.5 flex items-center gap-1">
                 <IoMusicalNotes size={12} className="text-purple-500 shrink-0" />
-                <span>Type thoughts with 7 vibrant colors & song</span>
+                <span>7 vibrant colors &amp; music</span>
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-purple-600 px-3 py-1.5 rounded-xl bg-purple-100 group-hover:bg-purple-600 group-hover:text-white transition shrink-0 ml-2">
+          <span className="text-[11px] sm:text-xs font-bold text-purple-600 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-purple-100 group-hover:bg-purple-600 group-hover:text-white transition shrink-0">
             Write →
           </span>
         </div>

@@ -28,11 +28,11 @@ const HomePage = () => {
       <MicPermissionPrompt />
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar: Visible on desktop, or on mobile when no chat is open */}
+        {/* Sidebar: Visible on desktop/tablet, or on mobile when no chat is open */}
         <div
           className={`${
             hasActiveChat ? "hidden md:flex" : "flex"
-          } w-full md:w-[380px] lg:w-[420px] flex-col h-full border-r border-[#18233c] shrink-0 bg-[#050814] overflow-hidden`}
+          } w-full md:w-[330px] lg:w-[380px] xl:w-[420px] flex-col h-full border-r border-[#18233c] shrink-0 bg-[#050814] overflow-hidden`}
         >
           <Sidebar />
         </div>

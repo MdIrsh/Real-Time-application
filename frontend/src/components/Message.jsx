@@ -651,7 +651,7 @@ const Message = ({ message }) => {
             href={message.file.url}
             download={message.file.name || "document"}
             onClick={(e) => e.stopPropagation()}
-            className="mb-1.5 p-2.5 rounded-xl bg-[#f8fafc] hover:bg-[#eff6ff] border border-blue-100/90 flex items-center gap-3 min-w-[220px] sm:min-w-[260px] transition-colors group/file cursor-pointer"
+            className="mb-1.5 p-2.5 rounded-xl bg-[#f8fafc] hover:bg-[#eff6ff] border border-blue-100/90 flex items-center gap-2.5 sm:gap-3 w-full min-w-[180px] sm:min-w-[255px] max-w-[280px] transition-colors group/file cursor-pointer"
           >
             <div className="w-10 h-10 rounded-lg bg-[#2563eb]/12 text-[#1d4ed8] flex items-center justify-center shrink-0">
               <IoDocumentText className="text-2xl" />
@@ -673,7 +673,7 @@ const Message = ({ message }) => {
 
         {/* Interactive Group Poll Card */}
         {message?.poll?.question && Array.isArray(message.poll.options) && (
-          <div className="mb-1.5 min-w-[235px] sm:min-w-[275px] bg-[#f8fafc]/95 rounded-xl p-3 border border-blue-100/90">
+          <div className="mb-1.5 w-full min-w-[190px] sm:min-w-[270px] max-w-[300px] bg-[#f8fafc]/95 rounded-xl p-2.5 sm:p-3 border border-blue-100/90">
             <div className="flex items-center gap-2 mb-2.5">
               <IoBarChart className="text-[#1d4ed8] text-lg shrink-0" />
               <h4 className="text-[14px] font-bold text-[#0f172a] leading-snug">

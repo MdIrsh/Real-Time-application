@@ -93,8 +93,8 @@ const Signup = () => {
   };
 
   return (
-    <div data-theme="light" className="h-screen w-screen flex items-center justify-center bg-[#f0f2f5] p-4">
-      <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
+    <div data-theme="light" className="min-h-[100dvh] w-full overflow-y-auto flex items-center justify-center bg-[#f0f2f5] p-4 py-6">
+      <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl bg-white border border-gray-200/80">
         <div className="flex flex-col items-center mb-4">
           <img
             src="/irshad_3d_signature_transparent.png"

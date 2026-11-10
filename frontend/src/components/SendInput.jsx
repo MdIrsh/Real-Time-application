@@ -560,7 +560,7 @@ const SendInput = () => {
 
       {/* Floating Quick Emoji Picker Popup */}
       {showEmojiPicker && (
-        <div className="absolute bottom-full mb-2 left-4 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl shadow-xl border border-gray-200 z-30 max-w-sm">
+        <div className="absolute bottom-full mb-2 left-2 sm:left-4 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl shadow-xl border border-gray-200 z-30 w-[calc(100vw-16px)] sm:w-auto max-w-sm">
           <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-gray-100 text-xs font-semibold text-gray-500">
             <span>Quick Emojis</span>
             <button
@@ -668,7 +668,7 @@ const SendInput = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-blue-100 overflow-hidden"
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-blue-100 overflow-hidden max-h-[90dvh] flex flex-col"
           >
             <div className="bg-gradient-to-r from-[#0d47a1] to-[#1e88e5] px-5 py-4 flex items-center justify-between text-white">
               <div className="flex items-center gap-2">
@@ -794,7 +794,7 @@ const SendInput = () => {
       {/* Main Input Form matching screenshot */}
       <form
         onSubmit={onSubmitHandler}
-        className="bg-[#f4f7fc] px-3.5 sm:px-5 py-3 flex items-center gap-2.5 border-t border-blue-100/90"
+        className="bg-[#f4f7fc] px-2.5 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-2.5 border-t border-blue-100/90"
       >
         {/* If recording voice: Show Voice Recording Bar */}
         {isRecordingVoice ? (
@@ -856,14 +856,14 @@ const SendInput = () => {
                 setShowEmojiPicker(false);
                 setShowAttachMenu((prev) => !prev);
               }}
-              className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] hover:brightness-110 active:scale-95 text-white flex items-center justify-center shadow-[0_3px_10px_rgba(37,99,235,0.4)] transition-all shrink-0 cursor-pointer"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] hover:brightness-110 active:scale-95 text-white flex items-center justify-center shadow-[0_3px_10px_rgba(37,99,235,0.4)] transition-all shrink-0 cursor-pointer"
               title="More options (Photo, Camera, Voice)"
             >
               <BsPlusLg className={`w-4 h-4 transition-transform duration-200 ${showAttachMenu ? "rotate-45" : ""}`} />
             </button>
 
             {/* White Pill Input Capsule */}
-            <div className="flex-1 relative flex items-center bg-white rounded-full px-4 py-2 border border-blue-100/90 shadow-xs focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all">
+            <div className="flex-1 min-w-0 relative flex items-center bg-white rounded-full px-3 sm:px-4 py-1.5 sm:py-2 border border-blue-100/90 shadow-xs focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all">
               <input
                 ref={inputRef}
                 value={message}
@@ -913,7 +913,7 @@ const SendInput = () => {
                   inputRef.current?.focus();
                 }
               }}
-              className={`w-10 h-10 rounded-full ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${
                 selectedUser?._id === "meta-ai"
                   ? "bg-gradient-to-tr from-[#0064e0] to-[#ff007f] hover:opacity-90"
                   : "bg-gradient-to-tr from-[#1d4ed8] to-[#2563eb] hover:brightness-110"

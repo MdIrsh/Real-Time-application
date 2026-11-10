@@ -124,6 +124,9 @@ const UpdatesTab = ({ onOpenUpload }) => {
 
   const hasMyStatus = myStatuses.length > 0;
   const latestMyStatus = hasMyStatus ? myStatuses[0] : null;
+  const orderedMyStatuses = [...myStatuses].sort(
+    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+  );
 
   const getUniqueViewCount = (status) => {
     if (!status?.viewers) return 0;
@@ -135,8 +138,19 @@ const UpdatesTab = ({ onOpenUpload }) => {
     return seen.size || status.viewers.length;
   };
 
-  const getReactionCount = (status) => {
-    return status?.reactions?.length || 0;
+  const getGroupUniqueViewCount = (items = []) => {
+    const seen = new Set();
+    for (const st of items) {
+      for (const v of st?.viewers || []) {
+        const uId = String(v.user?._id || v.user || v._id || "");
+        if (uId) seen.add(uId);
+      }
+    }
+    return seen.size;
+  };
+
+  const getGroupReactionCount = (items = []) => {
+    return items.reduce((sum, st) => sum + (st?.reactions?.length || 0), 0);
   };
 
   const filteredOtherStatuses = otherStatuses.filter((s) => {
@@ -149,8 +163,52 @@ const UpdatesTab = ({ onOpenUpload }) => {
     );
   });
 
+  // Group multiple statuses from the same friend into ONE unified entry per friend
+  const groupedOtherUsers = Object.values(
+    filteredOtherStatuses.reduce((acc, st) => {
+      const authorId = String(st.user?._id || st.user || st.userName || st._id);
+      if (!acc[authorId]) {
+        const displayName = st.user?.fullName || st.userName || "Contact";
+        const avatar =
+          st.user?.profilePhoto ||
+          st.userAvatar ||
+          getAvatarUrl({ fullName: displayName });
+        acc[authorId] = {
+          authorId,
+          displayName,
+          avatar,
+          latestStatus: st,
+          items: [],
+        };
+      }
+      acc[authorId].items.push(st);
+      if (new Date(st.createdAt || 0) > new Date(acc[authorId].latestStatus.createdAt || 0)) {
+        acc[authorId].latestStatus = st;
+      }
+      return acc;
+    }, {})
+  ).map((grp) => {
+    const orderedItems = [...grp.items].sort(
+      (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+    );
+    const allViewed = orderedItems.every((st) =>
+      st.viewers?.some((v) => String(v.user?._id || v.user) === String(authUser?._id))
+    );
+    const firstUnviewed = orderedItems.find(
+      (st) => !st.viewers?.some((v) => String(v.user?._id || v.user) === String(authUser?._id))
+    );
+    return {
+      ...grp,
+      items: orderedItems,
+      entryStatus: firstUnviewed || orderedItems[0],
+      allViewed,
+      viewsCount: getGroupUniqueViewCount(orderedItems),
+      likesCount: getGroupReactionCount(orderedItems),
+    };
+  });
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#f8faff] text-[#0f172a] select-none p-3 sm:p-4 pb-24 flex flex-col gap-3.5 sm:gap-4 relative">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#f8faff] text-[#0f172a] select-none p-3 sm:p-4 pb-28 flex flex-col gap-3.5 sm:gap-4 relative">
       {/* 1. Header matching screenshot ("Status" + "Share what's on your mind" + Search & 3-dots) */}
       <div className="flex items-start justify-between">
         <div>
@@ -239,11 +297,11 @@ const UpdatesTab = ({ onOpenUpload }) => {
         </div>
       )}
 
-      {/* 2. "My Status" Soft Blue Card matching screenshot */}
+      {/* 2. "My Status" Single Unified Card (groups multiple user stories into one card) */}
       <div
         onClick={() => {
           if (hasMyStatus) {
-            handleOpenStatus(myStatuses, 0);
+            handleOpenStatus(orderedMyStatuses, 0);
           } else {
             onOpenUpload("image");
           }
@@ -282,19 +340,29 @@ const UpdatesTab = ({ onOpenUpload }) => {
           </div>
 
           <div className="min-w-0">
-            <h4 className="text-sm font-semibold text-[#0f172a] leading-tight">
-              My Status
-            </h4>
+            <div className="flex items-center gap-1.5">
+              <h4 className="text-sm font-semibold text-[#0f172a] leading-tight">
+                My Status
+              </h4>
+              {myStatuses.length > 1 && (
+                <span className="text-[10px] font-bold bg-[#2563eb] text-white px-1.5 py-0.5 rounded-full leading-none">
+                  {myStatuses.length} stories
+                </span>
+              )}
+            </div>
             <div className="text-xs text-[#64748b] mt-0.5 flex items-center gap-1.5 flex-wrap">
               {hasMyStatus ? (
                 <>
                   <span>{formatStatusTime(latestMyStatus.createdAt)}</span>
                   <span className="text-[11px] font-semibold text-[#2563eb] flex items-center gap-1">
-                    • <IoEyeOutline size={12} /> {getUniqueViewCount(latestMyStatus)}
+                    • <IoEyeOutline size={12} />{" "}
+                    {myStatuses.length > 1
+                      ? getGroupUniqueViewCount(myStatuses)
+                      : getUniqueViewCount(latestMyStatus)}
                   </span>
-                  {getReactionCount(latestMyStatus) > 0 && (
+                  {getGroupReactionCount(myStatuses) > 0 && (
                     <span className="text-[11px] font-semibold text-rose-500 flex items-center gap-0.5">
-                      • <IoHeart size={11} /> {getReactionCount(latestMyStatus)}
+                      • <IoHeart size={11} /> {getGroupReactionCount(myStatuses)}
                     </span>
                   )}
                 </>
@@ -318,78 +386,40 @@ const UpdatesTab = ({ onOpenUpload }) => {
         </button>
       </div>
 
-      {/* 3. Horizontal Story Rings Strip matching screenshot */}
-      {(hasMyStatus || filteredOtherStatuses.length > 0) && (
+      {/* 3. Horizontal Friends Story Rings Strip (1 ring per friend; duplicate My Status removed) */}
+      {groupedOtherUsers.length > 0 && (
         <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 shrink-0">
-          {/* My Status Ring */}
-          <button
-            type="button"
-            onClick={() =>
-              hasMyStatus ? handleOpenStatus(myStatuses, 0) : onOpenUpload("image")
-            }
-            className="flex flex-col items-center gap-1 shrink-0 group cursor-pointer"
-          >
-            <div className="relative">
-              <div
-                className={`p-[2.5px] rounded-full ${
-                  hasMyStatus
-                    ? "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb]"
-                    : "bg-blue-100"
-                }`}
-              >
-                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white bg-slate-100 shrink-0">
-                  <img
-                    src={getAvatarUrl(authUser)}
-                    alt="My Status"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    onError={(e) => handleImageError(e, authUser?.fullName)}
-                  />
-                </div>
-              </div>
-              <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#2563eb] text-white border-2 border-white flex items-center justify-center text-[9px] shadow-xs">
-                {hasMyStatus ? <IoEyeOutline size={9} /> : <IoAdd size={10} />}
-              </span>
-            </div>
-            <span className="text-[11px] font-medium text-[#334155] truncate max-w-[56px]">
-              My Status
-            </span>
-          </button>
-
-          {/* Friends Story Rings */}
-          {filteredOtherStatuses.map((status, index) => {
-            const displayName =
-              status.user?.fullName || status.userName || "Contact";
-            const firstName = displayName.split(" ")[0];
-            const avatar =
-              status.user?.profilePhoto ||
-              status.userAvatar ||
-              getAvatarUrl({ fullName: displayName });
-            const isViewed = status.viewers?.some(
-              (v) => String(v.user?._id || v.user) === String(authUser?._id)
-            );
-
+          {groupedOtherUsers.map((grp) => {
+            const firstName = grp.displayName.split(" ")[0];
             return (
               <button
-                key={`ring-${status._id || index}`}
+                key={`ring-${grp.authorId}`}
                 type="button"
-                onClick={() => handleOpenStatus(filteredOtherStatuses, index)}
+                onClick={() => handleOpenStatus([grp.entryStatus], 0)}
                 className="flex flex-col items-center gap-1 shrink-0 group cursor-pointer"
               >
-                <div
-                  className={`p-[2.5px] rounded-full ${
-                    isViewed
-                      ? "bg-slate-300"
-                      : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
-                  }`}
-                >
-                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white bg-slate-100 shrink-0">
-                    <img
-                      src={avatar}
-                      alt={displayName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => handleImageError(e, displayName)}
-                    />
+                <div className="relative">
+                  <div
+                    className={`p-[2.5px] rounded-full ${
+                      grp.allViewed
+                        ? "bg-slate-300"
+                        : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white bg-slate-100 shrink-0">
+                      <img
+                        src={grp.avatar}
+                        alt={grp.displayName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        onError={(e) => handleImageError(e, grp.displayName)}
+                      />
+                    </div>
                   </div>
+                  {grp.items.length > 1 && (
+                    <span className="absolute -bottom-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#2563eb] text-white text-[10px] font-bold border-2 border-white flex items-center justify-center shadow-xs">
+                      {grp.items.length}
+                    </span>
+                  )}
                 </div>
                 <span className="text-[11px] font-medium text-[#334155] truncate max-w-[56px]">
                   {firstName}
@@ -400,15 +430,15 @@ const UpdatesTab = ({ onOpenUpload }) => {
         </div>
       )}
 
-      {/* 4. Recent Updates List with Eye + Heart Counts matching screenshot */}
+      {/* 4. Recent Updates List (grouped 1 row per friend, multiple statuses combined) */}
       <div>
         <div className="flex items-center justify-between mb-2 px-0.5">
           <h3 className="font-bold text-sm text-[#0f172a]">Recent Updates</h3>
           <button
             type="button"
             onClick={() => {
-              if (filteredOtherStatuses.length > 0) {
-                handleOpenStatus(filteredOtherStatuses, 0);
+              if (groupedOtherUsers.length > 0) {
+                handleOpenStatus([groupedOtherUsers[0].entryStatus], 0);
               } else {
                 onOpenUpload("image");
               }
@@ -425,83 +455,76 @@ const UpdatesTab = ({ onOpenUpload }) => {
             <div className="w-4 h-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin mr-2" />
             <span>Loading updates...</span>
           </div>
-        ) : filteredOtherStatuses.length === 0 ? (
+        ) : groupedOtherUsers.length === 0 ? (
           <div className="p-4 bg-white rounded-2xl border border-blue-100 text-center text-xs text-[#64748b] shadow-xs">
             No recent updates from friends yet
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {filteredOtherStatuses.map((status, index) => {
-              const displayName =
-                status.user?.fullName || status.userName || "Contact";
-              const avatar =
-                status.user?.profilePhoto ||
-                status.userAvatar ||
-                getAvatarUrl({ fullName: displayName });
-
-              const isViewed = status.viewers?.some(
-                (v) => String(v.user?._id || v.user) === String(authUser?._id)
-              );
-
-              const viewsCount = getUniqueViewCount(status);
-              const likesCount = getReactionCount(status);
-
-              return (
-                <div
-                  key={status._id || index}
-                  onClick={() => handleOpenStatus(filteredOtherStatuses, index)}
-                  className={`flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer ${
-                    index === 0
-                      ? "bg-[#eff6ff] border border-blue-100 shadow-xs"
-                      : "bg-white hover:bg-[#f1f5f9] border border-transparent hover:border-blue-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Gradient Story Ring */}
-                    <div
-                      className={`p-[2.5px] rounded-full shrink-0 ${
-                        isViewed
-                          ? "bg-slate-300"
-                          : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
-                      }`}
-                    >
-                      <img
-                        src={avatar}
-                        alt={displayName}
-                        className="w-11 h-11 rounded-full object-cover border-2 border-white"
-                        onError={(e) => handleImageError(e, displayName)}
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold text-[#0f172a] truncate">
-                        {displayName}
-                      </h4>
-                      <div className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1.5">
-                        <span className="shrink-0">{formatStatusTime(status.createdAt)}</span>
-                        {status.song?.title && (
-                          <span className="text-[10px] text-[#2563eb] font-medium bg-blue-50 px-1.5 py-0.2 rounded-full truncate max-w-[110px] shrink-0">
-                            🎵 {status.song.title}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            {groupedOtherUsers.map((grp, index) => (
+              <div
+                key={grp.authorId}
+                onClick={() => handleOpenStatus([grp.entryStatus], 0)}
+                className={`flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer ${
+                  index === 0
+                    ? "bg-[#eff6ff] border border-blue-100 shadow-xs"
+                    : "bg-white hover:bg-[#f1f5f9] border border-transparent hover:border-blue-100"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Gradient Story Ring */}
+                  <div
+                    className={`p-[2.5px] rounded-full shrink-0 ${
+                      grp.allViewed
+                        ? "bg-slate-300"
+                        : "bg-gradient-to-tr from-[#22c55e] via-[#06b6d4] to-[#2563eb] shadow-xs"
+                    }`}
+                  >
+                    <img
+                      src={grp.avatar}
+                      alt={grp.displayName}
+                      className="w-11 h-11 rounded-full object-cover border-2 border-white"
+                      onError={(e) => handleImageError(e, grp.displayName)}
+                    />
                   </div>
 
-                  {/* Right Stats: Eye Count + Red Heart Count matching screenshot */}
-                  <div className="flex items-center gap-3 shrink-0 ml-2">
-                    <span className="flex items-center gap-1 text-xs font-semibold text-[#475569]">
-                      <IoEyeOutline size={15} className="text-[#475569]" />
-                      <span>{viewsCount}</span>
-                    </span>
-                    <span className="flex items-center gap-1 text-xs font-semibold text-[#0f172a]">
-                      <IoHeart size={14} className="text-[#ef4444]" />
-                      <span>{likesCount}</span>
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-sm font-semibold text-[#0f172a] truncate">
+                        {grp.displayName}
+                      </h4>
+                      {grp.items.length > 1 && (
+                        <span className="text-[10px] font-bold text-[#2563eb] bg-blue-100 px-1.5 py-0.5 rounded-full shrink-0 leading-none">
+                          {grp.items.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1.5">
+                      <span className="shrink-0">
+                        {formatStatusTime(grp.latestStatus.createdAt)}
+                      </span>
+                      {grp.latestStatus.song?.title && (
+                        <span className="text-[10px] text-[#2563eb] font-medium bg-blue-50 px-1.5 py-0.5 rounded-full truncate max-w-[110px] shrink-0">
+                          🎵 {grp.latestStatus.song.title}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Right Stats: Eye Count + Red Heart Count matching screenshot */}
+                <div className="flex items-center gap-3 shrink-0 ml-2">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-[#475569]">
+                    <IoEyeOutline size={15} className="text-[#475569]" />
+                    <span>{grp.viewsCount}</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-[#0f172a]">
+                    <IoHeart size={14} className="text-[#ef4444]" />
+                    <span>{grp.likesCount}</span>
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -51,10 +51,23 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
   const { socket } = useSelector((store) => store.socket);
   const dispatch = useDispatch();
 
-  // Use statuses passed as prop, or fallback to allStatuses from Redux store
+  // Filter statuses cleanly to the selected author's stories (all multiple statuses in one viewer, oldest -> newest)
   const effectiveStatuses = useMemo(() => {
-    return statuses && statuses.length > 0 ? statuses : allStatuses || [];
-  }, [statuses, allStatuses]);
+    const source = statuses && statuses.length > 0 ? statuses : allStatuses || [];
+    if (!selectedStatus) return source;
+    const targetAuthorId = String(selectedStatus.user?._id || selectedStatus.user || "");
+    const authorMatches = source.filter((s) => {
+      const sAuthorId = String(s.user?._id || s.user || "");
+      if (targetAuthorId && sAuthorId) {
+        return sAuthorId === targetAuthorId;
+      }
+      return (s.userName || "") === (selectedStatus.userName || "");
+    });
+    const list = authorMatches.length > 0 ? authorMatches : [selectedStatus];
+    return [...list].sort(
+      (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+    );
+  }, [statuses, allStatuses, selectedStatus]);
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);

@@ -617,10 +617,10 @@ const Sidebar = () => {
         {/* Updates Tab */}
         <button
           onClick={() => setActiveBottomTab("updates")}
-          className="flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 relative px-1 py-1 min-w-0"
+          className="flex flex-col items-center justify-center cursor-pointer transition active:scale-95 relative min-w-0"
         >
           <div
-            className={`px-2 sm:px-3 py-1 rounded-2xl flex flex-col items-center justify-center transition-all max-w-full ${
+            className={`px-1.5 sm:px-3 py-1 rounded-2xl flex flex-col items-center justify-center transition-all max-w-full ${
               activeBottomTab === "updates"
                 ? "bg-[#111c3a] border border-blue-500/40"
                 : ""
@@ -635,7 +635,7 @@ const Sidebar = () => {
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#22c55e] rounded-full ring-2 ring-[#080d1e] shadow-[0_0_6px_#22c55e]" />
             </div>
             <span
-              className={`text-[10px] sm:text-[11px] truncate max-w-full mt-0.5 leading-none ${
+              className={`text-[10px] sm:text-[11px] mt-0.5 leading-none whitespace-nowrap ${
                 activeBottomTab === "updates" ? "font-bold text-white" : "font-medium text-[#64748b]"
               }`}
             >

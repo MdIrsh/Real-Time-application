@@ -212,13 +212,12 @@ export const reactToStatus = async (req, res) => {
     if (!status.reactions) status.reactions = [];
     const existingIndex = status.reactions.findIndex((r) => {
       const uId = String(r.user?._id || r.user || "");
-      return uId && uId === String(userId);
+      return uId && uId === String(userId) && r.emoji === emoji;
     });
 
     if (existingIndex === -1) {
       status.reactions.push({ user: userId, emoji, reactedAt: new Date() });
     } else {
-      status.reactions[existingIndex].emoji = emoji;
       status.reactions[existingIndex].reactedAt = new Date();
     }
 
@@ -237,6 +236,7 @@ export const reactToStatus = async (req, res) => {
     try {
       io.emit("statusReacted", {
         statusId,
+        statusOwnerId: String(status.user),
         reaction: reactionObj,
       });
     } catch (e) {

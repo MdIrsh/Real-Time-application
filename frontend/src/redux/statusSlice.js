@@ -88,7 +88,9 @@ const statusSlice = createSlice({
         if (!rUserId) return;
 
         const existingIdx = item.reactions.findIndex(
-          (r) => String(r.user?._id || r.user || r._id || "") === String(rUserId)
+          (r) =>
+            String(r.user?._id || r.user || r._id || "") === String(rUserId) &&
+            r.emoji === reaction.emoji
         );
         if (existingIdx === -1) {
           item.reactions.push(reaction);

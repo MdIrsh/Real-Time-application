@@ -68,19 +68,23 @@ code {
 @keyframes statusEmojiFloat {
   0% {
     opacity: 0;
-    transform: translate3d(0, 20px, 0) scale(0.35) rotate(0deg);
+    transform: translate3d(0, 24px, 0) scale(0.25) rotate(0deg);
   }
-  18% {
+  16% {
     opacity: 1;
-    transform: translate3d(var(--tx-mid, 12px), -70px, 0) scale(1.25) rotate(var(--rot, 10deg));
+    transform: translate3d(var(--tx-mid, 14px), -90px, 0) scale(1.38) rotate(var(--rot, 10deg));
   }
-  65% {
-    opacity: 0.9;
-    transform: translate3d(var(--tx-end, -18px), -260px, 0) scale(1.05) rotate(calc(var(--rot, 10deg) * -1));
+  45% {
+    opacity: 0.96;
+    transform: translate3d(calc(var(--tx-mid, 14px) * -0.5), -240px, 0) scale(1.12) rotate(calc(var(--rot, 10deg) * -0.7));
+  }
+  75% {
+    opacity: 0.72;
+    transform: translate3d(var(--tx-end, -18px), -390px, 0) scale(0.98) rotate(calc(var(--rot, 10deg) * 0.6));
   }
   100% {
     opacity: 0;
-    transform: translate3d(var(--tx-end, -18px), -420px, 0) scale(0.75) rotate(var(--rot, 10deg));
+    transform: translate3d(var(--tx-end, -18px), -540px, 0) scale(0.7) rotate(var(--rot, 10deg));
   }
 }
 

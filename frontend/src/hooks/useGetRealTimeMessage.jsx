@@ -23,6 +23,7 @@ import {
   updateGroupPoll,
   updateGroupPinned,
 } from "../redux/groupSlice";
+import { reactStatusLocally } from "../redux/statusSlice";
 import { triggerMessageNotification } from "../utils/notificationService";
 import { getAvatarUrl, handleImageError } from "../utils/avatar";
 import toast from "react-hot-toast";
@@ -334,6 +335,60 @@ const useGetRealTimeMessage = () => {
       }
     };
 
+    // Real-time Status Reaction Update & Owner Notification Toast
+    const handleStatusReacted = ({ statusId, statusOwnerId, reaction }) => {
+      if (!statusId || !reaction) return;
+      dispatch(reactStatusLocally({ statusId, reaction }));
+
+      const currentAuthUser = authUserRef.current;
+      const reactorObj = reaction.user || {};
+      const reactorId = String(reactorObj._id || reactorObj || "");
+      const reactorName = reactorObj.fullName || reactorObj.username || "Someone";
+
+      if (
+        currentAuthUser?._id &&
+        statusOwnerId &&
+        String(statusOwnerId) === String(currentAuthUser._id) &&
+        reactorId !== String(currentAuthUser._id)
+      ) {
+        const emoji = reaction.emoji || "❤️";
+        toast.custom(
+          (t) => (
+            <div
+              onClick={() => toast.dismiss(t.id)}
+              className={`${
+                t.visible ? "animate-enter" : "animate-leave"
+              } max-w-sm w-full bg-[#111b21] text-white shadow-2xl rounded-2xl pointer-events-auto flex items-center p-3.5 cursor-pointer hover:bg-[#1e293b] transition-all border border-rose-500/40 gap-3`}
+            >
+              <img
+                src={getAvatarUrl(reactorObj)}
+                alt={reactorName}
+                className="w-10 h-10 rounded-full object-cover border border-rose-400 shrink-0"
+                onError={(e) => handleImageError(e, reactorName)}
+              />
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold text-white truncate">
+                  {reactorName} reacted {emoji}
+                </h4>
+                <p className="text-[11px] text-rose-300 truncate mt-0.5">
+                  Reacted to your status update
+                </p>
+              </div>
+              <span className="text-xl shrink-0">{emoji}</span>
+            </div>
+          ),
+          { id: `status-react-${statusId}-${reactorId}`, duration: 4000, position: "top-right" }
+        );
+
+        triggerMessageNotification({
+          senderName: `${reactorName} reacted ${emoji}`,
+          senderAvatar: getAvatarUrl(reactorObj),
+          messageText: "Reacted to your status update",
+          isCurrentChatActive: false,
+        });
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
     socket.on("newGroupMessage", handleNewGroupMessage);
     socket.on("groupAvatarUpdated", handleGroupAvatarUpdated);
@@ -343,6 +398,7 @@ const useGetRealTimeMessage = () => {
     socket.on("messageReacted", handleMessageReacted);
     socket.on("pollUpdated", handlePollUpdated);
     socket.on("groupPinnedUpdated", handleGroupPinnedUpdated);
+    socket.on("statusReacted", handleStatusReacted);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
@@ -354,6 +410,7 @@ const useGetRealTimeMessage = () => {
       socket.off("messageReacted", handleMessageReacted);
       socket.off("pollUpdated", handlePollUpdated);
       socket.off("groupPinnedUpdated", handleGroupPinnedUpdated);
+      socket.off("statusReacted", handleStatusReacted);
     };
   }, [socket, dispatch]);
 };

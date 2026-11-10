@@ -366,39 +366,45 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
     }
   };
 
-  // Quick 1-tap reaction (❤️, 😂, 👍, 🔥) with burst bubble float animation + live DB + Socket notification
+  // Quick 1-tap reaction (❤️, 😂, 👍, 🔥) with multi-bubble burst float animation + instant count + post-animation owner notification
   const handleSendQuickReaction = async (emoji) => {
     if (!activeStatus) return;
-    const targetUserId = activeStatus.user?._id || activeStatus.user;
+    const statusSnapshot = activeStatus;
+    const targetUserId = statusSnapshot.user?._id || statusSnapshot.user;
     const authorName =
-      activeStatus.user?.fullName || activeStatus.userName || "Contact";
+      statusSnapshot.user?.fullName || statusSnapshot.userName || "Contact";
+    const ownerSelf =
+      authUser?._id &&
+      targetUserId &&
+      String(targetUserId) === String(authUser._id);
 
-    // Spawn 12 multi-bubble floating emojis spread smoothly across the screen
-    const batchId = Date.now();
-    const burst = Array.from({ length: 12 }).map((_, idx) => ({
+    // 1. Spawn 18 floating multi-bubble emojis spreading smoothly across screen
+    const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const burst = Array.from({ length: 18 }).map((_, idx) => ({
       id: `${batchId}-${idx}`,
       emoji,
-      leftPct: 12 + Math.random() * 76, // spread across 12%..88% of screen width
-      txMid: `${(Math.random() - 0.5) * 60}px`,
-      txEnd: `${(Math.random() - 0.5) * 110}px`,
-      rot: `${(Math.random() - 0.5) * 40}deg`,
-      dur: `${1.2 + Math.random() * 0.7}s`,
-      delay: `${idx * 45}ms`,
-      sizePx: 22 + Math.floor(Math.random() * 18),
+      leftPct: 6 + Math.random() * 88, // spread wide across 6%..94%
+      bottomPct: 8 + Math.random() * 14,
+      txMid: `${(Math.random() - 0.5) * 90}px`,
+      txEnd: `${(Math.random() - 0.5) * 160}px`,
+      rot: `${(Math.random() - 0.5) * 55}deg`,
+      dur: `${1.3 + Math.random() * 0.65}s`,
+      delay: `${idx * 35}ms`,
+      sizePx: 24 + Math.floor(Math.random() * 22),
     }));
 
-    setFloatingHearts((prev) => [...prev.slice(-24), ...burst]);
+    setFloatingHearts((prev) => [...prev.slice(-36), ...burst]);
     setTimeout(() => {
       setFloatingHearts((prev) =>
         prev.filter((item) => !String(item.id).startsWith(String(batchId)))
       );
-    }, 2200);
+    }, 2400);
 
-    // Optimistic local state update for instant UI counter & "You reacted" pill
+    // 2. Instant local UI reaction count update
     if (authUser?._id) {
       dispatch(
         reactStatusLocally({
-          statusId: activeStatus._id,
+          statusId: statusSnapshot._id,
           reaction: {
             user: authUser,
             emoji,
@@ -408,54 +414,55 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
       );
     }
 
-    toast.success(`Reacted ${emoji} to ${authorName}'s status!`, {
+    toast.success(`Reacted ${emoji}${ownerSelf ? "" : ` to ${authorName}'s status`}!`, {
       id: "react-toast",
       duration: 1500,
     });
 
-    // Persist reaction to status document in DB
-    if (activeStatus._id) {
-      axios
-        .put(
-          `${BASE_URL}/api/v1/status/react/${activeStatus._id}`,
-          { emoji },
-          { withCredentials: true }
-        )
-        .catch(() => {});
-    }
-
-    // Send chat notification message if reacting to someone else's status
-    if (targetUserId && !isMyStatus) {
-      try {
-        const payload = {
-          caption: activeStatus.caption || "",
-          mediaUrl: activeStatus.mediaUrl || "",
-          mediaType:
-            activeStatus.mediaType || (activeStatus.mediaUrl ? "image" : "text"),
-          bgColor: activeStatus.bgColor || "#128c7e",
-          songTitle: activeStatus.song?.title || "",
-          authorName,
-          emoji,
-        };
-        const textToSend = `[STATUS_REACT:${JSON.stringify(payload)}]`;
-
-        const res = await axios.post(
-          `${BASE_URL}/api/v1/message/send/${targetUserId}`,
-          { message: textToSend },
-          { withCredentials: true }
-        );
-        if (res.data?.newMessage) {
-          if (
-            selectedUser?._id &&
-            String(selectedUser._id) === String(targetUserId)
-          ) {
-            dispatch(setMessages([...(messages || []), res.data.newMessage]));
-          }
-        }
-      } catch (err) {
-        console.error("React error:", err);
+    // 3. After floating bubble animation completes (~1.35s), persist & notify status owner
+    setTimeout(async () => {
+      if (statusSnapshot._id) {
+        try {
+          await axios.put(
+            `${BASE_URL}/api/v1/status/react/${statusSnapshot._id}`,
+            { emoji },
+            { withCredentials: true }
+          );
+        } catch (err) {}
       }
-    }
+
+      if (targetUserId && !ownerSelf) {
+        try {
+          const payload = {
+            caption: statusSnapshot.caption || "",
+            mediaUrl: statusSnapshot.mediaUrl || "",
+            mediaType:
+              statusSnapshot.mediaType || (statusSnapshot.mediaUrl ? "image" : "text"),
+            bgColor: statusSnapshot.bgColor || "#128c7e",
+            songTitle: statusSnapshot.song?.title || "",
+            authorName,
+            emoji,
+          };
+          const textToSend = `[STATUS_REACT:${JSON.stringify(payload)}]`;
+
+          const res = await axios.post(
+            `${BASE_URL}/api/v1/message/send/${targetUserId}`,
+            { message: textToSend },
+            { withCredentials: true }
+          );
+          if (res.data?.newMessage) {
+            if (
+              selectedUser?._id &&
+              String(selectedUser._id) === String(targetUserId)
+            ) {
+              dispatch(setMessages([...(messages || []), res.data.newMessage]));
+            }
+          }
+        } catch (err) {
+          console.error("React error:", err);
+        }
+      }
+    }, 1350);
   };
 
   // Delete status action (only for status author)
@@ -737,15 +744,16 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
             </div>
           )}
 
-          {/* Floating Animated Multi-Bubble Emojis Spread Across Screen */}
+          {/* Floating Animated Multi-Bubble Emojis Spread Across Full Screen */}
           {floatingHearts.length > 0 && (
-            <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+            <div className="fixed inset-0 z-[75] pointer-events-none overflow-hidden">
               {floatingHearts.map((item) => (
                 <span
                   key={item.id}
-                  className="absolute bottom-24 animate-status-bubble drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] select-none"
+                  className="absolute animate-status-bubble drop-shadow-[0_6px_16px_rgba(0,0,0,0.45)] select-none"
                   style={{
                     left: `${item.leftPct ?? 50}%`,
+                    bottom: `${item.bottomPct ?? 14}%`,
                     fontSize: `${item.sizePx ?? 28}px`,
                     "--tx-mid": item.txMid || "12px",
                     "--tx-end": item.txEnd || "-18px",
@@ -847,57 +855,39 @@ const StatusViewerModal = ({ statuses = [], initialIndex = 0 }) => {
           )}
 
           {/* Quick Floating Reaction Circles (👍, ❤️, 😂, 🔥) with bubble burst animation */}
-          {!isMyStatus && (
-            <div className="flex items-center justify-center gap-3.5 py-0.5">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendQuickReaction("👍");
-                }}
-                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-white flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
-                title="Thumbs Up"
-              >
-                <IoThumbsUp size={19} />
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendQuickReaction("❤️");
-                }}
-                className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#f43f5e] to-[#ec4899] text-white flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.6)] transition hover:scale-110 active:scale-90 cursor-pointer"
-                title="Send Heart Reaction"
-              >
-                <IoHeart size={22} />
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendQuickReaction("😂");
-                }}
-                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-xl flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
-                title="Send Laugh Reaction"
-              >
-                😂
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendQuickReaction("🔥");
-                }}
-                className="w-11 h-11 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-xl flex items-center justify-center shadow-lg transition hover:scale-110 active:scale-90 cursor-pointer"
-                title="Send Fire Reaction"
-              >
-                🔥
-              </button>
-            </div>
-          )}
+          <div className="flex items-center justify-center gap-3.5 py-0.5">
+            {[
+              { emoji: "👍", label: "Like", icon: <IoThumbsUp size={19} />, isPrimary: false },
+              { emoji: "❤️", label: "Heart", icon: <IoHeart size={22} />, isPrimary: true },
+              { emoji: "😂", label: "Laugh", icon: <span className="text-xl leading-none">😂</span>, isPrimary: false },
+              { emoji: "🔥", label: "Fire", icon: <span className="text-xl leading-none">🔥</span>, isPrimary: false },
+            ].map((btn) => {
+              const count = reactionsList.filter((r) => r.emoji === btn.emoji).length;
+              return (
+                <button
+                  key={btn.emoji}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendQuickReaction(btn.emoji);
+                  }}
+                  className={`relative rounded-full flex items-center justify-center shadow-lg transition hover:scale-115 active:scale-90 cursor-pointer ${
+                    btn.isPrimary
+                      ? "w-12 h-12 bg-gradient-to-tr from-[#f43f5e] to-[#ec4899] text-white shadow-[0_0_20px_rgba(244,63,94,0.6)]"
+                      : "w-11 h-11 bg-black/55 hover:bg-black/75 backdrop-blur-md border border-white/15 text-white"
+                  }`}
+                  title={btn.label}
+                >
+                  {btn.icon}
+                  {count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[#0f172a] text-[10px] font-black flex items-center justify-center shadow border border-black/15">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
           {/* Optional Quick Emoji Picker Row */}
           {!isMyStatus && showEmojiRow && (
